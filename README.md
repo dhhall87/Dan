@@ -2,13 +2,15 @@
 
 Capture things you pass while driving, then look them up later. One tap saves a pin, and identifying the thing happens afterwards. The full spec is in [CLAUDE.md](CLAUDE.md).
 
-**Status:** Milestones 1–6 are done. Milestone 7 (listen after tap) is built and waiting for its test run. It's the last milestone in the plan.
+**Status:** Milestones 1–7 are done. The refreshed capture screen (design option A, tuned for iOS 27 on an iPhone 16 Pro) is built and waiting for its test run. See "Design refresh checklist".
 
 ## What it does so far
 
 **Capture (Milestone 1)**
-- **Quick mode (default):** the whole screen is one capture button.
-- **Four-zone mode** (Settings → Capture screen): `| Far left | Near left | car | Near right | Far right |` as full-height columns. Near zones are green, far zones blue. Tapping the car saves a pin with the side unknown.
+- **Simple (default):** the whole screen is one capture button, with the app icon's yellow pin.
+- **Four zones:** `| Far left | Near left | road | Near right | Far right |` as full-height columns. Near zones are green, far zones blue. The narrow road in the middle, with your car on it, saves a pin with the side unknown.
+- **Switching layouts:** Settings → Capture screen picks the one Passing opens with. To switch during a drive, tap the **Passing** title at the top (the line under it says **Simple** or **Four zones**). After more than 30 minutes away, Passing comes back on the Settings layout.
+- **GPS pill** at the top: **GPS ready** (green), **Finding GPS…** (yellow), **Location asked on first pin** (gray), **Location off** (red) or **Precise Location off** (orange). Pins save in every state; the pill just says whether they'll have a position.
 - **Save first:** a tap writes the pin immediately with no label. If GPS has no usable fix yet, the pin is still saved, marked "No location", and picks up the first good fix within 15 seconds. An old position is never used.
 - **Approximate flag:** a pin is marked approximate when its total uncertainty is more than about 50 m: how far the car could have moved between the GPS reading and the tap (speed × time apart), combined with how precise the reading itself was. A parked car's older reading counts as exact.
 - **Non-visual confirmation:** a haptic and a short tone. Spoken "Left, far, saved" is optional. Repeat taps within 0.75 s are ignored, and the screen stays awake.
@@ -24,7 +26,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **When the clean-up runs:** on launch, whenever the app comes back to the front, when you open the Pins list, and in the background when iOS allows. It never runs in the middle of an export.
 
 **Miles back and voice (Milestone 3)**
-- **+1 mi back** (amber strip at the bottom of the capture screen): one tap saves a pin 1 mile back along the road you just drove. Tap again within 4 seconds and the same pin moves to 2 miles, 3 miles, and so on, with a haptic and tone each time.
+- **+1 mi back** (the wide button at the bottom of the capture screen): one tap saves a pin 1 mile back along the road you just drove. Tap again within 4 seconds and the same pin moves to 2 miles, 3 miles, and so on, with a haptic and tone each time.
 - **How it knows the road:** while the capture screen is open, Passing keeps a trail of the last ~25 miles in memory, a point every ~50 m. It's never saved and never recorded in the background.
 - **On the map:** the pin's detail screen shows your car (blue), the estimate (orange "About here") and the road between them. Apple and Google Maps links go to the estimate.
 - **Not enough trail yet** (app just opened): no estimate goes on the map. Instead the pin says "About 2 miles back the way you came. You were heading southwest, so look northeast of this spot."
@@ -104,10 +106,10 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 
 ## Run it
 
-You need **Xcode 26 or newer** (the app targets **iOS 26**).
+You need **Xcode 26 or newer**. The app runs on **iOS 26** and later, and is tuned for **iOS 27 on an iPhone 16 Pro**.
 
 1. Open `Passing.xcodeproj`.
-2. Pick an iPhone simulator and press Run (⌘R). Press ⌘U to run the tests.
+2. Pick the **iPhone 16 Pro** simulator (iOS 27) next to the Run button and press Run (⌘R). Press ⌘U to run the tests. If iPhone 16 Pro isn't in the list: **Window → Devices and Simulators → Simulators → +**, Device Type **iPhone 16 Pro**, OS Version **iOS 27**, then **Create**.
 3. Give the Simulator a location. While the app runs, click the **location arrow** in Xcode's debug bar (the strip above the console) and pick **KansasDrive** for a moving car, or a city to stay parked. To use it on every run, choose **Product → Scheme → Edit Scheme… → Run → Options → Default Location**.
 
 ### The test drive
@@ -118,7 +120,7 @@ You need **Xcode 26 or newer** (the app targets **iOS 26**).
 
 ```sh
 xcodebuild -project Passing.xcodeproj -scheme Passing \
-  -destination 'platform=iOS Simulator,name=iPhone 17' test
+  -destination 'platform=iOS Simulator,name=iPhone 16 Pro' test
 ```
 
 Run `xcrun simctl list devices available` to see which simulator names you have.
@@ -231,6 +233,21 @@ The Simulator uses your Mac's microphone. It usually has no on-device speech mod
 3. In light mode, check the yellow-ish highlights (Recover buttons, ticks, links) are readable. They switch to a deeper amber in light mode.
 4. Delete three pins, then open **Recently Deleted** → **Select**. Tick two → **Recover**: both are back in Pins. Select the last one → **Delete Now** → confirm: it's gone. **Select All** / **Deselect All** work, and **Done** brings back the per-pin Recover buttons.
 
+## Design refresh checklist
+
+1. Pull, then ⌘U. Pick the **iPhone 16 Pro** simulator (iOS 27) and ⌘R.
+2. **Simple:** a navy button with the yellow pin, **Pin** and **Tap anywhere**. Tap it: the tone plays and nothing else changes.
+3. **GPS pill:** in the Simulator choose **Features → Location → None**: the pill says **Finding GPS…** (yellow) within about 10 seconds. Pick **KansasDrive** in Xcode's location menu: **GPS ready** (green) within a second or two. In the iOS Settings app → Passing → Location → **Never**: **Location off** (red), and a tap still saves a "No location" pin. Set it back to **While Using the App**. On a fresh install, before the first pin, it says **Location asked on first pin** (gray).
+4. **Title button:** the title says **Passing** with **⇄ Simple** under it in yellow. Tap it: the screen switches to Four zones and the line says **Four zones** (on your iPhone you also feel a light click). Tap again: back to Simple.
+5. **Four zones:** the middle is a gray road with white edge lines, a dashed yellow center line and the car near the bottom. Tap each column and the road, then check side and distance in Pins: far left, near left, unknown, near right, far right.
+6. **Default:** Settings → Capture screen → **Four zones**: the capture screen shows Four zones straight away. Set it back to **Simple**. Switch to Four zones with the title, then quit Passing (swipe it away in the app switcher) and reopen: it's back on Simple. Switch again, go to the Home Screen for a minute and come back: still Four zones.
+7. **Listen after tap** on: tap a zone. The title turns into the red **Stop listening** button, then goes back to the title when listening ends.
+8. **+1 mi back:** a wide rounded button with a yellow arrow. A tap, then quick extra taps, still give 1, 2, 3 miles back.
+9. **Landscape:** rotate the Simulator (⌘→). Everything fits, and the Simple pin shrinks to make room. Rotate back.
+10. **Widgets:** the **Pin** widget shows the yellow pin. If it still shows the old symbol, remove it and add it again. Check both widgets in the CarPlay window too.
+11. **Light mode:** with Settings → Appearance → Light, the capture screen and its title bar stay dark.
+12. **On your iPhone 16 Pro, parked:** check the screen is easy to read in the mount, in daylight and at night, and that the title button isn't easy to hit by accident. The Action Button's **Quick Pin** works as before.
+
 ## Set up the App Group (needed for your own iPhone)
 
 The project ships with the App Group `group.com.example.passing`. To run on your phone, the bundle IDs and App Group have to be yours. There are two targets to change, the app and the widget:
@@ -249,7 +266,10 @@ If the App Group doesn't match, the app still works, but Settings shows an orang
 
 - **Fix freshness:** a reading up to 10 s old and within 200 m accuracy can be used. The numbers are in `Shared/Model/FixPolicy.swift`.
 - **The tone plays even with the ring switch on silent**, because a haptic is easy to miss with the phone in a dash mount. It mixes with music rather than pausing it.
-- **Darker zone colors than the mock-up**, so the screen isn't glaring at night.
+- **Capture colors come from the app icon** (navy, verge green, deep blue, asphalt, pin yellow). Near and far differ in brightness as well as color, so they're easy to tell apart at a glance and for color-blind drivers, and nothing is glaring at night.
+- **Solid capture buttons, not Liquid Glass.** iOS 27 adds a slider that changes how see-through glass is, and the buttons you hit while driving shouldn't change with it. Glass is only on the title-bar buttons (iOS draws those) and the GPS pill.
+- **Still runs on iOS 26.** It's tuned for iOS 27 and the iPhone 16 Pro, but the minimum stays iOS 26, so iPhones that haven't updated can still install it. Nothing in the app needs iOS 27 yet.
+- **The title switch lasts for the drive.** It resets when Passing is reopened or comes back after more than 30 minutes away, so Settings stays the layout Passing opens with.
 - **Location permission is requested on the first capture** (privacy rule), so that one tap gets a system prompt. Do your first capture while parked.
 - **Expired pins are stamped with when they moved, not when they hit 7 days.** Every pin gets its full 30 days in Recently Deleted, even after weeks away from the app, or after turning off "Keep records indefinitely" with old pins.
 - **Recovering a pin that's more than 7 days old also keeps (stars) it.** Otherwise it would expire again on the next clean-up.
@@ -281,7 +301,8 @@ If the App Group doesn't match, the app still works, but Settings shows an orang
 | Piece | Where |
 | --- | --- |
 | Code used by both the app and the widget | `Shared/` |
-| Capture screen | `Passing/Views/CaptureView.swift` |
+| Capture screen | `Passing/Views/CaptureView.swift`, colors and pin in `Shared/Views/PassingColors.swift` and `PinGlyph.swift` |
+| Layout switch and GPS pill | `Passing/Model/CaptureModeChoice.swift`, `Passing/Model/GPSStatus.swift`, title button in `Passing/App/PassingApp.swift` |
 | Single save entry point | `Shared/Services/CaptureService.swift`, wired up per target in `Passing/Services/CaptureService+App.swift` and `PassingWidget/CaptureService+Widget.swift` |
 | Siri, Shortcuts, Action Button | `Passing/Intents/CaptureIntents.swift`, `Shared/Services/IntentCapture.swift` |
 | Widgets and Control Center | `PassingWidget/`, `Shared/Intents/WidgetIntents.swift` |

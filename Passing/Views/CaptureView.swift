@@ -3,8 +3,13 @@ import UIKit
 
 /// The screen used while driving. A tap saves a pin immediately; confirmation is a haptic and a
 /// tone, never something to read. Nothing pops up or changes screens after a tap.
+///
+/// Sized for an iPhone 16 Pro (402 × 874 points) but laid out flexibly, because iOS 27 lets iPhone
+/// apps be resized. The capture buttons are solid colors rather than Liquid Glass, so iOS 27's glass
+/// slider can't make them fainter; glass is only on the title bar buttons and the GPS pill.
 struct CaptureView: View {
-    @AppStorage(SettingsKey.captureMode) private var mode: CaptureMode = .quick
+    /// Simple or Four zones. RootView decides: the Settings choice, or the title-button switch.
+    let mode: CaptureMode
     @Environment(\.scenePhase) private var scenePhase
     @State private var isShowing = false
 
@@ -12,19 +17,15 @@ struct CaptureView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Standing notices, not reactions to a tap.
-            if location.isDenied {
-                notice("Location is off. Pins save without a position.")
-            } else if location.isPreciseLocationOff {
-                notice("Precise Location is off. Pins save without a position.")
-            }
+            GPSPill()
+                .padding(.top, 4)
             switch mode {
             case .quick: QuickCapture()
             case .fourZone: FourZoneCapture()
             }
             MilesBackStrip()
         }
-        .background(Color.black.ignoresSafeArea())
+        .background(Color.captureBackground.ignoresSafeArea())
         .environment(\.colorScheme, .dark)
         .onAppear {
             // Keep the screen awake while it's mounted on the dash.
@@ -43,15 +44,6 @@ struct CaptureView: View {
         }
     }
 
-    private func notice(_ text: String) -> some View {
-        Label(text, systemImage: "location.slash")
-            .font(.footnote.weight(.semibold))
-            .foregroundStyle(.black)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 6)
-            .background(Color.orange)
-    }
-
     /// GPS runs while this screen is showing and Passing is open, and stops the moment Passing goes
     /// to the background. (Pulling down Control Center or a Siri request doesn't count as leaving.)
     private func updateLocation() {
@@ -59,48 +51,101 @@ struct CaptureView: View {
     }
 }
 
-// MARK: Quick mode
+// MARK: GPS pill
+
+/// Whether a tap right now gets a position. A standing notice, never a reaction to a tap, and never
+/// needed to capture: pins save in every state.
+private struct GPSPill: View {
+    private let location = LocationProvider.shared
+
+    var body: some View {
+        // Once a second, because a fix goes stale with time as well as with new readings.
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let status = GPSStatus(
+                isAuthorized: location.isAuthorized,
+                isDenied: location.isDenied,
+                isPreciseLocationOff: location.isPreciseLocationOff,
+                hasFreshFix: location.freshFix(now: context.date) != nil
+            )
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(status.dotColor)
+                    .frame(width: 8, height: 8)
+                Text(status.title)
+                    .lineLimit(1)
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.white.opacity(0.8))
+            .padding(.horizontal, 14)
+            .frame(height: 32)
+            .glassEffect(.regular, in: Capsule())
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(status.pinsGetAPosition ? status.title : "\(status.title). Pins still save, without a position.")
+        }
+    }
+}
+
+private extension GPSStatus {
+    var dotColor: Color {
+        switch self {
+        case .ready: return .green
+        case .searching: return .yellow
+        case .notAsked: return .gray
+        case .off: return .red
+        case .notPrecise: return .orange
+        }
+    }
+}
+
+// MARK: Simple mode
 
 private struct QuickCapture: View {
     var body: some View {
         Button {
             CaptureService.shared.capture(side: .unknown, distance: .unknown, source: .app)
         } label: {
-            VStack(spacing: 20) {
-                Image(systemName: "mappin.and.ellipse")
-                    .font(.system(size: 96, weight: .bold))
-                Text("Tap anywhere to pin")
-                    .font(.largeTitle.weight(.heavy))
-                Text("Capture now. Investigate later.")
-                    .font(.title3)
-                    .foregroundStyle(.white.opacity(0.6))
+            VStack(spacing: 10) {
+                // Shrinks first when the window is short (landscape, or a resized window on iOS 27).
+                PinGlyph()
+                    .frame(minWidth: 44, maxWidth: 132, minHeight: 44, maxHeight: 132)
+                Text("Pin")
+                    .font(.system(size: 56, weight: .heavy, design: .rounded))
+                    .padding(.top, 8)
+                Text("Tap anywhere")
+                    .font(.system(size: 17, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color(red: 0.66, green: 0.70, blue: 0.78))
             }
             .foregroundStyle(.white)
-            .multilineTextAlignment(.center)
-            .padding()
+            .minimumScaleFactor(0.6)
+            .padding(16)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.quickSurface, in: RoundedRectangle(cornerRadius: 24))
-            .contentShape(RoundedRectangle(cornerRadius: 24))
+            .background(Color.quickSurface, in: RoundedRectangle(cornerRadius: 36))
+            .overlay(RoundedRectangle(cornerRadius: 36).strokeBorder(.white.opacity(0.08)))
+            .contentShape(RoundedRectangle(cornerRadius: 36))
         }
-        .buttonStyle(PressHighlightStyle(cornerRadius: 24))
-        .padding(8)
+        .buttonStyle(PressHighlightStyle(cornerRadius: 36))
+        .padding(.horizontal, 12)
+        .padding(.top, 12)
+        .padding(.bottom, 10)
         .accessibilityLabel("Save a pin")
     }
 }
 
 // MARK: Four-zone mode
 
-/// Laid out exactly as the road looks: | Far left | Near left | car | Near right | Far right |
+/// Laid out exactly as the road looks: | Far left | Near left | road | Near right | Far right |
 private struct FourZoneCapture: View {
     var body: some View {
         HStack(spacing: 6) {
             ZoneColumn(zone: .farLeft)
             ZoneColumn(zone: .nearLeft)
-            CarDivider()
+            RoadDivider()
             ZoneColumn(zone: .nearRight)
             ZoneColumn(zone: .farRight)
         }
-        .padding(6)
+        .padding(.horizontal, 12)
+        .padding(.top, 12)
+        .padding(.bottom, 10)
     }
 }
 
@@ -114,48 +159,72 @@ private struct ZoneColumn: View {
         Button {
             CaptureService.shared.capture(side: zone.side, distance: zone.distance, source: .app)
         } label: {
-            VStack(spacing: 8) {
-                Spacer()
+            VStack(spacing: 6) {
                 Image(systemName: isLeft ? "arrow.up.left" : "arrow.up.right")
-                    .font(.title2.weight(.bold))
+                    .font(.system(size: 24, weight: .bold))
                 Text(isFar ? "FAR" : "NEAR")
-                    .font(.title3.weight(.heavy))
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
                 Text(isLeft ? "left" : "right")
-                    .font(.headline)
-                Text(isFar ? "Beyond\nroadside" : "Roadside\n")
-                    .font(.caption)
-                    .opacity(0.75)
-                Spacer()
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.82))
             }
             .foregroundStyle(.white)
-            .multilineTextAlignment(.center)
-            .lineLimit(2)
+            .lineLimit(1)
             .minimumScaleFactor(0.6)
             .padding(.horizontal, 2)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(isFar ? Color.farZone : Color.nearZone, in: RoundedRectangle(cornerRadius: 16))
-            .contentShape(RoundedRectangle(cornerRadius: 16))
+            .background(isFar ? Color.farZone : Color.nearZone, in: RoundedRectangle(cornerRadius: 26))
+            .contentShape(RoundedRectangle(cornerRadius: 26))
         }
-        .buttonStyle(PressHighlightStyle(cornerRadius: 16))
+        .buttonStyle(PressHighlightStyle(cornerRadius: 26))
         .accessibilityLabel("Save pin, \(zone.distance.title.lowercased()) \(zone.side.title.lowercased())")
     }
 }
 
-/// The narrow centre divider. Tapping the car saves a pin with the side unknown.
-private struct CarDivider: View {
+/// The narrow centre divider, drawn as the road with the car on it. Tapping it saves a pin with the
+/// side unknown.
+private struct RoadDivider: View {
     var body: some View {
         Button {
             CaptureService.shared.capture(side: .unknown, distance: .unknown, source: .app)
         } label: {
-            TopDownCar()
-                .frame(width: 28)
-                .frame(maxHeight: .infinity)
-                .frame(width: 48)
-                .background(Color.quickSurface, in: RoundedRectangle(cornerRadius: 12))
-                .contentShape(RoundedRectangle(cornerRadius: 12))
+            ZStack(alignment: .bottom) {
+                RoadMarkings()
+                TopDownCar()
+                    .frame(width: 24)
+                    .padding(.bottom, 22)
+            }
+            .frame(width: 46)
+            .frame(maxHeight: .infinity)
+            .background(Color.asphalt)
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+            .contentShape(RoundedRectangle(cornerRadius: 18))
         }
-        .buttonStyle(PressHighlightStyle(cornerRadius: 12))
+        .buttonStyle(PressHighlightStyle(cornerRadius: 18))
         .accessibilityLabel("Save pin, side unknown")
+    }
+}
+
+/// White edge lines and a dashed yellow centre line, like the app icon's road.
+private struct RoadMarkings: View {
+    var body: some View {
+        GeometryReader { geo in
+            let width = geo.size.width
+            let height = geo.size.height
+            Path { path in
+                path.move(to: CGPoint(x: 5, y: 0))
+                path.addLine(to: CGPoint(x: 5, y: height))
+                path.move(to: CGPoint(x: width - 5, y: 0))
+                path.addLine(to: CGPoint(x: width - 5, y: height))
+            }
+            .stroke(Color.white.opacity(0.92), lineWidth: 2.5)
+            Path { path in
+                path.move(to: CGPoint(x: width / 2, y: 0))
+                path.addLine(to: CGPoint(x: width / 2, y: height))
+            }
+            .stroke(Color.pinYellow, style: StrokeStyle(lineWidth: 3, dash: [18, 16]))
+        }
+        .accessibilityHidden(true)
     }
 }
 
@@ -168,16 +237,22 @@ private struct MilesBackStrip: View {
         Button {
             CaptureService.shared.captureMilesBack(source: .app)
         } label: {
-            Label("+1 mi back", systemImage: "arrow.uturn.backward")
-                .font(.title3.weight(.bold))
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity, minHeight: 64)
-                .background(Color.milesBackSurface, in: RoundedRectangle(cornerRadius: 16))
-                .contentShape(RoundedRectangle(cornerRadius: 16))
+            HStack(spacing: 12) {
+                Image(systemName: "arrow.uturn.backward")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(Color.pinYellow)
+                Text("+1 mi back")
+                    .font(.system(size: 21, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+            }
+            .frame(maxWidth: .infinity, minHeight: 66)
+            .background(Color.white.opacity(0.09), in: Capsule())
+            .overlay(Capsule().strokeBorder(.white.opacity(0.16)))
+            .contentShape(Capsule())
         }
-        .buttonStyle(PressHighlightStyle(cornerRadius: 16))
-        .padding(.horizontal, 6)
-        .padding(.bottom, 6)
+        .buttonStyle(PressHighlightStyle(cornerRadius: 33))
+        .padding(.horizontal, 12)
+        .padding(.bottom, 10)
         .accessibilityLabel("Save a pin one mile back. Tap again to move it further back.")
     }
 }
@@ -195,9 +270,14 @@ struct PressHighlightStyle: ButtonStyle {
     }
 }
 
+#Preview("Simple") {
+    NavigationStack {
+        CaptureView(mode: .quick)
+    }
+}
+
 #Preview("Four zones") {
     NavigationStack {
-        CaptureView()
+        CaptureView(mode: .fourZone)
     }
-    .onAppear { UserDefaults.standard.set(CaptureMode.fourZone.rawValue, forKey: SettingsKey.captureMode) }
 }

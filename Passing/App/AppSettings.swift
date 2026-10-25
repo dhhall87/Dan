@@ -10,7 +10,7 @@ enum CaptureMode: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .quick: return "Quick"
+        case .quick: return "Simple"
         case .fourZone: return "Four zones"
         }
     }

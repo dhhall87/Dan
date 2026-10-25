@@ -77,10 +77,16 @@ struct PinWidgetView: View {
                 Button(intent: WidgetPinIntent(side: .unknown, distance: .unknown)) {
                     let note = entry.savedNote(side: .unknown, distance: .unknown)
                     VStack(spacing: 8) {
-                        Image(systemName: note == nil ? "mappin.and.ellipse" : "checkmark")
-                            .font(.system(size: 48, weight: .bold))
+                        if note == nil {
+                            // The app icon's pin, as on the phone's Simple screen.
+                            PinGlyph()
+                                .frame(width: 56, height: 56)
+                        } else {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 48, weight: .bold))
+                        }
                         Text(note?.shortMessage ?? "Pin")
-                            .font(.title2.weight(.heavy))
+                            .font(.system(.title2, design: .rounded, weight: .heavy))
                     }
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -91,7 +97,7 @@ struct PinWidgetView: View {
                 NotSetUpView()
             }
         }
-        // CarPlay and StandBy remove this background; the white symbol still reads on black.
+        // CarPlay and StandBy remove this background; the yellow pin and white text still read on black.
         .containerBackground(Color.quickSurface, for: .widget)
     }
 }
@@ -135,7 +141,7 @@ struct PinGridWidgetView: View {
                 NotSetUpView()
             }
         }
-        .containerBackground(Color.black, for: .widget)
+        .containerBackground(Color.captureBackground, for: .widget)
     }
 }
 

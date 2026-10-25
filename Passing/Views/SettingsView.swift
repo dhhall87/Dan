@@ -49,9 +49,12 @@ struct SettingsView: View {
                 } header: {
                     Text("Capture screen")
                 } footer: {
-                    Text(mode == .quick
-                         ? "The whole screen is one button."
-                         : "Tap the side of the road the thing was on. Inner columns are right by the road, outer columns are farther away. Tap the car if you're not sure which side.")
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(mode == .quick
+                             ? "The whole screen is one button."
+                             : "Tap the side of the road the thing was on. Inner columns are right by the road, outer columns are farther away. Tap the road in the middle if you're not sure which side.")
+                        Text("Passing opens with this one. To switch during a drive, tap the **Passing** title at the top of the capture screen.")
+                    }
                 }
 
                 Section {

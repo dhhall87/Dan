@@ -1,12 +1,19 @@
 import SwiftUI
 
-/// The capture colors, shared with the widget so its buttons match the phone screen.
+/// The capture colors, taken from the app icon and shared with the widget so its buttons match the
+/// phone screen. Near and far differ in brightness as well as color, so they stay distinct in
+/// peripheral vision and for color-blind drivers.
 extension Color {
-    /// Near zones: green, like the grass verge.
-    static let nearZone = Color(red: 0.13, green: 0.38, blue: 0.25)
-    /// Far zones: blue, like the distance.
-    static let farZone = Color(red: 0.15, green: 0.28, blue: 0.55)
-    static let quickSurface = Color(white: 0.13)
-    /// Dark amber, so "+1 mi back" stands apart from the zones.
-    static let milesBackSurface = Color(red: 0.42, green: 0.29, blue: 0.04)
+    /// Behind the capture screen: near-black with a hint of the icon's night-sky navy.
+    static let captureBackground = Color(red: 0.020, green: 0.027, blue: 0.051)
+    /// Near zones: a brighter green, like the grass verge.
+    static let nearZone = Color(red: 0.180, green: 0.490, blue: 0.373)
+    /// Far zones: a deep blue, like the distance.
+    static let farZone = Color(red: 0.118, green: 0.204, blue: 0.400)
+    /// The big Simple-mode button: the icon's navy.
+    static let quickSurface = Color(red: 0.063, green: 0.102, blue: 0.188)
+    /// The icon's road.
+    static let asphalt = Color(red: 0.227, green: 0.251, blue: 0.294)
+    /// The icon's pin and road markings.
+    static let pinYellow = Color(red: 1.0, green: 0.780, blue: 0.0)
 }

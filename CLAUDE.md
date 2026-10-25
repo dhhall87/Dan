@@ -19,7 +19,7 @@ Native iPhone app for capturing things you pass while driving so you can look th
 ## Stack
 
 - Swift, SwiftUI, SwiftData, Core Location, MapKit, App Intents, WidgetKit
-- Deployment target: iOS 26 (CarPlay widget support requires it)
+- Deployment target: iOS 26 (CarPlay widget support requires it). Built with Xcode 27 and tuned for iOS 27 on Dan's iPhone 16 Pro (402 × 874 points). Raising the target to 27 would lock out iPhones still on iOS 26, and nothing needs it yet.
 - No accounts, backend, analytics, subscriptions, or paid map APIs. All data stays on device.
 - Network is only used for map tiles, reverse geocoding, and Look Around, and capture never waits on it.
 
@@ -67,9 +67,11 @@ Keep capture coordinates and target coordinates separate. The app records where 
 
 ## Main screen
 
-Dark, high contrast, no map, no clutter. Mode switch lives in Settings, not on the capture screen. The rest of the app follows Settings → Appearance (System by default, or Light/Dark); the capture screen stays dark in every appearance.
+Dark, high contrast, no map, no clutter. Settings picks the layout Passing opens with. At Dan's request the two-line title ("Passing" over "Simple" or "Four zones") is also a button that switches layout for the drive; coming back after more than 30 minutes away starts on the Settings layout again (`CaptureModeChoice`). A GPS pill at the top says whether a tap now gets a position (GPS ready / Finding GPS… / Location off / Precise Location off). It's a standing notice, never a reaction to a tap. The rest of the app follows Settings → Appearance (System by default, or Light/Dark); the capture screen stays dark in every appearance.
 
-**Quick mode (default):** the entire screen is one capture button.
+**Simple mode (default; stored as `quick`):** the entire screen is one capture button.
+
+**Look (option A, chosen October 2026):** colors from the app icon (`Shared/Views/PassingColors.swift`), the icon's pin on the Simple button and the Pin widget (`PinGlyph`), rounded type. Capture buttons are solid colors, not Liquid Glass, so iOS 27's glass slider can't fade them. Glass is only on the system title-bar buttons and the GPS pill.
 
 **Four-zone mode:** four full-height vertical columns, laid out left to right exactly as the road looks:
 
@@ -79,7 +81,7 @@ Dark, high contrast, no map, no clutter. Mode switch lives in Settings, not on t
 
 - Near zones sit next to the car; far zones are on the outer edges. The layout must be spatially literal so it works without reading labels. Do not use a 2x2 grid or stack left zones above right zones.
 - Near and far zones use two distinct colors, mirrored on both sides.
-- The car is a narrow center divider. Tapping it saves a pin with side unknown.
+- The center divider is narrow and drawn as the road with the car on it. Tapping it saves a pin with side unknown.
 
 **"+1 mi back" button** (bottom strip, both modes):
 - One action. A tap creates a pin placed 1 mile back along the breadcrumb trail.
@@ -182,8 +184,11 @@ Later / maybe: native CarPlay app (only if publishing).
 
 ## Current status
 
-- Milestones 1–6 are done and confirmed by Dan (Milestone 5 in the Simulator, including its CarPlay window). Work happens on branch `claude/road-marker-pin-app-flj2qm`.
-- **Milestone 7 is built and waiting for Dan's test run** (README, "Milestone 7 manual test checklist"). It's the last planned milestone. Notes:
+- Milestones 1–7 are done (Milestone 5 confirmed in the Simulator, including its CarPlay window; Dan ran 7 and its follow-ups without issues). Work happens on branch `claude/road-marker-pin-app-flj2qm`.
+- **Design refresh (option A) is built and waiting for Dan's test run** (README, "Design refresh checklist"). Notes:
+  - Checked against WWDC26 "What's new in SwiftUI": iPhone apps can be resized on iOS 27 (so the capture layout stays flexible, and the Simple pin shrinks first), the new Liquid Glass slider changes glass tint (so capture buttons stay solid), and `@State` is now a macro (a default value plus an assignment in `init` is an error; there are none here). `confirmationDialog(_:item:)` and `alert(_:item:)` are iOS 27-only, so the iOS 26 forms stay.
+  - `Text + Text` is deprecated in the iOS 26 SDK; use separate `Text` views or interpolation.
+- Notes from Milestone 7:
   - Listen-after-tap uses `SFSpeechRecognizer` with `requiresOnDeviceRecognition` (not deprecated in iOS 26; simpler than `SpeechAnalyzer`). On iPhone it's on-device only, and the setting stays off if the language isn't supported on device. In the Simulator only, it may fall back to server recognition so the feature can be tried.
   - `CaptureFeedback` owns the whole flow: a `.playAndRecord` session (pausing or ducking other audio per the existing setting), the chime, `SpeechListener.listen()`, then `CaptureService.setLabel`. Only `.app` taps listen. Permission is requested only from Settings.
   - The audio-thread and Speech callbacks are built in `nonisolated` helpers, so they never run as main-actor closures on other threads.
@@ -199,6 +204,6 @@ Later / maybe: native CarPlay app (only if publishing).
 - **Schema changes:** after an update, the app and the widget extension can both open the store at once and both try the migration. `SharedStore` retries, then falls back to a private store, which would hide pins (in the widget, silently). Keep model changes additive (new optional fields, new models) so migrations stay lightweight.
 - **Keep the build warning-free** (Dan asked). Two Swift 6 warnings have come up: a `Sendable` conformance declared outside the type's own file, and a one-line `Task { … }` whose last call returns a non-Sendable value (it becomes the task's result; write `_ =`). When Xcode offers "Update to recommended settings", Dan sends the list and the settings get written into `project.pbxproj` here.
 - **Privacy settings Dan chose (October 2026):** "Precise location" (on by default; off rounds each pin to ~1 km via `Pin.coarsenLocation()` at save, drops speed and the route, keeps the compass direction; stored in App Group defaults via `LocationPrivacy` so the widget follows it). "Delete pins after exporting" (off by default; only after a completed share; kept pins stay). "Delete All Pins" in Settings (permanent, groups stay). Exports never include speed. Groups are deleted by hand in Manage Groups (swipe, Edit, or tap → Delete Group).
-- **Privacy and footprint review (October 2026):** added App Store privacy manifests (`Passing/Resources/PrivacyInfo.xcprivacy`, `PassingWidget/PrivacyInfo.xcprivacy`; UserDefaults reasons CA92.1 app-only and 1C8F.1 App Group; no tracking, no collected data). Update them if a new required-reason API is used. Exports are deleted after sharing and at launch. Look Around loads only on tap. Town-name lookups can be turned off in Settings → Privacy. The capture screen warns when Precise Location is off (those fixes never pass `FixPolicy`). README "Privacy and footprint" is the user-facing summary.
+- **Privacy and footprint review (October 2026):** added App Store privacy manifests (`Passing/Resources/PrivacyInfo.xcprivacy`, `PassingWidget/PrivacyInfo.xcprivacy`; UserDefaults reasons CA92.1 app-only and 1C8F.1 App Group; no tracking, no collected data). Update them if a new required-reason API is used. Exports are deleted after sharing and at launch. Look Around loads only on tap. Town-name lookups can be turned off in Settings → Privacy. The capture screen's GPS pill says when Precise Location is off (those fixes never pass `FixPolicy`). README "Privacy and footprint" is the user-facing summary.
 - **Reviewed and declined (October 2026):** keeping GPS on in the background or asking for Always (battery; Dan wants location only while the app is open, plus the short burst per capture); `requestLocation()` for intents (it can hand back a cached fix, and the burst keeps going until a fresh one arrives); `ModelActor` (all store access is already on the main actor, one container per process); `usesApplicationAudioSession = false` (speech would stop pausing or lowering music); background-task wrappers against `0xdead10cc` (every save finishes while the app is on screen or before the Siri/widget intent returns). Revisit the last one if a crash report ever shows `0xdead10cc`.
 - **Future, not now:** `ROADMAP.md` holds the Passing Pro and sales-workflow roadmap. Don't implement any of it or change the milestones until Dan asks. When it starts, inspect the code and propose a focused plan first.

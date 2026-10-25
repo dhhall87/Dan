@@ -1,5 +1,6 @@
 import SwiftData
 import SwiftUI
+import UIKit
 
 @main
 struct PassingApp: App {
@@ -32,6 +33,9 @@ struct RootView: View {
     @State private var path = NavigationPath()
     @State private var showingSettings = false
     @AppStorage(SettingsKey.appearance) private var appearance: Appearance = .system
+    /// The layout Passing opens with. The title button switches away from it for the drive.
+    @AppStorage(SettingsKey.captureMode) private var defaultMode: CaptureMode = .quick
+    @State private var modeChoice = CaptureModeChoice()
     /// Bumped to rebuild the pin list after the widget or Control Center saved pins.
     @State private var listRefresh = 0
     @State private var seenWidgetCapture = WidgetActivity.lastCaptureAt
@@ -39,13 +43,14 @@ struct RootView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            CaptureView()
+            CaptureView(mode: modeChoice.mode(default: defaultMode))
+                // Shown as the back button's name; the title itself is the mode button below.
                 .navigationTitle("Passing")
                 .navigationBarTitleDisplayMode(.inline)
                 // The capture screen is dark and high-contrast in every appearance, so it's never a
                 // bright screen on the dash at night. Its title bar matches.
                 .toolbarColorScheme(.dark, for: .navigationBar)
-                .toolbarBackground(Color.black, for: .navigationBar)
+                .toolbarBackground(Color.captureBackground, for: .navigationBar)
                 .toolbarBackground(.visible, for: .navigationBar)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
@@ -62,11 +67,11 @@ struct RootView: View {
                             Label("Settings", systemImage: "gearshape")
                         }
                     }
-                    if feedback.isListening {
-                        // Listen after tap: turn the microphone off now. It sits in the title bar so
-                        // it never moves or covers the capture buttons, and it never has to be used:
-                        // listening stops by itself after a few seconds.
-                        ToolbarItem(placement: .principal) {
+                    ToolbarItem(placement: .principal) {
+                        if feedback.isListening {
+                            // Listen after tap: turn the microphone off now. It takes the title's
+                            // place so it never moves or covers the capture buttons, and it never has
+                            // to be used: listening stops by itself after a few seconds.
                             Button {
                                 feedback.stopListening()
                             } label: {
@@ -79,6 +84,11 @@ struct RootView: View {
                                     .background(Color.red, in: Capsule())
                             }
                             .buttonStyle(.plain)
+                        } else {
+                            ModeTitleButton(mode: modeChoice.mode(default: defaultMode)) {
+                                modeChoice.toggle(default: defaultMode)
+                                UISelectionFeedbackGenerator().selectionChanged()
+                            }
                         }
                     }
                 }
@@ -98,14 +108,19 @@ struct RootView: View {
         .onChange(of: appearance, initial: true) {
             appearance.apply()
         }
+        .onChange(of: defaultMode) {
+            modeChoice.defaultChanged()
+        }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
             case .active:
                 // Again here, in case the window didn't exist yet when the setting was first applied.
                 appearance.apply()
+                modeChoice.cameBack(at: .now)
                 RetentionService.shared.run()
                 refreshIfWidgetSaved()
             case .background:
+                modeChoice.wentToBackground(at: .now)
                 RetentionScheduler.schedule()
             default:
                 break
@@ -120,5 +135,36 @@ struct RootView: View {
         guard latest != seenWidgetCapture else { return }
         seenWidgetCapture = latest
         listRefresh += 1
+    }
+}
+
+/// The capture screen's title, which is also the layout switch: "Passing" over "Simple" or
+/// "Four zones". A tap flips the layout with a light click; nothing else changes on screen.
+private struct ModeTitleButton: View {
+    let mode: CaptureMode
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 1) {
+                Text("Passing")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.caption2.weight(.bold))
+                    Text(mode.title)
+                        .font(.caption.weight(.semibold))
+                }
+                .foregroundStyle(Color.pinYellow)
+            }
+            .lineLimit(1)
+            .padding(.horizontal, 12)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Capture screen, \(mode.title)")
+        .accessibilityHint("Switches between Simple and Four zones")
     }
 }
