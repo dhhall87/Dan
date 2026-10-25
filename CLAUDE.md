@@ -186,3 +186,4 @@ Later / maybe: native CarPlay app (only if publishing).
   - The control and the widget buttons should run `QuickPinIntent` (never asks). The 2x2 widget needs side/distance variants of it.
   - Verify first: which process runs a widget or control intent, and whether it can get a location under When In Use. Check Apple's docs for `AppIntent.allowedExecutionTargets` / `IntentExecutionTargets` (listed in the current AppIntent docs) before choosing an approach.
   - This environment can't build iOS. Pure-logic tests run on Linux through a scratch SwiftPM package; Dan runs ⌘U in Xcode.
+- **Future, not now:** `ROADMAP.md` holds the Passing Pro and sales-workflow roadmap. Don't implement any of it or change the milestones until Dan asks. When it starts, inspect the code and propose a focused plan first.
