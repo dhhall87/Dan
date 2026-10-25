@@ -90,7 +90,8 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         let voice = voiceIdentifier ?? AppSettings.voiceIdentifier
         audio.activateAndPlay(tone: false, mode: Self.speechMode) {
             Task { @MainActor in
-                self.speak(text, voiceIdentifier: voice)
+                // `_ =` so the task doesn't return the utterance (which can't cross actors).
+                _ = self.speak(text, voiceIdentifier: voice)
             }
         }
     }
