@@ -86,9 +86,17 @@ struct PinListView: View {
                         noteText = ""
                         addingNote = true
                     } label: {
-                        Label("New Note", systemImage: "square.and.pencil")
-                            .labelStyle(.titleAndIcon)
+                        // Wider than the round toolbar buttons (about three or four of them), so
+                        // it's easy to find and reads as the main action here.
+                        HStack(spacing: 8) {
+                            Image(systemName: "square.and.pencil")
+                            Text("New Note")
+                        }
+                        .font(.body.weight(.semibold))
+                        .padding(.horizontal, 16)
+                        .frame(minWidth: 160)
                     }
+                    .accessibilityLabel("New Note")
                 }
             }
         }
@@ -191,6 +199,7 @@ struct PinListView: View {
                 Section {
                     ForEach(section.pins) { pin in
                         row(for: pin)
+                            .listRowBackground(rowBackground(for: pin))
                     }
                 } header: {
                     DayHeader(title: title(for: section.day), day: section.day, count: section.pins.count)
@@ -371,6 +380,20 @@ struct PinListView: View {
     private var selectionTitle: String {
         let count = selectedPins.count
         return count == 0 ? "Select Pins" : "\(count) Selected"
+    }
+
+    /// Widget, CarPlay and Control Center pins still waiting for review get a faint amber tint, so
+    /// they stand out in the list. Not in Needs Review itself, where every row is one.
+    @ViewBuilder
+    private func rowBackground(for pin: Pin) -> some View {
+        if pin.needsReview, filter != .needsReview {
+            ZStack {
+                Color(.secondarySystemGroupedBackground)
+                Color.accentColor.opacity(0.12)
+            }
+        } else {
+            Color(.secondarySystemGroupedBackground)
+        }
     }
 
     private func keepButton(for pin: Pin) -> some View {
@@ -610,6 +633,11 @@ struct PinRow: View {
             }
             Spacer(minLength: 0)
             VStack(spacing: 6) {
+                if pin.needsReview {
+                    Image(systemName: "tray.full")
+                        .foregroundStyle(Color.accentColor)
+                        .accessibilityLabel("Needs review")
+                }
                 if pin.isKept {
                     Image(systemName: "star.fill")
                         .foregroundStyle(.yellow)

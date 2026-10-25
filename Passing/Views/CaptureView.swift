@@ -240,7 +240,7 @@ private struct ZoneColumn: View {
             .minimumScaleFactor(0.6)
             .padding(.horizontal, 2)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background((isFar ? Color.farZone : Color.nearZone).softGradient, in: RoundedRectangle(cornerRadius: 26))
+            .background(Color.zoneGradient(far: isFar), in: RoundedRectangle(cornerRadius: 26))
             // A faint edge, so neighbouring columns read as separate shapes rather than one block.
             .overlay(RoundedRectangle(cornerRadius: 26).strokeBorder(.white.opacity(0.07)))
             .contentShape(RoundedRectangle(cornerRadius: 26))

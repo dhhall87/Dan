@@ -165,7 +165,7 @@ private struct GridButton: View {
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background((distance == .far ? Color.farZone : Color.nearZone).softGradient, in: ContainerRelativeShape())
+            .background(Color.zoneGradient(far: distance == .far), in: ContainerRelativeShape())
         }
         .buttonStyle(.plain)
     }
