@@ -9,26 +9,19 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
 
     private let haptics = UINotificationFeedbackGenerator()
     private let synthesizer = AVSpeechSynthesizer()
-    private var tonePlayer: AVAudioPlayer?
+    private let audio = AudioWorker()
     private var speechInProgress = false
     private var deactivateTask: Task<Void, Never>?
-    /// Turning the audio session on or off can block for a noticeable moment (longer when the
-    /// car's Bluetooth or CarPlay route has to wake up), so it never happens on the main thread.
-    /// iOS 27 adds async activate/deactivate calls; this queue does the same job on iOS 26 too.
-    private let audioQueue = DispatchQueue(label: "Passing.audio-session", qos: .userInitiated)
 
     override init() {
         super.init()
         synthesizer.delegate = self
-        if let url = Bundle.main.url(forResource: "capture-tone", withExtension: "wav") {
-            tonePlayer = try? AVAudioPlayer(contentsOf: url)
-        }
     }
 
     /// Warms up the haptic engine and audio so the first tap responds instantly.
     func prepare() {
         haptics.prepare()
-        tonePlayer?.prepareToPlay()
+        audio.prepare()
     }
 
     func confirmCapture(of pin: Pin) {
@@ -36,7 +29,7 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         haptics.notificationOccurred(.success)
         haptics.prepare()
 
-        let playTone = AppSettings.confirmationTone && tonePlayer != nil
+        let playTone = AppSettings.confirmationTone && audio.hasTone
         let spokenText = AppSettings.spokenConfirmation
             ? PinDescription.spokenConfirmation(side: pin.side, distance: pin.distance)
             : nil
@@ -44,24 +37,19 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
 
         deactivateTask?.cancel()
         if spokenText != nil { speechInProgress = true }
-        audioQueue.async {
-            CaptureFeedback.activateAudio(ducking: spokenText != nil)
+        audio.activateAndPlay(tone: playTone, ducking: spokenText != nil) {
             Task { @MainActor in
-                self.startSounds(tone: playTone, speech: spokenText)
+                self.audioIsActive(speech: spokenText)
             }
         }
     }
 
-    private func startSounds(tone: Bool, speech: String?) {
-        if tone, let tonePlayer {
-            tonePlayer.currentTime = 0
-            tonePlayer.play()
-        }
+    private func audioIsActive(speech: String?) {
         if let speech {
             synthesizer.stopSpeaking(at: .immediate)
             synthesizer.speak(AVSpeechUtterance(string: speech))
         } else {
-            scheduleDeactivation(after: (tonePlayer?.duration ?? 0) + 0.2)
+            scheduleDeactivation(after: audio.toneDuration + 0.2)
         }
     }
 
@@ -70,9 +58,7 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         deactivateTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(delay))
             guard !Task.isCancelled, let self, !self.speechInProgress else { return }
-            self.audioQueue.async {
-                CaptureFeedback.deactivateAudio()
-            }
+            self.audio.deactivate()
         }
     }
 
@@ -81,11 +67,62 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         scheduleDeactivation(after: 0.1)
     }
 
-    // MARK: Audio session (runs on `audioQueue`)
+    // MARK: AVSpeechSynthesizerDelegate
+
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        Task { @MainActor in self.speechEnded() }
+    }
+
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        // A newer confirmation interrupted this one; that one's own didFinish deactivates audio.
+    }
+}
+
+/// Owns the audio session and the tone player, and touches them only on its own serial queue.
+/// Turning the session on or off, and playing while it's on, can block for a noticeable moment
+/// (longer when the car's Bluetooth or CarPlay route has to wake up), so none of it runs on the
+/// main thread. iOS 27 adds async activate/deactivate calls; this queue does the same job on iOS 26.
+private final class AudioWorker: @unchecked Sendable {
+    // @unchecked: `tonePlayer` is only used on `queue`, which serializes all access.
+    private let queue = DispatchQueue(label: "Passing.audio", qos: .userInitiated)
+    private let tonePlayer: AVAudioPlayer?
+    let toneDuration: TimeInterval
+
+    var hasTone: Bool { tonePlayer != nil }
+
+    init() {
+        let player = Bundle.main.url(forResource: "capture-tone", withExtension: "wav")
+            .flatMap { try? AVAudioPlayer(contentsOf: $0) }
+        tonePlayer = player
+        toneDuration = player?.duration ?? 0
+    }
+
+    func prepare() {
+        queue.async { self.tonePlayer?.prepareToPlay() }
+    }
+
+    /// Turns the session on, plays the tone if asked, then calls `activated` (on the queue).
+    func activateAndPlay(tone: Bool, ducking: Bool, activated: @escaping @Sendable () -> Void) {
+        queue.async {
+            Self.activateSession(ducking: ducking)
+            if tone, let tonePlayer = self.tonePlayer {
+                tonePlayer.currentTime = 0
+                tonePlayer.play()
+            }
+            activated()
+        }
+    }
+
+    /// Lets ducked music come back up.
+    func deactivate() {
+        queue.async {
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        }
+    }
 
     /// The tone mixes with whatever is playing and still plays with the ring switch on silent,
     /// because the haptic is easy to miss with the phone in a dash mount. Speech ducks the music briefly.
-    private nonisolated static func activateAudio(ducking: Bool) {
+    private static func activateSession(ducking: Bool) {
         let session = AVAudioSession.sharedInstance()
         do {
             if ducking {
@@ -97,20 +134,5 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         } catch {
             print("Passing: couldn't start audio for the confirmation: \(error)")
         }
-    }
-
-    /// Lets ducked music come back up.
-    private nonisolated static func deactivateAudio() {
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-    }
-
-    // MARK: AVSpeechSynthesizerDelegate
-
-    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        Task { @MainActor in self.speechEnded() }
-    }
-
-    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        // A newer confirmation interrupted this one; that one's own didFinish deactivates audio.
     }
 }

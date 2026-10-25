@@ -4,11 +4,18 @@ import SwiftData
 /// Writes the active pins (not Recently Deleted) to a JSON or CSV file for the share sheet.
 @MainActor
 enum ExportService {
+    static func exportActivePins(as format: ExportFormat) throws -> URL {
+        // The shared store is looked up here rather than as default arguments: default values are
+        // evaluated outside the main actor, and the compiler rejects main-actor state there.
+        try exportActivePins(as: format, context: SharedStore.context, retention: .shared, now: .now)
+    }
+
+    /// The same, with every dependency passed in (used by the tests).
     static func exportActivePins(
         as format: ExportFormat,
-        context: ModelContext = SharedStore.context,
-        retention: RetentionService = .shared,
-        now: Date = .now
+        context: ModelContext,
+        retention: RetentionService,
+        now: Date
     ) throws -> URL {
         try retention.whilePaused {
             let descriptor = FetchDescriptor<Pin>(
