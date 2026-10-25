@@ -2,7 +2,7 @@
 
 Capture things you pass while driving, then look them up later. One tap saves a pin, and identifying the thing happens afterwards. The full spec is in [CLAUDE.md](CLAUDE.md).
 
-**Status:** Milestones 1–4 are done. Milestone 5 (widgets, CarPlay and Control Center) is built and waiting for its test run. Review polish (groups, maps export) comes in Milestone 6.
+**Status:** Milestones 1–5 are done. Milestone 6 (review polish: Look Around, town names, groups, maps export) is next.
 
 ## What it does so far
 
