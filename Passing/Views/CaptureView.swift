@@ -221,6 +221,15 @@ private struct ZoneColumn: View {
 
     private var isFar: Bool { zone.distance == .far }
     private var isLeft: Bool { zone.side == .left }
+    /// Each zone's own smoky pattern, left to right.
+    private var smokeSeed: Int {
+        switch zone {
+        case .farLeft: return 0
+        case .nearLeft: return 1
+        case .car, .nearRight: return 2
+        case .farRight: return 3
+        }
+    }
 
     var body: some View {
         Button {
@@ -240,7 +249,7 @@ private struct ZoneColumn: View {
             .minimumScaleFactor(0.6)
             .padding(.horizontal, 2)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(ZoneFill(far: isFar).clipShape(RoundedRectangle(cornerRadius: 26)))
+            .background(ZoneFill(far: isFar, seed: smokeSeed).clipShape(RoundedRectangle(cornerRadius: 26)))
             // A faint edge, so neighbouring columns read as separate shapes rather than one block.
             .overlay(RoundedRectangle(cornerRadius: 26).strokeBorder(.white.opacity(0.07)))
             .contentShape(RoundedRectangle(cornerRadius: 26))

@@ -13,35 +13,6 @@ extension Color {
     /// The icon's pin and road markings.
     static let pinYellow = Color(red: 1.0, green: 0.780, blue: 0.0)
 
-    /// A zone's top-to-bottom shading, sampled from Dan's mockup: brightest about a sixth of the way
-    /// down, then darkening smoothly while staying green (near) or blue (far) all the way, so the two
-    /// never meet in the same navy. The labels sit in the middle, where white text stands out on both.
-    static func zoneGradient(far: Bool) -> LinearGradient {
-        func rgb(_ red: Double, _ green: Double, _ blue: Double) -> Color {
-            Color(red: red / 255, green: green / 255, blue: blue / 255)
-        }
-        let stops: [Gradient.Stop] = far
-            ? [
-                .init(color: rgb(24, 50, 89), location: 0),
-                .init(color: rgb(24, 51, 92), location: 0.15),
-                .init(color: rgb(22, 46, 81), location: 0.36),
-                .init(color: rgb(17, 38, 67), location: 0.59),
-                .init(color: rgb(15, 35, 65), location: 0.74),
-                .init(color: rgb(13, 33, 61), location: 0.88),
-                .init(color: rgb(10, 27, 51), location: 1),
-            ]
-            : [
-                .init(color: rgb(25, 100, 72), location: 0),
-                .init(color: rgb(30, 108, 79), location: 0.15),
-                .init(color: rgb(25, 100, 72), location: 0.36),
-                .init(color: rgb(21, 88, 63), location: 0.59),
-                .init(color: rgb(18, 78, 60), location: 0.74),
-                .init(color: rgb(15, 68, 52), location: 0.88),
-                .init(color: rgb(11, 59, 45), location: 1),
-            ]
-        return LinearGradient(stops: stops, startPoint: .top, endPoint: .bottom)
-    }
-
     /// A soft top-to-bottom shading of a capture color, so the buttons look designed rather than
     /// flat bars: slightly lighter at the top and darker at the bottom. The middle third, where the
     /// labels sit, keeps the full color, so the contrast with the white text doesn't change.
@@ -59,24 +30,41 @@ extension Color {
     }
 }
 
-/// A zone's fill: the top-to-bottom shading, with the side edges about 15% darker so each column
-/// looks gently lit from the middle, as in Dan's mockup. Used by the phone's zones and the grid widget.
+/// A zone's fill: the top-to-bottom shading from Dan's mockup with a subtle smoky variation (a
+/// `MeshGradient` through `ZoneShade.grid`), and side edges about 15% darker so each column looks
+/// gently lit from the middle. Fixed, so it costs nothing after it's drawn. Used by the phone's
+/// zones and the grid widget.
 struct ZoneFill: View {
     let far: Bool
+    /// Which zone, so each gets its own wisps rather than a copy of its neighbour's.
+    var seed: Int = 0
+
+    private static let points: [SIMD2<Float>] = (0..<ZoneShade.rows).flatMap { row in
+        (0..<ZoneShade.columns).map { column in
+            SIMD2(Float(column) / Float(ZoneShade.columns - 1), Float(row) / Float(ZoneShade.rows - 1))
+        }
+    }
 
     var body: some View {
-        Color.zoneGradient(far: far)
-            .overlay(
-                LinearGradient(
-                    stops: [
-                        .init(color: .black.opacity(0.15), location: 0),
-                        .init(color: .clear, location: 0.35),
-                        .init(color: .clear, location: 0.65),
-                        .init(color: .black.opacity(0.15), location: 1),
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
+        MeshGradient(
+            width: ZoneShade.columns,
+            height: ZoneShade.rows,
+            points: Self.points,
+            colors: ZoneShade.grid(far: far, seed: seed).map {
+                Color(red: $0.x / 255, green: $0.y / 255, blue: $0.z / 255)
+            }
+        )
+        .overlay(
+            LinearGradient(
+                stops: [
+                    .init(color: .black.opacity(0.15), location: 0),
+                    .init(color: .clear, location: 0.35),
+                    .init(color: .clear, location: 0.65),
+                    .init(color: .black.opacity(0.15), location: 1),
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
             )
+        )
     }
 }

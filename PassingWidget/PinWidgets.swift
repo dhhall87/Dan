@@ -165,7 +165,7 @@ private struct GridButton: View {
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(ZoneFill(far: distance == .far).clipShape(ContainerRelativeShape()))
+            .background(ZoneFill(far: distance == .far, seed: (side == .left ? 0 : 2) + (distance == .far ? 0 : 1)).clipShape(ContainerRelativeShape()))
         }
         .buttonStyle(.plain)
     }
