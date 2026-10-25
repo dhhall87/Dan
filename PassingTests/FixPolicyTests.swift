@@ -36,6 +36,13 @@ struct FixPolicyTests {
         #expect(FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(-4), horizontalAccuracy: 5, speed: 13))
     }
 
+    @Test func accuracyAndMovementAddUp() {
+        // 30 mph (13 m/s) for 3 s is 39 m. With a ±30 m fix that's 49 m in total: exact.
+        #expect(!FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(-3), horizontalAccuracy: 30, speed: 13))
+        // With a ±40 m fix it's 56 m: approximate, though neither is over 50 m on its own.
+        #expect(FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(-3), horizontalAccuracy: 40, speed: 13))
+    }
+
     @Test func unknownSpeedFallsBackToFixAge() {
         for speed in [nil, -1.0] {
             #expect(!FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(-FixPolicy.exactAge), horizontalAccuracy: 5, speed: speed))

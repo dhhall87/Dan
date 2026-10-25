@@ -105,7 +105,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Location")
                 } footer: {
-                    Text("Passing uses your location only while the capture screen is open. It asks the first time you pin something. Pins stay on this iPhone.")
+                    Text("Passing uses your location while the capture screen is open, and for a few seconds when you pin from Siri, a widget or Control Center. It never tracks you in the background. It asks the first time you pin something. Pins stay on this iPhone.")
                 }
 
                 #if DEBUG
@@ -125,7 +125,7 @@ struct SettingsView: View {
 
                 if !SharedStore.isUsingAppGroup {
                     Section {
-                        Label("The App Group isn't set up, so pins are stored in the app's own space. Siri and widgets (later milestones) won't see them. See “Set up the App Group” in the README.", systemImage: "exclamationmark.triangle")
+                        Label("The App Group isn't set up, so pins are stored in the app's own space. The widgets and Control Center can't save pins here. See “Set up the App Group” in the README.", systemImage: "exclamationmark.triangle")
                             .foregroundStyle(.orange)
                     } header: {
                         Text("Storage")

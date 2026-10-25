@@ -10,7 +10,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Quick mode (default):** the whole screen is one capture button.
 - **Four-zone mode** (Settings → Capture screen): `| Far left | Near left | car | Near right | Far right |` as full-height columns. Near zones are green, far zones blue. Tapping the car saves a pin with the side unknown.
 - **Save first:** a tap writes the pin immediately with no label. If GPS has no usable fix yet, the pin is still saved, marked "No location", and picks up the first good fix within 15 seconds. An old position is never used.
-- **Approximate flag:** a pin is marked approximate when the car could have moved more than about 50 m between the GPS reading and the tap (speed × time apart), or when the reading was imprecise. A parked car's older reading counts as exact.
+- **Approximate flag:** a pin is marked approximate when its total uncertainty is more than about 50 m: how far the car could have moved between the GPS reading and the tap (speed × time apart), combined with how precise the reading itself was. A parked car's older reading counts as exact.
 - **Non-visual confirmation:** a haptic and a short tone. Spoken "Left, far, saved" is optional. Repeat taps within 0.75 s are ignored, and the screen stays awake.
 - **Review:** pins grouped by day. Each pin's detail screen has a map, editable label/side/distance, Reviewed, and Apple Maps / Google Maps links.
 
@@ -153,6 +153,7 @@ If the App Group doesn't match, the app still works, but Settings shows an orang
 - **Two kinds of shortcut:** "Pin That" asks a question through Siri. "Quick Pin" never asks, because outside Siri the question would pop up on screen and need typing.
 - **The Control Center button moved to Milestone 5.** It needs the same widget extension as the CarPlay widget, so it was simpler to add both at once.
 - **Widget and Control Center taps run in the widget extension, not the app.** Apple's docs say so, and say widgets can use location once you allow it for them. The widget extension shares the capture code in `Shared/` with the app, so there's still one save path. Whether Control Center and CarPlay count as "in use" for location isn't documented, so the checklist asks you to check.
+- **GPS never runs in the background.** It runs while the capture screen is open, stops the moment Passing goes to the background, and otherwise only runs for a few seconds per Siri, widget or Control Center pin. No "Always" permission. Those pins can take a few seconds to get a reading, and occasionally get none, but GPS isn't using battery the rest of the time.
 - **No "+1 mi back" on the widgets.** It needs the trail, which only exists while the app's capture screen is open.
 - **The grid widget is 2x2, unlike the phone screen.** The spec asks for that, and a small widget is too narrow for five columns you can hit while driving.
 - **No automatic Apple Maps Guide:** Apple doesn't let apps create Guides or add places to them. Milestone 6 adds a KML export that Google My Maps turns into a "Passing pins" map. Each pin also keeps "Open in Apple Maps", where you can tap "Add to Guide" yourself.

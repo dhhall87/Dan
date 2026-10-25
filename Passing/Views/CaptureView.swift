@@ -5,6 +5,8 @@ import UIKit
 /// tone, never something to read. Nothing pops up or changes screens after a tap.
 struct CaptureView: View {
     @AppStorage(SettingsKey.captureMode) private var mode: CaptureMode = .quick
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var isShowing = false
 
     private let location = LocationProvider.shared
 
@@ -29,13 +31,24 @@ struct CaptureView: View {
         .onAppear {
             // Keep the screen awake while it's mounted on the dash.
             UIApplication.shared.isIdleTimerDisabled = true
-            location.setCaptureScreenVisible(true)
+            isShowing = true
+            updateLocation()
             CaptureFeedback.shared.prepare()
         }
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false
-            location.setCaptureScreenVisible(false)
+            isShowing = false
+            updateLocation()
         }
+        .onChange(of: scenePhase) {
+            updateLocation()
+        }
+    }
+
+    /// GPS runs while this screen is showing and Passing is open, and stops the moment Passing goes
+    /// to the background. (Pulling down Control Center or a Siri request doesn't count as leaving.)
+    private func updateLocation() {
+        location.setCaptureScreenVisible(isShowing && scenePhase != .background)
     }
 }
 

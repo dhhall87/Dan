@@ -11,6 +11,8 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
     private let synthesizer = AVSpeechSynthesizer()
     private let audio = AudioWorker()
     private var speechInProgress = false
+    /// The utterance being spoken now, so a cancelled older one isn't mistaken for the end of speech.
+    private var currentUtterance: AVSpeechUtterance?
     private var deactivateTask: Task<Void, Never>?
 
     override init() {
@@ -88,6 +90,7 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         synthesizer.stopSpeaking(at: .immediate)
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = Self.voice(identifier: voiceIdentifier)
+        currentUtterance = utterance
         synthesizer.speak(utterance)
     }
 
@@ -100,7 +103,12 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
-    private func speechEnded() {
+    /// Called when an utterance finishes or is cut off. A newer confirmation cancels the one before
+    /// it, and that newer one's own end lets the music back. If nothing replaced it (a phone call cut
+    /// it off, say), speech is over and the music can come back now rather than staying paused.
+    private func utteranceStopped(_ utterance: AVSpeechUtterance) {
+        guard utterance === currentUtterance else { return }
+        currentUtterance = nil
         speechInProgress = false
         scheduleDeactivation(after: 0.1)
     }
@@ -108,11 +116,11 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
     // MARK: AVSpeechSynthesizerDelegate
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        Task { @MainActor in self.speechEnded() }
+        Task { @MainActor in self.utteranceStopped(utterance) }
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        // A newer confirmation interrupted this one; that one's own didFinish deactivates audio.
+        Task { @MainActor in self.utteranceStopped(utterance) }
     }
 }
 
