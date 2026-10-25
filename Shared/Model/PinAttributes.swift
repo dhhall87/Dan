@@ -1,6 +1,6 @@
 import Foundation
 
-enum Side: String, Codable, CaseIterable, Identifiable {
+enum Side: String, Codable, CaseIterable, Identifiable, Sendable {
     case left
     case right
     case unknown
@@ -16,7 +16,7 @@ enum Side: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-enum Distance: String, Codable, CaseIterable, Identifiable {
+enum Distance: String, Codable, CaseIterable, Identifiable, Sendable {
     case near
     case far
     case unknown
