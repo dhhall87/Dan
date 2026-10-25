@@ -279,7 +279,7 @@ If the App Group doesn't match, the app still works, but Settings shows an orang
 - **Fix freshness:** a reading up to 10 s old and within 200 m accuracy can be used. The numbers are in `Shared/Model/FixPolicy.swift`.
 - **The tone plays even with the ring switch on silent**, because a haptic is easy to miss with the phone in a dash mount. It mixes with music rather than pausing it.
 - **Capture colors come from the app icon** (navy, verge green, deep blue, asphalt, pin yellow). Near and far differ in brightness as well as color, so they're easy to tell apart at a glance and for color-blind drivers, and nothing is glaring at night.
-- **Gradient capture buttons, not Liquid Glass.** Each zone fades from a lighter color at the top to a darker one at the bottom (green #31614A to #1A1B2E, blue #1E2756 to #0D1B31), with a faint edge between columns. The labels sit in the middle, where white text still stands out.
+- **Gradient capture buttons, not Liquid Glass.** Each zone is brightest near the top and darkens toward the bottom while staying green or blue, with slightly darker side edges and a faint border (colors sampled from your mockup). The labels sit in the middle, where white text stands out.
 - **Still runs on iOS 26.** It's tuned for iOS 27 and the iPhone 16 Pro, but the minimum stays iOS 26, so iPhones that haven't updated can still install it. Nothing in the app needs iOS 27 yet.
 - **The title switch lasts for the drive.** It resets when Passing is reopened or comes back after more than 30 minutes away, so Settings stays the layout Passing opens with.
 - **Location permission is requested on the first capture** (privacy rule), so that one tap gets a system prompt. Do your first capture while parked.
