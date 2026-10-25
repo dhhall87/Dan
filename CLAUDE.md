@@ -86,6 +86,12 @@ Dark, high contrast, no map, no clutter. Mode switch lives in Settings, not on t
 - Tapping again within ~4 s bumps that same pin to 2 mi, 3 mi, and so on, with tone/haptic per step (and spoken "2 miles back" if spoken confirmation is on).
 - No separate "pending offset" state that requires a second tap somewhere else. Side defaults to unknown and is editable in review.
 
+## Voice confirmation options
+
+- Spoken confirmation stays optional and off by default.
+- **Voice picker:** choose from the voices installed on the phone (`AVSpeechSynthesisVoice.speechVoices()`), labeled by quality (Default / Enhanced / Premium), with a preview button. The default is the system voice for the phone's language. Siri voices aren't available to third-party apps, and no voice files are bundled. Better voices are free downloads in iOS Settings → Accessibility → Spoken Content → Voices, and the app explains how to get them. Refresh the list when installed voices change. Optionally offer the user's Personal Voice, with their permission.
+- **Custom phrases:** Dan can type his own confirmation phrases ("Location saved", "Got it boss", "I'll look this up later", "Writing this down for you now"). One is picked at random per capture. Option to say the side/distance first ("Left, far. Got it boss."). Keep phrases short (about 60 characters max) so confirmations stay brief, and add a preview button. Miles-back bumps still say the number ("2 miles back").
+
 ## Miles back
 
 - While the app is foregrounded, keep a rolling in-memory trail of the last ~25 miles, sampled roughly every 50 m. This is not persisted and not background tracking.
@@ -138,7 +144,7 @@ Dark, high contrast, no map, no clutter. Mode switch lives in Settings, not on t
 
 1. **Core capture.** Quick and four-zone modes, CaptureService, LocationProvider with freshness rules, App Group SwiftData store with the full Pin model, review list and detail with map links, haptic/tone confirmation, screen stays awake.
 2. **Retention.** 7-day rolling expiry, keep star, keep-forever setting, Recently Deleted with 30-day purge, export, tests.
-3. **Miles back.** BreadcrumbBuffer, +1 mi back button with bump-on-repeat, target estimation, trail on review map.
+3. **Miles back and voice options.** BreadcrumbBuffer, +1 mi back button with bump-on-repeat, target estimation, trail on review map. Voice picker and custom confirmation phrases.
 4. **Siri.** CapturePinIntent with save-then-ask label flow, App Shortcuts, Control Center control, Action Button.
 5. **Widget / CarPlay.** systemSmall widget (single and 2x2), tested in the CarPlay Simulator.
 6. **Review polish.** Look Around, reverse geocoding, optional listen-after-tap.
