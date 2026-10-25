@@ -179,7 +179,7 @@ Later / maybe: native CarPlay app (only if publishing).
 
 - Capture never requires reading, typing, or answering.
 - Nothing pops up or changes screens on the capture screen after a tap.
-  - One exception, at Dan's request: with listen-after-tap on, a "Stop listening" button replaces the GPS pill in the title bar while Passing asks or listens. It never moves or covers the capture buttons, and listening ends by itself, so it never has to be pressed.
+  - One exception, at Dan's request: with listen-after-tap on, a big "Stop listening" button takes the Passing title's place (same fixed height; the GPS pill hides) while Passing asks or listens. It never moves or covers the capture buttons, and listening ends by itself, so it never has to be pressed.
 - Every voice prompt is optional and can be turned off.
 
 ## Current status

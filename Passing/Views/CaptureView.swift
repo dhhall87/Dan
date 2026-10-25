@@ -16,10 +16,19 @@ struct CaptureView: View {
     @State private var isShowing = false
 
     private let location = LocationProvider.shared
+    private let feedback = CaptureFeedback.shared
 
     var body: some View {
         VStack(spacing: 0) {
-            ModeTitleButton(mode: mode, action: switchMode)
+            // A fixed height, so the capture buttons never move when Stop listening swaps in.
+            Group {
+                if feedback.isListening {
+                    StopListeningButton()
+                } else {
+                    ModeTitleButton(mode: mode, action: switchMode)
+                }
+            }
+            .frame(height: 62)
             switch mode {
             case .quick: QuickCapture()
             case .fourZone: FourZoneCapture()
@@ -62,11 +71,13 @@ struct ModeTitleButton: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 1) {
-                // About 15% larger and bolder than a standard title; the layout line stays small.
+            VStack(spacing: 0) {
+                // Big, heavy and wide, about twice a standard title; the layout line stays small.
                 Text("Passing")
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 36, weight: .heavy))
+                    .fontWidth(.expanded)
                     .foregroundStyle(.white)
+                    .minimumScaleFactor(0.7)
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.left.arrow.right")
                         .font(.caption2.weight(.bold))
@@ -77,12 +88,34 @@ struct ModeTitleButton: View {
             }
             .lineLimit(1)
             .padding(.horizontal, 12)
-            .frame(minHeight: 44)
+            .frame(maxHeight: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Capture screen, \(mode.title)")
         .accessibilityHint("Switches between Simple and Four zones")
+    }
+}
+
+/// Listen after tap: turn the microphone off now. While Passing listens it takes the place of the
+/// title (and the GPS pill hides), so it never moves or covers the capture buttons. It never has to
+/// be used: listening stops by itself after a few seconds.
+private struct StopListeningButton: View {
+    var body: some View {
+        Button {
+            CaptureFeedback.shared.stopListening()
+        } label: {
+            Label("Stop listening", systemImage: "mic.slash.fill")
+                .labelStyle(.titleAndIcon)
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 28)
+                .frame(maxHeight: .infinity)
+                .background(Color.red, in: Capsule())
+                .padding(.vertical, 4)
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -100,17 +133,17 @@ struct GPSPill: View {
                 isPreciseLocationOff: location.isPreciseLocationOff,
                 hasFreshFix: location.freshFix(now: context.date) != nil
             )
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Circle()
                     .fill(status.dotColor)
-                    .frame(width: 8, height: 8)
+                    .frame(width: 6, height: 6)
                 Text(status.title)
                     .lineLimit(1)
             }
-            .font(.footnote.weight(.semibold))
+            .font(.caption2.weight(.semibold))
             .foregroundStyle(.white.opacity(0.8))
-            .padding(.horizontal, 14)
-            .frame(height: 32)
+            .padding(.horizontal, 10)
+            .frame(height: 24)
             .glassEffect(.regular, in: Capsule())
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(status.pinsGetAPosition ? status.title : "\(status.title). Pins still save, without a position.")
@@ -158,7 +191,7 @@ private struct QuickCapture: View {
         }
         .buttonStyle(PressHighlightStyle(cornerRadius: 36))
         .padding(.horizontal, 12)
-        .padding(.top, 12)
+        .padding(.top, 4)
         .padding(.bottom, 10)
         .accessibilityLabel("Save a pin")
     }
@@ -177,7 +210,7 @@ private struct FourZoneCapture: View {
             ZoneColumn(zone: .farRight)
         }
         .padding(.horizontal, 12)
-        .padding(.top, 12)
+        .padding(.top, 4)
         .padding(.bottom, 10)
     }
 }

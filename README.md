@@ -67,7 +67,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 **Listen after tap (Milestone 7, optional, off by default)**
 - Settings → **Labels by voice** → **Listen after tap**. After a tap on the capture screen, Passing asks **"What are you passing?"** and listens for a few seconds. Say what you saw ("red barn") and it becomes the label. Say nothing, "cancel" or "stop", and the pin stays unlabeled. Turn off **Ask "What are you passing?"** to get a short chime instead of the question.
 - It stops listening about 1.5 seconds after you stop talking, after 6 seconds if you say nothing, and after 15 seconds at most. "Stop" or "cancel" ends it after about half a second. If the speech recognizer gives up on the silence early, Passing quietly starts it again, so the microphone stays on for the full 6 seconds.
-- **Stop listening:** while Passing asks or listens, a red **Stop listening** button sits in the title bar of the capture screen. It turns the microphone off right away and keeps anything you'd already said. The Passing widgets turn into a big **Stop listening** button at the same time, so you can stop it from CarPlay. It never has to be pressed, and it doesn't move or cover the capture buttons.
+- **Stop listening:** while Passing asks or listens, a big red **Stop listening** button takes the place of the **Passing** title (the GPS pill hides meanwhile). It turns the microphone off right away and keeps anything you'd already said. The Passing widgets turn into a big **Stop listening** button at the same time, so you can stop it from CarPlay. It never has to be pressed, and it doesn't move or cover the capture buttons.
 - The pin is saved before Passing listens, so a missed or garbled answer never loses it. You can fix the label later in Pins.
 - With **Spoken confirmation** on, Passing reads the label back ("red barn") instead of saying your phrase.
 - Music pauses while it listens (or is lowered, with "Pause music while speaking or listening" off), so the microphone hears you rather than the radio.
@@ -238,10 +238,10 @@ The Simulator uses your Mac's microphone. It usually has no on-device speech mod
 1. Pull, then ⌘U. Pick the **iPhone 16 Pro** simulator (iOS 27) and ⌘R.
 2. **Simple:** a navy button with the yellow pin, **Pin it** and **Tap anywhere**. Tap it: the tone plays and nothing else changes.
 3. **GPS pill:** in the Simulator choose **Features → Location → None**: the pill says **Finding GPS…** (yellow) within about 10 seconds. Pick **KansasDrive** in Xcode's location menu: **GPS ready** (green) within a second or two. In the iOS Settings app → Passing → Location → **Never**: **Location off** (red), and a tap still saves a "No location" pin. Set it back to **While Using the App**. On a fresh install, before the first pin, it says **Location asked on first pin** (gray).
-4. **Title button:** under the GPS pill, the title says **Passing** (large and bold) with **⇄ Simple** under it in yellow. Tap it: the screen switches to Four zones and the line says **Four zones** (on your iPhone you also feel a light click). Tap again: back to Simple.
+4. **Title button:** under the GPS pill, the title says **Passing** (big, heavy and wide) with **⇄ Simple** under it in yellow. Tap it: the screen switches to Four zones and the line says **Four zones** (on your iPhone you also feel a light click). Tap again: back to Simple.
 5. **Four zones:** the middle is a gray road with white edge lines, a dashed yellow center line and the car near the bottom. Tap each column and the road, then check side and distance in Pins: far left, near left, unknown, near right, far right.
 6. **Default:** Settings → Capture screen → **Four zones**: the capture screen shows Four zones straight away. Set it back to **Simple**. Switch to Four zones with the title, then quit Passing (swipe it away in the app switcher) and reopen: it's back on Simple. Switch again, go to the Home Screen for a minute and come back: still Four zones.
-7. **Listen after tap** on: tap a zone. The GPS pill turns into the red **Stop listening** button, then comes back when listening ends.
+7. **Listen after tap** on: tap a zone. The **Passing** title turns into a big red **Stop listening** button and the GPS pill hides. Both come back when listening ends, and the capture buttons don't move.
 8. **+1 mi back:** a wide rounded button with a yellow arrow. A tap, then quick extra taps, still give 1, 2, 3 miles back.
 9. **Landscape:** rotate the Simulator (⌘→). Everything fits, and the Simple pin shrinks to make room. Rotate back.
 10. **Widgets:** the **Pin** widget shows the yellow pin. If it still shows the old symbol, remove it and add it again. Check both widgets in the CarPlay window too.
@@ -292,7 +292,7 @@ If the App Group doesn't match, the app still works, but Settings shows an orang
 
 - **Listening only follows taps on the capture screen.** Widgets and Control Center stay silent per the spec, and Siri asks its own question.
 - **The question (or chime) always plays when listening**, even with the tone turned off, because it's the cue to start talking.
-- **The Stop listening button is the one thing that appears on the capture screen after a tap**, at your request. It's in the title bar, so it never moves or covers a capture button, and it never has to be pressed.
+- **The Stop listening button is the one thing that appears on the capture screen after a tap**, at your request. It takes the title's place, at the same height, so it never moves or covers a capture button, and it never has to be pressed.
 - **Microphone and speech permission are asked for in Settings**, when you turn listening on, so no permission prompt can appear on the capture screen.
 - **`SFSpeechRecognizer` rather than iOS 26's new `SpeechAnalyzer`.** It's simpler, still supported, and on-device on iPhone. If the iPhone can't recognize its language on the device, the setting stays off rather than sending audio to a server.
 

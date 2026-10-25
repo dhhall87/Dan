@@ -71,23 +71,9 @@ struct RootView: View {
                         }
                     }
                     ToolbarItem(placement: .principal) {
-                        if feedback.isListening {
-                            // Listen after tap: turn the microphone off now. It takes the GPS pill's
-                            // place in the title bar so it never moves or covers the capture buttons,
-                            // and it never has to be used: listening stops by itself after a few seconds.
-                            Button {
-                                feedback.stopListening()
-                            } label: {
-                                Label("Stop listening", systemImage: "mic.slash.fill")
-                                    .labelStyle(.titleAndIcon)
-                                    .font(.headline)
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .background(Color.red, in: Capsule())
-                            }
-                            .buttonStyle(.plain)
-                        } else {
+                        // Hidden while listening: the big Stop listening button below takes the
+                        // title's place, so the eye goes to one thing.
+                        if !feedback.isListening {
                             GPSPill()
                         }
                     }
