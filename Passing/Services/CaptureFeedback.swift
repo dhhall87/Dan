@@ -26,6 +26,7 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
     @ObservationIgnored private var listenTask: Task<Void, Never>?
     @ObservationIgnored private var deactivateTask: Task<Void, Never>?
     @ObservationIgnored private var stopObserver: (any NSObjectProtocol)?
+    @ObservationIgnored private var voicesObserver: (any NSObjectProtocol)?
 
     /// True from the tap until listening ends, including while the question is asked.
     var isListening: Bool { listeningPin != nil }
@@ -37,6 +38,10 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         ListeningSignal.startObserving()
         stopObserver = NotificationCenter.default.addObserver(forName: ListeningSignal.stopRequested, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.stopListening() }
+        }
+        // A voice downloaded in iOS Settings may be better than the one "Best available" picked.
+        voicesObserver = NotificationCenter.default.addObserver(forName: AVSpeechSynthesizer.availableVoicesDidChangeNotification, object: nil, queue: .main) { _ in
+            Task { @MainActor in AutomaticVoice.forget() }
         }
     }
 
@@ -96,11 +101,14 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         AppSettings.pauseAudioWhileSpeaking ? .speechPausingOthers : .speechLoweringOthers
     }
 
-    /// The voice for an identifier from settings. Nil means the system voice for the phone's
-    /// language, which is also the fallback if the chosen voice has been deleted.
+    /// The voice for an identifier from settings. Empty means "Best available": the most natural
+    /// voice installed for the phone's language, which is also the fallback if the chosen voice has
+    /// been deleted. Nil (no voice installed for the language at all) leaves it to the system.
     static func voice(identifier: String) -> AVSpeechSynthesisVoice? {
-        guard !identifier.isEmpty else { return nil }
-        return AVSpeechSynthesisVoice(identifier: identifier)
+        guard !identifier.isEmpty, let chosen = AVSpeechSynthesisVoice(identifier: identifier) else {
+            return AutomaticVoice.voice
+        }
+        return chosen
     }
 
     private func audioIsActive(speech: String?) {

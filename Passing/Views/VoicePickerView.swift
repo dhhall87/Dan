@@ -17,17 +17,8 @@ struct VoiceOption: Identifiable, Hashable {
         name = voice.name
         languageCode = voice.language
         languageName = Locale.current.localizedString(forIdentifier: voice.language) ?? voice.language
-        switch voice.quality {
-        case .premium:
-            qualityRank = 2
-            qualityLabel = "Premium"
-        case .enhanced:
-            qualityRank = 1
-            qualityLabel = "Enhanced"
-        default:
-            qualityRank = 0
-            qualityLabel = "Default"
-        }
+        qualityRank = AutomaticVoice.qualityRank(voice.quality)
+        qualityLabel = ["Default", "Enhanced", "Premium"][qualityRank]
         isNovelty = voice.voiceTraits.contains(.isNoveltyVoice)
         isPersonal = voice.voiceTraits.contains(.isPersonalVoice)
     }
@@ -40,7 +31,7 @@ struct VoiceOption: Identifiable, Hashable {
     /// The name shown in Settings for a stored voice identifier.
     static func displayName(for identifier: String) -> String {
         guard !identifier.isEmpty, let voice = AVSpeechSynthesisVoice(identifier: identifier) else {
-            return "System voice"
+            return "Best available"
         }
         return voice.name
     }
@@ -62,8 +53,8 @@ struct VoicePickerView: View {
         List {
             Section {
                 VoiceRow(
-                    title: "System voice",
-                    subtitle: "Your iPhone's default voice",
+                    title: "Best available",
+                    subtitle: automaticSubtitle,
                     isSelected: voiceIdentifier.isEmpty,
                     preview: { CaptureFeedback.shared.preview(sample, voiceIdentifier: "") },
                     select: { voiceIdentifier = "" }
@@ -96,7 +87,7 @@ struct VoicePickerView: View {
             }
 
             Section {
-                Text("For more natural voices, open iOS **Settings → Accessibility → Spoken Content → Voices**, choose a language, and download an **Enhanced** or **Premium** voice. It appears here automatically. Siri's own voices can't be used by other apps.")
+                Text("For more natural voices, open iOS **Settings → Accessibility → Spoken Content → Voices**, choose a language, and download an **Enhanced** or **Premium** voice. It appears here automatically, and **Best available** switches to it on its own. Siri's own voices can't be used by other apps.")
                     .font(.callout)
             } header: {
                 Text("Getting better voices")
@@ -111,6 +102,13 @@ struct VoicePickerView: View {
                 reload()
             }
         }
+    }
+
+    /// Which voice "Best available" uses right now, so it's clear what downloading a better one changes.
+    private var automaticSubtitle: String {
+        guard let voice = AutomaticVoice.voice else { return "Your iPhone's default voice" }
+        let option = VoiceOption(voice)
+        return "The most natural voice installed. Now: \(option.name) · \(option.qualityLabel)"
     }
 
     @ViewBuilder
@@ -174,6 +172,7 @@ struct VoicePickerView: View {
     /// The chosen voice is never cleared here: the voice list can briefly come back empty while iOS
     /// loads it, and speaking already falls back to the system voice if the chosen one is gone.
     private func reload() {
+        AutomaticVoice.forget()
         voices = AVSpeechSynthesisVoice.speechVoices().map(VoiceOption.init)
         personalVoiceStatus = AVSpeechSynthesizer.personalVoiceAuthorizationStatus
     }
