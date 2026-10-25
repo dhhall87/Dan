@@ -299,12 +299,12 @@ private struct RoadMarkings: View {
 
 /// One tap saves a pin 1 mile back along the road just driven; each extra tap within 4 seconds
 /// pushes that same pin another mile back. Confirmed by haptic and tone on every tap, never by reading.
-/// "+1 mi back" and "Label last pin", side by side under the capture area.
+/// "+1 mi back" and "Add a note", side by side under the capture area.
 private struct BottomButtons: View {
     var body: some View {
         HStack(spacing: 10) {
             MilesBackButton()
-            LabelLastPinButton()
+            AddNoteButton()
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 10)
@@ -331,26 +331,26 @@ private struct MilesBackButton: View {
     }
 }
 
-/// Asks "What did you pass?" and puts the answer on the newest pin from the last 30 minutes, such as
-/// one dropped from a widget or CarPlay, or makes a new pin if there isn't one. Never asks for typing.
-private struct LabelLastPinButton: View {
+/// Asks "What's your note?" and saves what's said as a note in Pins, with no pin or location.
+/// Voice only: typing a note happens in Pins, never on this screen.
+private struct AddNoteButton: View {
     var body: some View {
         Button {
-            CaptureFeedback.shared.labelLastPin()
+            CaptureFeedback.shared.addSpokenNote()
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "mic.fill")
                     .font(.system(size: 19, weight: .bold))
                     .foregroundStyle(Color.pinYellow)
-                Text("Label last pin")
+                Text("Add a note")
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.9))
             }
             .bottomButtonShape()
         }
         .buttonStyle(PressHighlightStyle(cornerRadius: 27))
-        .accessibilityLabel("Label the last pin by voice")
-        .accessibilityHint("Asks what you passed, then listens")
+        .accessibilityLabel("Add a note by voice")
+        .accessibilityHint("Asks for your note, then listens")
     }
 }
 

@@ -48,6 +48,34 @@ struct CaptureServiceTests {
         try container.mainContext.fetch(FetchDescriptor<Pin>())
     }
 
+    @Test func notesSaveTextWithoutLocationOrConfirmation() throws {
+        let confirmations = Confirmations()
+        let note = service(currentFix: fix(at: tap), confirmations: confirmations)
+            .addNote("Call about the farm for sale", now: tap)
+
+        #expect(try savedPins().count == 1)
+        #expect(note.isNote)
+        #expect(note.label == "Call about the farm for sale")
+        #expect(!note.hasLocation, "a note never takes the car's position")
+        #expect(note.capturedAt == tap)
+        #expect(confirmations.count == 0, "notes give their own feedback")
+    }
+
+    @Test func onlyEmptyNotesAreDiscarded() throws {
+        let capture = service(currentFix: fix(at: tap))
+        let empty = capture.addNote(nil, now: tap)
+        let written = capture.addNote("blue silo", now: tap)
+        let pin = try #require(capture.capture(side: .left, distance: .far, source: .app, now: tap.addingTimeInterval(5)))
+        #expect(empty.displayLabel == "Empty note")
+
+        capture.discardEmptyNote(empty)
+        capture.discardEmptyNote(written)
+        capture.discardEmptyNote(pin)
+
+        let ids = Set(try savedPins().map(\.id))
+        #expect(ids == [written.id, pin.id])
+    }
+
     @Test func oneTapSavesAPinWithoutALabel() throws {
         let confirmations = Confirmations()
         let pin = try #require(service(currentFix: fix(at: tap), confirmations: confirmations)

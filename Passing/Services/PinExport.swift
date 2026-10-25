@@ -24,6 +24,8 @@ struct PinRecord: Codable, Equatable {
     /// The name of the pin's group, if it's in one.
     var group: String?
     var source: String
+    /// A text note rather than a pin: no location, and `label` holds the text.
+    var isNote: Bool = false
     var isReviewed: Bool
     var isKept: Bool
     var deletedAt: Date?
@@ -73,7 +75,7 @@ enum PinExport {
         "id", "capturedAt", "fixTimestamp", "latitude", "longitude", "horizontalAccuracy",
         "course", "courseReliable", "side", "distance", "milesBack",
         "targetLatitude", "targetLongitude", "targetSource", "label", "placeName", "group", "source",
-        "isReviewed", "isKept", "deletedAt", "appleMapsURL", "googleMapsURL",
+        "isNote", "isReviewed", "isKept", "deletedAt", "appleMapsURL", "googleMapsURL",
     ]
 
     /// RFC 4180 CSV with a header row and CRLF line endings. Missing values are empty fields.
@@ -91,7 +93,7 @@ enum PinExport {
                 pin.side, pin.distance, "\(pin.milesBack)",
                 number(pin.targetLatitude), number(pin.targetLongitude), pin.targetSource,
                 pin.label ?? "", pin.placeName ?? "", pin.group ?? "", pin.source,
-                "\(pin.isReviewed)", "\(pin.isKept)", date(pin.deletedAt),
+                "\(pin.isNote)", "\(pin.isReviewed)", "\(pin.isKept)", date(pin.deletedAt),
                 pin.appleMapsURL ?? "", pin.googleMapsURL ?? "",
             ]
             lines.append(fields.map(csvField).joined(separator: ","))
@@ -126,7 +128,8 @@ enum PinExport {
     /// A KML file for Google My Maps (Create a new map, then Import) or Google Earth. Each pin is a
     /// placemark at its estimated spot if it has one, otherwise where the car was, with its details
     /// as fields My Maps shows in a table. Pins without a location can't go on a map, so they're left
-    /// out, and the document's description says how many.
+    /// out, and the document's description says how many. Notes aren't places, so they're left out
+    /// without being counted.
     static func kml(_ pins: [PinRecord], title: String, exportedAt: Date, timeZone: TimeZone = .current, locale: Locale = .current) -> String {
         let display = DateFormatter()
         display.dateStyle = .medium
@@ -135,8 +138,9 @@ enum PinExport {
         display.locale = locale
         let iso = ISO8601DateFormatter()
 
-        let mapped = pins.compactMap { pin in kmlCoordinate(for: pin).map { (pin, $0) } }
-        let missing = pins.count - mapped.count
+        let places = pins.filter { !$0.isNote }
+        let mapped = places.compactMap { pin in kmlCoordinate(for: pin).map { (pin, $0) } }
+        let missing = places.count - mapped.count
         var summary = "Exported from Passing on \(display.string(from: exportedAt))."
         if missing > 0 {
             summary += missing == 1 ? " 1 pin had no location and was left out." : " \(missing) pins had no location and were left out."

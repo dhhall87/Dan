@@ -28,6 +28,8 @@ struct PinListView: View {
     }
     @State private var exportFile: ExportFile?
     @State private var exportError: String?
+    @State private var addingNote = false
+    @State private var noteText = ""
 
     var body: some View {
         Group {
@@ -74,7 +76,23 @@ struct PinListView: View {
                     groupMenu
                     exportMenu
                 }
+                ToolbarItem(placement: .bottomBar) {
+                    Button {
+                        noteText = ""
+                        addingNote = true
+                    } label: {
+                        Label("New Note", systemImage: "square.and.pencil")
+                            .labelStyle(.titleAndIcon)
+                    }
+                }
             }
+        }
+        .alert("New Note", isPresented: $addingNote) {
+            TextField("What did you see?", text: $noteText)
+            Button("Save", action: saveNote)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Type it, or tap the microphone on the keyboard to dictate.")
         }
         .sheet(item: $exportFile) { file in
             ShareSheet(items: [file.url]) { shared in
@@ -408,6 +426,17 @@ struct PinListView: View {
         return byDay.keys.sorted(by: >).map { DaySection(day: $0, pins: byDay[$0] ?? []) }
     }
 
+    /// A typed (or keyboard-dictated) note, filed in the group being shown, if any.
+    private func saveNote() {
+        let text = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
+        noteText = ""
+        guard !text.isEmpty else { return }
+        let note = CaptureService.shared.addNote(text)
+        if case .group = filter, let group = shownGroup {
+            PinGroups.move(note, to: group, in: context)
+        }
+    }
+
     private var exportErrorShown: Binding<Bool> {
         Binding(get: { exportError != nil }, set: { if !$0 { exportError = nil } })
     }
@@ -491,12 +520,15 @@ struct PinRow: View {
                 Text(pin.displayLabel)
                     .font(.headline)
                     .foregroundStyle(pin.label?.isEmpty == false ? Color.primary : Color.secondary)
+                    .lineLimit(pin.isNote ? 4 : nil)
                 Text(details)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                Text(PinFormat.accuracy(of: pin))
-                    .font(.caption)
-                    .foregroundStyle(pin.hasLocation ? Color.secondary : Color.orange)
+                if !pin.isNote {
+                    Text(PinFormat.accuracy(of: pin))
+                        .font(.caption)
+                        .foregroundStyle(pin.hasLocation ? Color.secondary : Color.orange)
+                }
                 if showsGroup, let group = pin.group {
                     Label(group.name, systemImage: "folder")
                         .font(.caption)
@@ -527,10 +559,12 @@ struct PinRow: View {
 
     private var details: String {
         let time = pin.capturedAt.formatted(date: .omitted, time: .shortened)
+        if pin.isNote { return "\(time) · Note" }
         return ([time] + [pin.milesBackText, pin.sideAndDistance, pin.placeName].compactMap { $0 }).joined(separator: " · ")
     }
 
     private var icon: String {
+        if pin.isNote { return "note.text" }
         if pin.milesBack > 0 { return "arrow.uturn.backward.circle.fill" }
         switch pin.side {
         case .left: return "arrow.up.left.circle.fill"

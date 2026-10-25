@@ -21,6 +21,7 @@ struct PinDetailView: View {
 
     var body: some View {
         Form {
+            if !pin.isNote {
             Section {
                 if let coordinate = pin.captureCoordinate {
                     Map(initialPosition: mapPosition(around: coordinate)) {
@@ -46,17 +47,20 @@ struct PinDetailView: View {
                         .font(.callout)
                 }
             }
+            }
 
-            Section("What was it?") {
-                TextField("Label, e.g. large building", text: labelBinding, axis: .vertical)
-                Picker("Side", selection: $pin.side) {
-                    ForEach(Side.allCases) { side in
-                        Text(side.title).tag(side)
+            Section(pin.isNote ? "Note" : "What was it?") {
+                TextField(pin.isNote ? "Note" : "Label, e.g. large building", text: labelBinding, axis: .vertical)
+                if !pin.isNote {
+                    Picker("Side", selection: $pin.side) {
+                        ForEach(Side.allCases) { side in
+                            Text(side.title).tag(side)
+                        }
                     }
-                }
-                Picker("Distance", selection: $pin.distance) {
-                    ForEach(Distance.allCases) { distance in
-                        Text(distance.title).tag(distance)
+                    Picker("Distance", selection: $pin.distance) {
+                        ForEach(Distance.allCases) { distance in
+                            Text(distance.title).tag(distance)
+                        }
                     }
                 }
                 Picker("Group", selection: groupSelection) {
@@ -119,7 +123,7 @@ struct PinDetailView: View {
             }
 
             Section("Details") {
-                LabeledContent("Pinned", value: pin.capturedAt.formatted(date: .abbreviated, time: .standard))
+                LabeledContent(pin.isNote ? "Written" : "Pinned", value: pin.capturedAt.formatted(date: .abbreviated, time: .standard))
                 if pin.hasLocation {
                     LabeledContent("Town", value: pin.placeName ?? "Not looked up yet")
                 }
@@ -127,7 +131,9 @@ struct PinDetailView: View {
                     LabeledContent("Coordinates", value: MapLinks.coordinateString(latitude: latitude, longitude: longitude))
                         .textSelection(.enabled)
                 }
-                LabeledContent("Accuracy", value: PinFormat.accuracy(of: pin))
+                if !pin.isNote {
+                    LabeledContent("Accuracy", value: PinFormat.accuracy(of: pin))
+                }
                 if let fixTimestamp = pin.fixTimestamp {
                     LabeledContent("GPS fix", value: fixOffset(fixTimestamp))
                 }
@@ -141,12 +147,12 @@ struct PinDetailView: View {
             }
 
             Section {
-                Button("Delete Pin", role: .destructive) {
+                Button(pin.isNote ? "Delete Note" : "Delete Pin", role: .destructive) {
                     RetentionService.shared.moveToRecentlyDeleted(pin)
                     dismiss()
                 }
             } footer: {
-                Text("Moves the pin to Recently Deleted, where you can recover it for 30 days.")
+                Text("Moves it to Recently Deleted, where you can recover it for 30 days.")
             }
         }
         .navigationTitle(pin.displayLabel)

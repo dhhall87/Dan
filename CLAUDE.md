@@ -53,6 +53,7 @@ Native iPhone app for capturing things you pass while driving so you can look th
 | source | app / siri / widget / control / actionButton |
 | isReviewed, isKept | Bool |
 | deletedAt | nil unless in Recently Deleted |
+| isNote | Bool, default false; a text note with no location (text in `label`) |
 
 Keep capture coordinates and target coordinates separate. The app records where the car was plus the driver's directional clue. It never claims to know where the building actually is.
 
@@ -83,7 +84,7 @@ Dark, high contrast, no map, no clutter. Settings picks the layout Passing opens
 - Near and far zones use two distinct colors, mirrored on both sides.
 - The center divider is narrow and drawn as the road with the car on it. Tapping it saves a pin with side unknown.
 
-**"Label last pin" button** (bottom strip, next to "+1 mi back", Dan's request): asks "What did you pass?" and listens (same flow as listen-after-tap, `CaptureFeedback.labelLastPin()`). The answer labels the newest active pin from the last 30 minutes, from any source, so widget and CarPlay pins can get a spoken label; with none it captures a new pin first. Never prompts for permission on the capture screen; without speech permission it says how to enable it.
+**"Add a note" button** (bottom strip, next to "+1 mi back", Dan's request): asks "What's your note?" and listens (same flow as listen-after-tap, `CaptureFeedback.addSpokenNote()`). What's said is saved as a note: a `Pin` with `isNote = true`, the text in `label`, and no location or GPS. The note is saved before listening and removed if nothing is said (`CaptureService.discardEmptyNote`). Voice only on the capture screen; typed or keyboard-dictated notes come from **New Note** in the Pins list. Never prompts for permission on the capture screen; without speech permission it says how to enable it. Notes follow pin retention, keep, groups and delete; exports mark them `isNote`; KML leaves them out.
 
 **"+1 mi back" button** (bottom strip, both modes):
 - One action. A tap creates a pin placed 1 mile back along the breadcrumb trail.

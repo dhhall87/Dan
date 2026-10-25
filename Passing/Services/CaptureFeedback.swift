@@ -82,26 +82,21 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
-    /// The "Label last pin" button on the capture screen: asks "What did you pass?" and listens. What's
-    /// said becomes the label of the newest pin from the last 30 minutes (from the phone, Siri, a widget
-    /// or Control Center), replacing any label it had. With no recent pin, it makes one first. Saying
-    /// nothing changes nothing. Permission is only ever asked in Settings, never here.
-    func labelLastPin() {
+    /// The capture screen's "Add a note" button: asks "What's your note?" and listens. What's said is
+    /// saved as a note in Pins (text only, no pin or location). Saying nothing saves nothing.
+    /// Permission is only ever asked in Settings, never here.
+    func addSpokenNote() {
         guard SpeechListener.availability == .ready else {
             haptics.notificationOccurred(.warning)
             haptics.prepare()
-            preview("Voice labels are off. Turn on Listen after tap in Settings once to allow them.")
+            preview("Voice notes are off. Turn on Listen after tap in Settings once to allow them.")
             return
         }
-        let service = CaptureService.shared
-        if let pin = service.latestPin(since: Date.now.addingTimeInterval(-ListenPolicy.lastPinWindow)) {
-            haptics.notificationOccurred(.success)
-            haptics.prepare()
-            listenForLabel(on: pin, question: ListenPolicy.lastPinQuestion)
-        } else if let pin = service.capture(side: .unknown, distance: .unknown, source: .app), listeningPin == nil {
-            // The capture already gave its haptic (and listened itself if Listen after tap is on).
-            listenForLabel(on: pin, question: ListenPolicy.lastPinQuestion)
-        }
+        haptics.notificationOccurred(.success)
+        haptics.prepare()
+        // Saved first, like every capture, so a note can't be lost mid-sentence; removed if empty.
+        let note = CaptureService.shared.addNote(nil)
+        listenForLabel(on: note, question: ListenPolicy.noteQuestion)
     }
 
     /// Settings preview: speaks `text` in the given voice (or the chosen one), whatever the
@@ -244,6 +239,9 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
             listeningPin = nil
             ListeningSignal.setListening(false)
             WidgetCenter.shared.reloadAllTimelines()
+        }
+        if label == nil, pin.isNote {
+            CaptureService.shared.discardEmptyNote(pin)
         }
         if let label {
             CaptureService.shared.setLabel(label, on: pin)

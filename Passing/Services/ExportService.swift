@@ -77,6 +77,7 @@ extension PinRecord {
             placeName: pin.placeName,
             group: pin.group?.name,
             source: pin.source.rawValue,
+            isNote: pin.isNote,
             isReviewed: pin.isReviewed,
             isKept: pin.isKept,
             deletedAt: pin.deletedAt,

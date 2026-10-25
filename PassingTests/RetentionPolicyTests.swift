@@ -160,6 +160,21 @@ struct PinExportTests {
         #expect(kml.contains("1 pin had no location and was left out."))
     }
 
+    @Test func notesAreMarkedInCSVAndLeftOffTheMap() throws {
+        var note = record(label: "Call about the farm sale", latitude: nil, longitude: nil)
+        note.isNote = true
+        note.appleMapsURL = nil
+        note.googleMapsURL = nil
+        let row = PinExport.csv([note]).components(separatedBy: "\r\n")[1]
+        let fields = row.split(separator: ",", omittingEmptySubsequences: false)
+        let column = try #require(PinExport.csvColumns.firstIndex(of: "isNote"))
+        #expect(fields[column] == "true")
+
+        let kml = PinExport.kml([record(), note], title: "Passing pins", exportedAt: when)
+        #expect(kml.components(separatedBy: "<Placemark>").count == 2)
+        #expect(!kml.contains("left out"), "a note isn't a pin missing its location")
+    }
+
     @Test func kmlEscapesTextAndNamesUnlabeledPins() {
         let kml = PinExport.kml([record(label: "Tom & Jerry's <diner>"), record(group: "A \"B\"")], title: "Passing pins - Road trip", exportedAt: when)
         #expect(kml.contains("<name>Tom &amp; Jerry&apos;s &lt;diner&gt;</name>"))

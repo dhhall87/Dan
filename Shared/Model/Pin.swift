@@ -42,6 +42,9 @@ final class Pin {
     var deletedAt: Date?
     /// The folder it's filed in, if any. A pin is in at most one group.
     var group: PinGroup?
+    /// A text note rather than a place: no location is recorded, and `label` holds the text.
+    /// Added later, with a default, so the store migrates lightly.
+    var isNote: Bool = false
 
     init(capturedAt: Date, side: Side, distance: Distance, source: CaptureSource) {
         self.capturedAt = capturedAt
@@ -106,7 +109,7 @@ extension Pin {
     }
 
     var displayLabel: String {
-        guard let label, !label.isEmpty else { return "Unlabeled" }
+        guard let label, !label.isEmpty else { return isNote ? "Empty note" : "Unlabeled" }
         return label
     }
 

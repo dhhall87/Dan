@@ -5,10 +5,8 @@ import Foundation
 struct ListenPolicy {
     /// Asked out loud before listening (unless the driver chose the chime instead).
     static let question = "What are you passing?"
-    /// Asked by the "Label last pin" button.
-    static let lastPinQuestion = "What did you pass?"
-    /// "Label last pin" labels the newest pin made within this long; otherwise it makes a new pin.
-    static let lastPinWindow: TimeInterval = 30 * 60
+    /// Asked by the capture screen's "Add a note" button.
+    static let noteQuestion = "What's your note?"
 
     /// Give up if nothing is said within this long after the question (or chime).
     var waitForSpeech: TimeInterval = 6

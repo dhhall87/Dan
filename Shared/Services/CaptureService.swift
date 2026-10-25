@@ -102,14 +102,23 @@ final class CaptureService {
         return pin
     }
 
-    /// The newest active pin made at or after `cutoff`, from any source (app, Siri, widget, Control Center).
-    func latestPin(since cutoff: Date) -> Pin? {
-        var descriptor = FetchDescriptor<Pin>(
-            predicate: #Predicate { $0.deletedAt == nil && $0.capturedAt >= cutoff },
-            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
-        )
-        descriptor.fetchLimit = 1
-        return (try? context.fetch(descriptor))?.first
+    /// Saves a note: text only, no location and no GPS. It shows in Pins by day like a pin, and
+    /// expires, can be kept, grouped and deleted the same way.
+    @discardableResult
+    func addNote(_ text: String?, source: CaptureSource = .app, now: Date = .now) -> Pin {
+        let note = Pin(capturedAt: now, side: .unknown, distance: .unknown, source: source)
+        note.isNote = true
+        note.label = text
+        context.insert(note)
+        persist()
+        return note
+    }
+
+    /// Removes a spoken note that ended up with nothing said, so no empty notes pile up.
+    func discardEmptyNote(_ note: Pin) {
+        guard note.isNote, note.label?.isEmpty ?? true, note.modelContext != nil else { return }
+        context.delete(note)
+        persist()
     }
 
     /// Adds or replaces a pin's label (e.g. Siri's answer to "What did you see?").
