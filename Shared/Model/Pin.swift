@@ -40,6 +40,8 @@ final class Pin {
     var isKept: Bool = false
     /// Set when the pin is in Recently Deleted.
     var deletedAt: Date?
+    /// The folder it's filed in, if any. A pin is in at most one group.
+    var group: PinGroup?
 
     init(capturedAt: Date, side: Side, distance: Distance, source: CaptureSource) {
         self.capturedAt = capturedAt
@@ -71,6 +73,9 @@ extension Pin {
     }
 
     var hasLocation: Bool { latitude != nil && longitude != nil }
+
+    /// True until the town has been looked up. Pins with no location have nothing to look up.
+    var needsPlaceName: Bool { hasLocation && placeName == nil }
 
     /// The car's position, if a usable fix was recorded.
     var captureCoordinate: CLLocationCoordinate2D? {

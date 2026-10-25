@@ -5,7 +5,18 @@ import SwiftUI
 struct PinDetailView: View {
     @Bindable var pin: Pin
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
     @AppStorage(SettingsKey.keepIndefinitely) private var keepIndefinitely = false
+    @Query(sort: \PinGroup.name) private var groups: [PinGroup]
+    @State private var lookAround: LookAroundState = .loading
+    @State private var addingGroup = false
+    @State private var newGroupName = ""
+
+    private enum LookAroundState {
+        case loading
+        case ready(MKLookAroundScene)
+        case unavailable
+    }
 
     var body: some View {
         Form {
@@ -47,7 +58,38 @@ struct PinDetailView: View {
                         Text(distance.title).tag(distance)
                     }
                 }
+                Picker("Group", selection: groupSelection) {
+                    Text("None").tag(UUID?.none)
+                    ForEach(groups) { group in
+                        Text(group.name).tag(UUID?.some(group.id))
+                    }
+                }
+                Button("New Group…") {
+                    newGroupName = ""
+                    addingGroup = true
+                }
                 Toggle("Reviewed", isOn: $pin.isReviewed)
+            }
+
+            if pin.lookUpCoordinate != nil {
+                Section {
+                    switch lookAround {
+                    case .loading:
+                        ProgressView()
+                            .frame(maxWidth: .infinity, minHeight: 60)
+                    case .ready(let scene):
+                        LookAroundPreview(initialScene: scene)
+                            .frame(height: 220)
+                            .listRowInsets(EdgeInsets())
+                    case .unavailable:
+                        Text("No Look Around imagery here, or you're offline.")
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("Look Around")
+                } footer: {
+                    Text(pin.targetCoordinate != nil ? "At the estimated spot. Tap to look around." : "Where your car was. Tap to look around.")
+                }
             }
 
             Section {
@@ -71,6 +113,9 @@ struct PinDetailView: View {
 
             Section("Details") {
                 LabeledContent("Pinned", value: pin.capturedAt.formatted(date: .abbreviated, time: .standard))
+                if pin.hasLocation {
+                    LabeledContent("Town", value: pin.placeName ?? "Not looked up yet")
+                }
                 if let latitude = pin.latitude, let longitude = pin.longitude {
                     LabeledContent("Coordinates", value: MapLinks.coordinateString(latitude: latitude, longitude: longitude))
                         .textSelection(.enabled)
@@ -99,6 +144,41 @@ struct PinDetailView: View {
         }
         .navigationTitle(pin.displayLabel)
         .navigationBarTitleDisplayMode(.inline)
+        .alert("New Group", isPresented: $addingGroup) {
+            TextField("Name, e.g. Road trip", text: $newGroupName)
+            Button("Add") {
+                // A name that's blank or already taken just doesn't make a group.
+                if let group = PinGroups.create(named: newGroupName, in: context) {
+                    PinGroups.move(pin, to: group, in: context)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This pin goes into the new group.")
+        }
+        .task {
+            await loadLookAround()
+        }
+        .task {
+            await PlaceNameService.shared.fillMissing(in: [pin])
+        }
+    }
+
+    private var groupSelection: Binding<UUID?> {
+        Binding(
+            get: { pin.group?.id },
+            set: { id in
+                PinGroups.move(pin, to: groups.first { $0.id == id }, in: context)
+            }
+        )
+    }
+
+    /// Look Around needs the network and only exists where Apple has driven, so it's often missing
+    /// on rural roads. The pin itself never depends on it.
+    private func loadLookAround() async {
+        guard let coordinate = pin.lookUpCoordinate else { return }
+        let scene = try? await MKLookAroundSceneRequest(coordinate: coordinate).scene
+        lookAround = scene.map(LookAroundState.ready) ?? .unavailable
     }
 
     /// Close in on an ordinary pin; fit the car, the estimate and the route for a miles-back pin.

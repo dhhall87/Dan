@@ -10,7 +10,7 @@ struct CaptureServiceTests {
     let tap = Date(timeIntervalSinceReferenceDate: 800_000_000)
 
     init() throws {
-        container = try ModelContainer(for: Pin.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        container = try ModelContainer(for: Pin.self, PinGroup.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     }
 
     private final class Confirmations {

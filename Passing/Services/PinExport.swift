@@ -1,7 +1,7 @@
 import Foundation
 
 /// A plain copy of a pin for export. Kept separate from the SwiftData model so exporting can't
-/// change stored pins, and so the JSON/CSV formatting is easy to unit test.
+/// change stored pins, and so the JSON, CSV and KML formatting is easy to unit test.
 struct PinRecord: Codable, Equatable {
     var id: UUID
     var capturedAt: Date
@@ -21,6 +21,8 @@ struct PinRecord: Codable, Equatable {
     var trail: Data?
     var label: String?
     var placeName: String?
+    /// The name of the pin's group, if it's in one.
+    var group: String?
     var source: String
     var isReviewed: Bool
     var isKept: Bool
@@ -32,6 +34,7 @@ struct PinRecord: Codable, Equatable {
 enum ExportFormat: String, CaseIterable, Identifiable {
     case json
     case csv
+    case kml
 
     var id: String { rawValue }
     var fileExtension: String { rawValue }
@@ -40,6 +43,7 @@ enum ExportFormat: String, CaseIterable, Identifiable {
         switch self {
         case .json: return "JSON"
         case .csv: return "CSV (spreadsheet)"
+        case .kml: return "KML (Google My Maps)"
         }
     }
 }
@@ -68,7 +72,7 @@ enum PinExport {
     static let csvColumns = [
         "id", "capturedAt", "fixTimestamp", "latitude", "longitude", "horizontalAccuracy",
         "course", "courseReliable", "speed", "side", "distance", "milesBack",
-        "targetLatitude", "targetLongitude", "targetSource", "label", "placeName", "source",
+        "targetLatitude", "targetLongitude", "targetSource", "label", "placeName", "group", "source",
         "isReviewed", "isKept", "deletedAt", "appleMapsURL", "googleMapsURL",
     ]
 
@@ -86,7 +90,7 @@ enum PinExport {
                 number(pin.course), "\(pin.courseReliable)", number(pin.speed),
                 pin.side, pin.distance, "\(pin.milesBack)",
                 number(pin.targetLatitude), number(pin.targetLongitude), pin.targetSource,
-                pin.label ?? "", pin.placeName ?? "", pin.source,
+                pin.label ?? "", pin.placeName ?? "", pin.group ?? "", pin.source,
                 "\(pin.isReviewed)", "\(pin.isKept)", date(pin.deletedAt),
                 pin.appleMapsURL ?? "", pin.googleMapsURL ?? "",
             ]
@@ -101,11 +105,110 @@ enum PinExport {
         return "\"" + value.replacingOccurrences(of: "\"", with: "\"\"") + "\""
     }
 
-    /// "Passing pins 2026-10-25.csv", using the phone's local date.
-    static func fileName(format: ExportFormat, exportedAt: Date, timeZone: TimeZone = .current) -> String {
+    /// "Passing pins 2026-10-25.csv", or "Passing pins - Road trip 2026-10-25.csv" for one group,
+    /// using the phone's local date.
+    static func fileName(format: ExportFormat, exportedAt: Date, groupName: String? = nil, timeZone: TimeZone = .current) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate]
         formatter.timeZone = timeZone
-        return "Passing pins \(formatter.string(from: exportedAt)).\(format.fileExtension)"
+        // Slashes and colons aren't allowed in file names.
+        let group = groupName.map { " - " + $0.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-") } ?? ""
+        return "Passing pins\(group) \(formatter.string(from: exportedAt)).\(format.fileExtension)"
+    }
+
+    // MARK: KML
+
+    /// The title Google My Maps gives the imported layer: "Passing pins", or "Passing pins - Road trip".
+    static func kmlTitle(groupName: String?) -> String {
+        groupName.map { "Passing pins - \($0)" } ?? "Passing pins"
+    }
+
+    /// A KML file for Google My Maps (Create a new map, then Import) or Google Earth. Each pin is a
+    /// placemark at its estimated spot if it has one, otherwise where the car was, with its details
+    /// as fields My Maps shows in a table. Pins without a location can't go on a map, so they're left
+    /// out, and the document's description says how many.
+    static func kml(_ pins: [PinRecord], title: String, exportedAt: Date, timeZone: TimeZone = .current, locale: Locale = .current) -> String {
+        let display = DateFormatter()
+        display.dateStyle = .medium
+        display.timeStyle = .short
+        display.timeZone = timeZone
+        display.locale = locale
+        let iso = ISO8601DateFormatter()
+
+        let mapped = pins.compactMap { pin in kmlCoordinate(for: pin).map { (pin, $0) } }
+        let missing = pins.count - mapped.count
+        var summary = "Exported from Passing on \(display.string(from: exportedAt))."
+        if missing > 0 {
+            summary += missing == 1 ? " 1 pin had no location and was left out." : " \(missing) pins had no location and were left out."
+        }
+
+        var lines = [
+            #"<?xml version="1.0" encoding="UTF-8"?>"#,
+            #"<kml xmlns="http://www.opengis.net/kml/2.2">"#,
+            "<Document>",
+            "  <name>\(xml(title))</name>",
+            "  <description>\(xml(summary))</description>",
+        ]
+        for (pin, coordinate) in mapped {
+            let side = Side(rawValue: pin.side) ?? .unknown
+            let distance = Distance(rawValue: pin.distance) ?? .unknown
+            let fields: [(String, String?)] = [
+                ("Pinned", display.string(from: pin.capturedAt)),
+                ("Side", PinDescription.sideAndDistance(side: side, distance: distance)),
+                ("Miles back", pin.milesBack > 0 ? Geo.milesText(pin.milesBack) : nil),
+                ("Place", pin.placeName),
+                ("Group", pin.group),
+                ("Accuracy", pin.horizontalAccuracy.map { "±\(Int($0.rounded())) m" }),
+                ("Apple Maps", pin.appleMapsURL),
+            ]
+            let shown = fields.compactMap { name, value in value.map { (name, $0) } }
+            var note = shown.filter { $0.0 != "Apple Maps" && $0.0 != "Miles back" }.map { $0.1 }.joined(separator: " · ")
+            if pin.milesBack > 0 {
+                let miles = Geo.milesText(pin.milesBack)
+                note += pin.targetSource == TargetSource.breadcrumb.rawValue
+                    ? ". Estimated spot, \(miles) back along the road driven."
+                    : ". About \(miles) back the way you came; this marks where you were when you pinned it."
+            }
+            lines.append("  <Placemark>")
+            lines.append("    <name>\(xml(pin.label.flatMap { $0.isEmpty ? nil : $0 } ?? "Unlabeled"))</name>")
+            lines.append("    <description>\(xml(note))</description>")
+            lines.append("    <TimeStamp><when>\(iso.string(from: pin.capturedAt))</when></TimeStamp>")
+            lines.append("    <ExtendedData>")
+            for (name, value) in shown {
+                lines.append("      <Data name=\"\(xml(name))\"><value>\(xml(value))</value></Data>")
+            }
+            lines.append("    </ExtendedData>")
+            lines.append("    <Point><coordinates>\(coordinate)</coordinates></Point>")
+            lines.append("  </Placemark>")
+        }
+        lines.append("</Document>")
+        lines.append("</kml>")
+        return lines.joined(separator: "\n") + "\n"
+    }
+
+    /// "longitude,latitude,0" (KML puts longitude first) at the estimate if there is one, otherwise
+    /// where the car was. Nil when the pin has no location.
+    static func kmlCoordinate(for pin: PinRecord) -> String? {
+        let latitude: Double
+        let longitude: Double
+        if let targetLatitude = pin.targetLatitude, let targetLongitude = pin.targetLongitude {
+            latitude = targetLatitude
+            longitude = targetLongitude
+        } else if let captureLatitude = pin.latitude, let captureLongitude = pin.longitude {
+            latitude = captureLatitude
+            longitude = captureLongitude
+        } else {
+            return nil
+        }
+        return String(format: "%.6f,%.6f,0", longitude, latitude)
+    }
+
+    /// Escapes text for XML.
+    static func xml(_ text: String) -> String {
+        text.replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;")
+            .replacingOccurrences(of: "\"", with: "&quot;")
+            .replacingOccurrences(of: "'", with: "&apos;")
     }
 }

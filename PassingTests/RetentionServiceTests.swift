@@ -11,7 +11,7 @@ struct RetentionServiceTests {
     let day = RetentionPolicy.day
 
     init() throws {
-        container = try ModelContainer(for: Pin.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        container = try ModelContainer(for: Pin.self, PinGroup.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         retention = RetentionService(context: container.mainContext)
     }
 

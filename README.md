@@ -2,7 +2,7 @@
 
 Capture things you pass while driving, then look them up later. One tap saves a pin, and identifying the thing happens afterwards. The full spec is in [CLAUDE.md](CLAUDE.md).
 
-**Status:** Milestones 1–5 are done. Milestone 6 (review polish: Look Around, town names, groups, maps export) is next.
+**Status:** Milestones 1–5 are done. Milestone 6 (review polish) is built and waiting for its test run. Listen-after-tap moved to an optional Milestone 7.
 
 ## What it does so far
 
@@ -46,6 +46,17 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - Widget and Control Center pins are **silent**: no tone, no voice. For about 5 seconds, the button you tapped shows a tick with "Saved", or "No location" if no GPS reading arrived. Labels get added later in Pins.
 - **Location:** when you add a widget, iOS asks whether Passing's widgets may use your location. Allow it, and Passing's location setting becomes "While Using the App or Widgets". Each widget tap saves the pin first, then waits up to 15 seconds for a GPS reading, as Siri does.
 - Repeat taps on the same widget button within 0.75 s count as one, as on the capture screen.
+
+**Review polish (Milestone 6)**
+- **Town names:** each pin picks up the town it was near ("Garden City, KS") from Apple Maps. It shows in the list row and on the pin's screen. Lookups happen only while you're looking at your pins and online, a few seconds apart, so capture never waits on them. Miles-back pins use the estimated spot.
+- **Look Around:** a pin's screen shows Apple's street-level imagery of the spot. Tap it to look around. It needs the network, and rural roads often have no imagery.
+- **Groups:** file pins in named groups, like "Road trip" or "Houses to check". A pin is in at most one group, and deleting a group keeps its pins.
+  - **Manage groups:** folder button on the Pins list → **Manage Groups…** to make, rename (tap) or delete (swipe left) groups.
+  - **Show one group:** pick it from the same folder button.
+  - **File a pin:** touch and hold it in the list → **Group**, or use the **Group** picker on its screen (with **New Group…** right there).
+- **Map:** the map button on the Pins list shows the same pins on a map. Tap one for a card, then tap the card to open it.
+- **KML export for Google My Maps:** Export → **KML (Google My Maps)**. Each pin becomes a placemark with its label, time, side, town and group. Pins without a location are left out, and the file says how many.
+- **Exports follow what's shown.** With a group picked, JSON, CSV and KML contain just that group, and the file name says which. CSV and JSON now have a group column too.
 
 ## Run it
 
@@ -124,6 +135,20 @@ Before you start: in Xcode, choose **Integrate → Pull** (or **Source Control �
 9. **No location:** iOS Settings → Privacy & Security → Location Services → Passing → choose **While Using the App** (not "…or Widgets"). Tap the Pin widget. After about 15 seconds it shows **No location**, and the pin is saved anyway with no position. Set it back to **While Using the App or Widgets**.
 10. iOS Settings → Privacy & Security → Location Services → Passing: the purpose text now mentions widgets, Control Center and Siri.
 
+## Milestone 6 manual test checklist
+
+1. Pull, then ⌘U and ⌘R. **Your existing pins are all still there.** This update adds groups to the database, so this checks the upgrade worked.
+2. **Town names:** open **Pins** (with your Mac online). Within a few seconds, rows with a location show a town after the side and distance. Open one: **Details → Town** shows it.
+3. **Look Around:** set the Simulator's location to a city (location arrow in Xcode's debug bar → e.g. San Francisco), make a pin, and open it. The **Look Around** section shows street imagery. Tap it to look around. A pin in rural Kansas probably says there's no imagery; that's expected.
+4. **Groups:** Pins → folder button → **Manage Groups…** → add **Road trip** and **Houses**. Adding a second "road trip" is refused.
+5. Touch and hold a pin → **Group → Road trip**. The row shows a folder label "Road trip". Open another pin, set **Group** to Houses, and try **New Group…** too.
+6. Folder button → **Road trip**. The title becomes "Road trip" and only that pin shows. Pick **All Pins** to see everything again.
+7. **Delete a group:** Manage Groups → swipe left on **Houses** → Delete. Its pin is still in Pins, now with no group. If you were showing Houses, the list goes back to All Pins.
+8. **Map:** tap the map button. Your pins appear on a map, with miles-back pins at their estimated spot. Tap one: a card appears, and tapping it opens the pin. Pick a group from the folder button: the map shows only that group.
+9. **KML:** show **Road trip**, then Export → **KML (Google My Maps)** → **Save to Files**. On your Mac, go to Google My Maps (google.com/mymaps) → **Create a new map** → name it **Passing pins** → **Import** → choose the file. The pin appears with its label, and clicking it shows the time, side, town and group.
+10. Export → **CSV** with All Pins showing. The file has a **group** column.
+11. Tap the Pin widget on the home screen. The new pin shows up in Pins as before.
+
 ## Set up the App Group (needed for your own iPhone)
 
 The project ships with the App Group `group.com.example.passing`. To run on your phone, the bundle IDs and App Group have to be yours. There are two targets to change, the app and the widget:
@@ -158,6 +183,11 @@ If the App Group doesn't match, the app still works, but Settings shows an orang
 - **The grid widget is 2x2, unlike the phone screen.** The spec asks for that, and a small widget is too narrow for five columns you can hit while driving.
 - **No automatic Apple Maps Guide:** Apple doesn't let apps create Guides or add places to them. Milestone 6 adds a KML export that Google My Maps turns into a "Passing pins" map. Each pin also keeps "Open in Apple Maps", where you can tap "Add to Guide" yourself.
 
+- **Town names are looked up lazily**, at most 20 each time you open the list, 1.5 seconds apart, because Apple limits how fast apps can ask. Pins Apple has no town for are skipped until the next launch. Offline, nothing happens until next time.
+- **Pins in Recently Deleted keep their group**, so recovering one puts it back where it was. Group counts only include active pins.
+- **KML placemarks go where map links go:** the estimated spot for miles-back pins, otherwise where the car was.
+- **Listen-after-tap is now its own optional Milestone 7.** It's the only remaining piece that changes how capture works, and it needs microphone and speech-recognition permission.
+
 ## Project layout
 
 | Piece | Where |
@@ -172,7 +202,9 @@ If the App Group doesn't match, the app still works, but Settings shows an orang
 | Miles back (trail and estimate) | `Shared/Model/BreadcrumbBuffer.swift`, `Shared/Services/CaptureService.swift` |
 | Voice and phrases | `Shared/Model/SpokenConfirmation.swift`, `Passing/Views/VoicePickerView.swift`, `PhrasesView.swift` |
 | Retention rules and clean-up | `Shared/Model/RetentionPolicy.swift`, `Passing/Services/RetentionService.swift` |
-| Export | `Passing/Services/PinExport.swift`, `Passing/Services/ExportService.swift` |
+| Export (JSON, CSV, KML) | `Passing/Services/PinExport.swift`, `Passing/Services/ExportService.swift` |
 | Haptic, tone and speech | `Passing/Services/CaptureFeedback.swift` |
-| Review screens | `Passing/Views/PinListView.swift`, `PinDetailView.swift`, `RecentlyDeletedView.swift` |
+| Review screens | `Passing/Views/PinListView.swift`, `PinDetailView.swift`, `PinsMapView.swift`, `RecentlyDeletedView.swift` |
+| Groups | `Shared/Model/PinGroup.swift`, `Passing/Services/PinGroups.swift`, `Passing/Model/GroupFilter.swift`, `Passing/Views/GroupsView.swift` |
+| Town names | `Passing/Services/PlaceNameService.swift`, `Passing/Model/PlaceNaming.swift` |
 | Tests | `PassingTests/` |

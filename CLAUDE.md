@@ -151,7 +151,8 @@ Dark, high contrast, no map, no clutter. Mode switch lives in Settings, not on t
 3. **Miles back and voice options.** BreadcrumbBuffer, +1 mi back button with bump-on-repeat, target estimation, trail on review map. Voice picker and custom confirmation phrases.
 4. **Siri.** CapturePinIntent with save-then-ask label flow, Quick Pin (never asks), App Shortcuts, Action Button and Back Tap setup, spoken confirmations pause other audio. The Control Center control moves to Milestone 5, because it needs the same widget extension target as the widget.
 5. **Widget / CarPlay.** Widget extension with the systemSmall widget (single and 2x2) and the Control Center control, tested in the CarPlay Simulator.
-6. **Review polish.** Look Around, reverse geocoding, pin groups (folders), KML export for a Google My Maps "Passing pins" map, optional listen-after-tap.
+6. **Review polish.** Look Around, reverse geocoding, pin groups (folders), KML export for a Google My Maps "Passing pins" map, and the all-pins map view from the review screen spec.
+7. **Listen after tap (optional).** Split out of Milestone 6: it's the only remaining piece that changes capture, and it needs microphone and speech-recognition permission.
 
 Later / maybe: native CarPlay app (only if publishing).
 
@@ -181,11 +182,14 @@ Later / maybe: native CarPlay app (only if publishing).
 ## Current status
 
 - Milestones 1–5 are done and confirmed by Dan (Milestone 5 in the Simulator, including its CarPlay window). Work happens on branch `claude/road-marker-pin-app-flj2qm`.
-- **Next: Milestone 6.** Don't start it until Dan asks. Notes from Milestone 5:
+- **Milestone 6 is built and waiting for Dan's test run** (README, "Milestone 6 manual test checklist"). Don't start Milestone 7 until he confirms. Notes:
+  - Town names use iOS 26's `MKReverseGeocodingRequest` (`try await request.mapItems`, `addressRepresentations.cityWithContext`), and Look Around uses `MKLookAroundSceneRequest(...).scene`. Both async forms come from Apple's own examples rather than the reference pages, which only list the completion-handler methods. If either doesn't compile, switch to `getMapItems(completionHandler:)` / `getSceneWithCompletionHandler(_:)`.
+  - Groups added `PinGroup` and `Pin.group` (lightweight migration). `SharedStore` now tries the App Group store three times, 0.5 s apart, before falling back, in case the app and widget open it mid-migration.
+- Notes from Milestone 5:
   - The widget extension target (`PassingWidgetExtension`, folder `PassingWidget/`) was added to the hand-written `project.pbxproj` directly instead of through Xcode's New Target wizard. The wizard would have needed a round trip and several manual file moves, and the project file was hand-written to begin with.
   - Code used by both targets lives in `Shared/` (a synced folder in both targets). `CaptureService.shared` is defined per target: `Passing/Services/CaptureService+App.swift` and `PassingWidget/CaptureService+Widget.swift`. Siri intents and `PassingShortcuts` stay app-only, so the system never runs them in the extension (`allowedExecutionTargets` is iOS 27+, so it can't be used to pin them).
   - Per Apple's docs, widget buttons and controls run their intent in the widget extension. Widgets get location through `NSWidgetWantsLocation` ("While Using the App or Widgets"). Still unverified: whether CarPlay widget buttons work with the iPhone locked, and location from the widget in a real car (only testable in a car).
   - This environment can't build iOS. Pure-logic tests run on Linux through a scratch SwiftPM package; Dan runs ⌘U in Xcode.
-- **Before changing the Pin schema (Milestone 6 groups):** after an update, the app and the widget extension can both open the store at once and both try the migration. `SharedStore` falls back to a private store if the App Group store won't open, which would hide pins (in the widget, silently). Plan the migration and that fallback together.
+- **Schema changes:** after an update, the app and the widget extension can both open the store at once and both try the migration. `SharedStore` retries, then falls back to a private store, which would hide pins (in the widget, silently). Keep model changes additive (new optional fields, new models) so migrations stay lightweight.
 - **Reviewed and declined (October 2026):** keeping GPS on in the background or asking for Always (battery; Dan wants location only while the app is open, plus the short burst per capture); `requestLocation()` for intents (it can hand back a cached fix, and the burst keeps going until a fresh one arrives); `ModelActor` (all store access is already on the main actor, one container per process); `usesApplicationAudioSession = false` (speech would stop pausing or lowering music); background-task wrappers against `0xdead10cc` (every save finishes while the app is on screen or before the Siri/widget intent returns). Revisit the last one if a crash report ever shows `0xdead10cc`.
 - **Future, not now:** `ROADMAP.md` holds the Passing Pro and sales-workflow roadmap. Don't implement any of it or change the milestones until Dan asks. When it starts, inspect the code and propose a focused plan first.

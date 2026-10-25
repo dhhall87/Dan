@@ -72,7 +72,7 @@ struct RetentionPolicyTests {
 struct PinExportTests {
     let when = Date(timeIntervalSinceReferenceDate: 800_000_000)
 
-    private func record(label: String? = nil, latitude: Double? = 40.7128, longitude: Double? = -74.006) -> PinRecord {
+    private func record(label: String? = nil, latitude: Double? = 40.7128, longitude: Double? = -74.006, group: String? = nil) -> PinRecord {
         PinRecord(
             id: UUID(uuidString: "11111111-2222-3333-4444-555555555555")!,
             capturedAt: when, fixTimestamp: when,
@@ -80,7 +80,7 @@ struct PinExportTests {
             course: 225, courseReliable: true, speed: 27,
             side: "left", distance: "far", milesBack: 0,
             targetLatitude: nil, targetLongitude: nil, targetSource: "direct",
-            trail: nil, label: label, placeName: nil, source: "app",
+            trail: nil, label: label, placeName: nil, group: group, source: "app",
             isReviewed: false, isKept: true, deletedAt: nil,
             appleMapsURL: "https://maps.apple.com/?ll=40.712800,-74.006000&q=Passing%20pin",
             googleMapsURL: "https://www.google.com/maps/search/?api=1&query=40.712800,-74.006000"
@@ -121,10 +121,58 @@ struct PinExportTests {
         #expect(document.pins == pins)
     }
 
+    @Test func csvIncludesTheGroup() throws {
+        var pin = record(group: "Road trip")
+        pin.appleMapsURL = nil
+        pin.googleMapsURL = nil
+        let row = PinExport.csv([pin]).components(separatedBy: "\r\n")[1]
+        let fields = row.split(separator: ",", omittingEmptySubsequences: false)
+        let column = try #require(PinExport.csvColumns.firstIndex(of: "group"))
+        #expect(fields[column] == "Road trip")
+    }
+
+    @Test func kmlPutsEachPinAtItsEstimateOrTheCar() {
+        var milesBack = record(label: "diner")
+        milesBack.milesBack = 2
+        milesBack.targetLatitude = 40.7
+        milesBack.targetLongitude = -74.1
+        milesBack.targetSource = "breadcrumb"
+        let kml = PinExport.kml([record(label: "red barn"), milesBack], title: "Passing pins", exportedAt: when)
+
+        #expect(kml.hasPrefix("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"))
+        #expect(kml.contains("<name>Passing pins</name>"))
+        #expect(kml.contains("<coordinates>-74.006000,40.712800,0</coordinates>"), "longitude first, at the car")
+        #expect(kml.contains("<coordinates>-74.100000,40.700000,0</coordinates>"), "at the miles-back estimate")
+        #expect(kml.contains("Estimated spot, 2 miles back"))
+        #expect(kml.contains("<Data name=\"Miles back\"><value>2 miles</value></Data>"))
+        #expect(kml.components(separatedBy: "<Placemark>").count == 3)
+    }
+
+    @Test func kmlLeavesOutPinsWithoutALocationAndSaysSo() {
+        let kml = PinExport.kml([record(), record(latitude: nil, longitude: nil)], title: "Passing pins", exportedAt: when)
+        #expect(kml.components(separatedBy: "<Placemark>").count == 2)
+        #expect(kml.contains("1 pin had no location and was left out."))
+    }
+
+    @Test func kmlEscapesTextAndNamesUnlabeledPins() {
+        let kml = PinExport.kml([record(label: "Tom & Jerry's <diner>"), record(group: "A \"B\"")], title: "Passing pins - Road trip", exportedAt: when)
+        #expect(kml.contains("<name>Tom &amp; Jerry&apos;s &lt;diner&gt;</name>"))
+        #expect(kml.contains("<name>Unlabeled</name>"))
+        #expect(kml.contains("<value>A &quot;B&quot;</value>"))
+        #expect(!kml.contains("<diner>"))
+    }
+
+    @Test func kmlTitleNamesTheGroup() {
+        #expect(PinExport.kmlTitle(groupName: nil) == "Passing pins")
+        #expect(PinExport.kmlTitle(groupName: "Road trip") == "Passing pins - Road trip")
+    }
+
     @Test func fileNameUsesTheLocalDate() {
         let utc = TimeZone(identifier: "UTC")!
         let name = PinExport.fileName(format: .csv, exportedAt: Date(timeIntervalSince1970: 1_793_000_000), timeZone: utc)
         #expect(name == "Passing pins 2026-10-26.csv")
         #expect(PinExport.fileName(format: .json, exportedAt: Date(timeIntervalSince1970: 1_793_000_000), timeZone: utc).hasSuffix(".json"))
+        #expect(PinExport.fileName(format: .kml, exportedAt: Date(timeIntervalSince1970: 1_793_000_000), groupName: "Trip 1/2", timeZone: utc)
+                == "Passing pins - Trip 1-2 2026-10-26.kml")
     }
 }

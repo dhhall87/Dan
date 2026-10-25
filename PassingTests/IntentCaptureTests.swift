@@ -10,7 +10,7 @@ struct IntentCaptureTests {
     let now = Date()
 
     init() throws {
-        container = try ModelContainer(for: Pin.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        container = try ModelContainer(for: Pin.self, PinGroup.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     }
 
     private final class Confirmations {
