@@ -25,6 +25,8 @@ struct PassingApp: App {
 /// inside the Pins list made the two feed back into each other and froze the app.
 enum Route: Hashable {
     case pins
+    /// The Pins list showing Needs Review (where review reminders lead).
+    case needsReview
     case recentlyDeleted
 }
 
@@ -81,6 +83,7 @@ struct RootView: View {
                 .navigationDestination(for: Route.self) { route in
                     switch route {
                     case .pins: PinListView().id(listRefresh)
+                    case .needsReview: PinListView(filter: .needsReview).id(listRefresh)
                     case .recentlyDeleted: RecentlyDeletedView()
                     }
                 }

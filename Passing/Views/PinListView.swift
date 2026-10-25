@@ -13,7 +13,7 @@ struct PinListView: View {
     @AppStorage(SettingsKey.deleteAfterExport) private var deleteAfterExport = false
     /// A plain count rather than a second live query: Recently Deleted has its own.
     @State private var recentlyDeletedCount = 0
-    @State private var filter: GroupFilter = .all
+    @State private var filter: GroupFilter
     @State private var showsMap = false
     @State private var managingGroups = false
     @State private var isSelecting = false
@@ -28,6 +28,11 @@ struct PinListView: View {
     }
     @State private var exportFile: ExportFile?
     @State private var exportError: String?
+
+    /// `filter` is where the list starts: All Pins, or Needs Review from a review reminder.
+    init(filter: GroupFilter = .all) {
+        self.filter = filter
+    }
     @State private var addingNote = false
     @State private var noteText = ""
 
@@ -140,8 +145,29 @@ struct PinListView: View {
 
     private var list: some View {
         List {
+            if filter == .all, !isSelecting, needsReviewCount > 0 {
+                Section {
+                    Button {
+                        filter = .needsReview
+                    } label: {
+                        LabeledContent {
+                            Text("\(needsReviewCount)")
+                        } label: {
+                            Label("Needs Review", systemImage: "tray.full")
+                        }
+                    }
+                } footer: {
+                    Text("Pins and notes you haven't marked Reviewed yet, such as ones from the widget or CarPlay.")
+                }
+            }
             if shownPins.isEmpty {
-                if filter == .all {
+                if filter == .needsReview {
+                    ContentUnavailableView(
+                        "All caught up",
+                        systemImage: "checkmark.circle",
+                        description: Text("Pins you haven't marked Reviewed show here. Swipe right on a pin, or open it and turn on Reviewed.")
+                    )
+                } else if filter == .all {
                     ContentUnavailableView(
                         "No pins yet",
                         systemImage: "mappin.slash",
@@ -203,7 +229,7 @@ struct PinListView: View {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
                     .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
-                PinRow(pin: pin, keepIndefinitely: keepIndefinitely, showsGroup: filter == .all)
+                PinRow(pin: pin, keepIndefinitely: keepIndefinitely, showsGroup: showsGroups)
             }
             .contentShape(Rectangle())
         }
@@ -213,16 +239,17 @@ struct PinListView: View {
 
     private func navigableRow(for pin: Pin) -> some View {
         NavigationLink(value: pin) {
-            PinRow(pin: pin, keepIndefinitely: keepIndefinitely, showsGroup: filter == .all)
+            PinRow(pin: pin, keepIndefinitely: keepIndefinitely, showsGroup: showsGroups)
         }
         .swipeActions(edge: .leading) {
-            Button {
-                pin.isKept.toggle()
-                try? context.save()
-            } label: {
-                Label(pin.isKept ? "Unkeep" : "Keep", systemImage: pin.isKept ? "star.slash" : "star")
+            // A full swipe does the first one: Reviewed in Needs Review, Keep everywhere else.
+            if filter == .needsReview {
+                reviewedButton(for: pin)
+                keepButton(for: pin)
+            } else {
+                keepButton(for: pin)
+                reviewedButton(for: pin)
             }
-            .tint(.yellow)
         }
         .swipeActions(edge: .trailing) {
             Button(role: .destructive) {
@@ -340,12 +367,33 @@ struct PinListView: View {
         return count == 0 ? "Select Pins" : "\(count) Selected"
     }
 
+    private func keepButton(for pin: Pin) -> some View {
+        Button {
+            pin.isKept.toggle()
+            try? context.save()
+        } label: {
+            Label(pin.isKept ? "Unkeep" : "Keep", systemImage: pin.isKept ? "star.slash" : "star")
+        }
+        .tint(.yellow)
+    }
+
+    private func reviewedButton(for pin: Pin) -> some View {
+        Button {
+            pin.isReviewed.toggle()
+            try? context.save()
+        } label: {
+            Label(pin.isReviewed ? "Not Reviewed" : "Reviewed", systemImage: pin.isReviewed ? "circle" : "checkmark.circle")
+        }
+        .tint(.green)
+    }
+
     // MARK: Toolbar menus
 
     private var groupMenu: some View {
         Menu {
             Picker("Show", selection: $filter) {
                 Text("All Pins").tag(GroupFilter.all)
+                Text("Needs Review").tag(GroupFilter.needsReview)
                 Text("Not in a Group").tag(GroupFilter.ungrouped)
                 ForEach(groups) { group in
                     Text(group.name).tag(GroupFilter.group(group.id))
@@ -384,7 +432,19 @@ struct PinListView: View {
     // MARK: Helpers
 
     private var shownPins: [Pin] {
-        pins.filter { filter.includes(groupID: $0.group?.id) }
+        pins.filter { filter.includes(groupID: $0.group?.id, isReviewed: $0.isReviewed) }
+    }
+
+    private var needsReviewCount: Int {
+        pins.reduce(0) { $0 + ($1.isReviewed ? 0 : 1) }
+    }
+
+    /// Group names on rows, except when the list is already one group.
+    private var showsGroups: Bool {
+        switch filter {
+        case .all, .needsReview: return true
+        case .ungrouped, .group: return false
+        }
     }
 
     private var shownGroup: PinGroup? {
@@ -395,6 +455,7 @@ struct PinListView: View {
     private var title: String {
         switch filter {
         case .all: return "Pins"
+        case .needsReview: return "Needs Review"
         case .ungrouped: return "Not in a Group"
         case .group: return shownGroup?.name ?? "Pins"
         }
@@ -461,6 +522,7 @@ struct PinListView: View {
     private var groupNameForExport: String? {
         switch filter {
         case .all: return nil
+        case .needsReview: return "Needs review"
         case .ungrouped: return "Not in a group"
         case .group: return shownGroup?.name
         }

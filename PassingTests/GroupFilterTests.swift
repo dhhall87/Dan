@@ -7,19 +7,26 @@ struct GroupFilterTests {
     let houses = UUID()
 
     @Test func allShowsEverything() {
-        #expect(GroupFilter.all.includes(groupID: nil))
-        #expect(GroupFilter.all.includes(groupID: roadTrip))
+        #expect(GroupFilter.all.includes(groupID: nil, isReviewed: false))
+        #expect(GroupFilter.all.includes(groupID: roadTrip, isReviewed: false))
     }
 
     @Test func oneGroupShowsOnlyItsPins() {
-        #expect(GroupFilter.group(roadTrip).includes(groupID: roadTrip))
-        #expect(!GroupFilter.group(roadTrip).includes(groupID: houses))
-        #expect(!GroupFilter.group(roadTrip).includes(groupID: nil))
+        #expect(GroupFilter.group(roadTrip).includes(groupID: roadTrip, isReviewed: false))
+        #expect(!GroupFilter.group(roadTrip).includes(groupID: houses, isReviewed: false))
+        #expect(!GroupFilter.group(roadTrip).includes(groupID: nil, isReviewed: false))
+    }
+
+    @Test func needsReviewShowsUnreviewedPinsInAnyGroup() {
+        #expect(GroupFilter.needsReview.includes(groupID: nil, isReviewed: false))
+        #expect(GroupFilter.needsReview.includes(groupID: roadTrip, isReviewed: false))
+        #expect(!GroupFilter.needsReview.includes(groupID: nil, isReviewed: true))
+        #expect(GroupFilter.all.includes(groupID: nil, isReviewed: true))
     }
 
     @Test func ungroupedShowsPinsWithoutAGroup() {
-        #expect(GroupFilter.ungrouped.includes(groupID: nil))
-        #expect(!GroupFilter.ungrouped.includes(groupID: roadTrip))
+        #expect(GroupFilter.ungrouped.includes(groupID: nil, isReviewed: false))
+        #expect(!GroupFilter.ungrouped.includes(groupID: roadTrip, isReviewed: false))
     }
 }
 
