@@ -246,7 +246,7 @@ The Simulator uses your Mac's microphone. It usually has no on-device speech mod
 9. **Landscape:** rotate the Simulator (⌘→). Everything fits, and the Simple pin shrinks to make room. Rotate back.
 10. **Widgets:** the **Pin** widget shows the yellow pin. If it still shows the old symbol, remove it and add it again. Check both widgets in the CarPlay window too.
 11. **Light mode:** with Settings → Appearance → Light, the capture screen and its title bar stay dark.
-12. **Pins by day:** each day has its own card under a bold heading (**Today · Sat, Oct 25**, **Yesterday**, then dates) with a pin count. To see it without waiting a day: make a few pins, then Settings → Testing → **Clock: +1 day**. Those pins move under **Yesterday**. New pins still use the real time, so they join them; the test clock only moves "now", not when pins were made. Set it back to 0.
+12. **Pins by day:** each day has its own card under a bold heading (**Today** or **Yesterday** with the date beside it, then dates) with a pin count. To see it without waiting a day: make a few pins, then Settings → Testing → **Clock: +1 day**. Those pins move under **Yesterday**. New pins still use the real time, so they join them; the test clock only moves "now", not when pins were made. Set it back to 0.
 13. **On your iPhone 16 Pro, parked:** check the screen is easy to read in the mount, in daylight and at night, and that the title button isn't easy to hit by accident. The Action Button's **Quick Pin** works as before.
 
 ## Set up the App Group (needed for your own iPhone)
