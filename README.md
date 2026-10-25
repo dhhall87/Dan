@@ -2,7 +2,7 @@
 
 Capture things you pass while driving, then look them up later. One tap saves a pin, and identifying the thing happens afterwards. The full spec is in [CLAUDE.md](CLAUDE.md).
 
-**Status:** Milestones 1–3 are done. Milestone 4 (Siri) is ready to test. The widget/CarPlay path (with the Control Center control) and review polish (groups, maps export) come in milestones 5–6.
+**Status:** Milestones 1–4 are done. Milestone 5 is next. The widget/CarPlay path (with the Control Center control) and review polish (groups, maps export) come in milestones 5–6.
 
 ## What it does so far
 

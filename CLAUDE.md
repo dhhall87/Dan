@@ -177,3 +177,12 @@ Later / maybe: native CarPlay app (only if publishing).
 - Capture never requires reading, typing, or answering.
 - Nothing pops up or changes screens on the capture screen after a tap.
 - Every voice prompt is optional and can be turned off.
+
+## Current status
+
+- Milestones 1–4 are done and confirmed by Dan. Work happens on branch `claude/road-marker-pin-app-flj2qm`.
+- **Next: Milestone 5.** Notes from planning:
+  - `Passing.xcodeproj/project.pbxproj` was written by hand. Per the rules above, Dan adds the Widget Extension target in Xcode (File → New → Target → Widget Extension, with "Include Control" ticked) and gives it the same App Group. Then the template files get replaced.
+  - The control and the widget buttons should run `QuickPinIntent` (never asks). The 2x2 widget needs side/distance variants of it.
+  - Verify first: which process runs a widget or control intent, and whether it can get a location under When In Use. Check Apple's docs for `AppIntent.allowedExecutionTargets` / `IntentExecutionTargets` (listed in the current AppIntent docs) before choosing an approach.
+  - This environment can't build iOS. Pure-logic tests run on Linux through a scratch SwiftPM package; Dan runs ⌘U in Xcode.
