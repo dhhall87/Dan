@@ -85,6 +85,18 @@ final class RetentionService {
         save()
     }
 
+    /// Settings → Privacy → Delete All Pins: every pin, kept ones and Recently Deleted included, gone
+    /// for good. Groups stay (empty) and are deleted separately.
+    @discardableResult
+    func deleteAllPins() -> Int {
+        let pins = (try? context.fetch(FetchDescriptor<Pin>())) ?? []
+        for pin in pins {
+            context.delete(pin)
+        }
+        save()
+        return pins.count
+    }
+
     func emptyRecentlyDeleted() {
         let inRecentlyDeleted = FetchDescriptor<Pin>(predicate: #Predicate { $0.deletedAt != nil })
         for pin in (try? context.fetch(inRecentlyDeleted)) ?? [] {

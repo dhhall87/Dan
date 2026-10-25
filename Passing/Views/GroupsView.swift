@@ -52,12 +52,17 @@ struct GroupsView: View {
                         }
                     }
                 } footer: {
-                    Text("Tap a group to rename it. Swipe left to delete one; its pins stay in your list.")
+                    Text("Tap a group to rename or delete it, or swipe left (or tap Edit) to delete. Deleting a group keeps its pins.")
                 }
             }
             .navigationTitle("Groups")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    // Shows a delete button on every group, for anyone who doesn't know to swipe.
+                    EditButton()
+                        .disabled(groups.isEmpty)
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
@@ -66,7 +71,15 @@ struct GroupsView: View {
             .alert("Rename Group", isPresented: renamingShown) {
                 TextField("Name", text: $renameText)
                 Button("Save") { saveRename() }
+                Button("Delete Group", role: .destructive) {
+                    if let group = renaming {
+                        PinGroups.delete(group, in: context)
+                    }
+                    renaming = nil
+                }
                 Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Deleting a group keeps its pins.")
             }
         }
     }

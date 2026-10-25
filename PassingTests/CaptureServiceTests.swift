@@ -89,6 +89,23 @@ struct CaptureServiceTests {
         #expect(try savedPins().count == 3)
     }
 
+    @Test func preciseLocationOffKeepsOnlyRoughlyWhere() throws {
+        let capture = CaptureService(
+            context: container.mainContext,
+            currentFix: { self.fix(at: self.tap) },
+            lateFix: { nil },
+            trail: { BreadcrumbBuffer() },
+            confirm: { _ in },
+            isPrecise: { false }
+        )
+        let pin = try #require(capture.capture(side: .left, distance: .far, source: .app, now: tap))
+        #expect(pin.latitude == 40.71 && pin.longitude == -74.01)
+        #expect(pin.speed == nil, "no speed without precise location")
+        #expect(pin.course == 225, "the direction is kept, to the nearest compass point")
+        #expect(pin.horizontalAccuracy == CoarseLocation.accuracy)
+        #expect(pin.isApproximate)
+    }
+
     @Test func widgetAndControlCenterTapsAreDebouncedToo() throws {
         let capture = service(currentFix: fix(at: tap))
         #expect(capture.capture(side: .left, distance: .near, source: .widget, now: tap) != nil)

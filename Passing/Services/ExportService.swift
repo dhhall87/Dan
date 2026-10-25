@@ -66,7 +66,6 @@ extension PinRecord {
             horizontalAccuracy: pin.horizontalAccuracy,
             course: pin.course,
             courseReliable: pin.courseReliable,
-            speed: pin.speed,
             side: pin.side.rawValue,
             distance: pin.distance.rawValue,
             milesBack: pin.milesBack,

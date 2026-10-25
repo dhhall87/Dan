@@ -1,7 +1,8 @@
 import Foundation
 
 /// A plain copy of a pin for export. Kept separate from the SwiftData model so exporting can't
-/// change stored pins, and so the JSON, CSV and KML formatting is easy to unit test.
+/// change stored pins, and so the JSON, CSV and KML formatting is easy to unit test. Speed is left
+/// out on purpose: an export can end up anywhere, and how fast you were driving isn't needed there.
 struct PinRecord: Codable, Equatable {
     var id: UUID
     var capturedAt: Date
@@ -11,7 +12,6 @@ struct PinRecord: Codable, Equatable {
     var horizontalAccuracy: Double?
     var course: Double?
     var courseReliable: Bool
-    var speed: Double?
     var side: String
     var distance: String
     var milesBack: Double
@@ -68,10 +68,10 @@ enum PinExport {
         return try decoder.decode(Document.self, from: data)
     }
 
-    /// Column order for CSV. The breadcrumb trail is JSON-only.
+    /// Column order for CSV. The breadcrumb trail is JSON-only. Speed is never exported.
     static let csvColumns = [
         "id", "capturedAt", "fixTimestamp", "latitude", "longitude", "horizontalAccuracy",
-        "course", "courseReliable", "speed", "side", "distance", "milesBack",
+        "course", "courseReliable", "side", "distance", "milesBack",
         "targetLatitude", "targetLongitude", "targetSource", "label", "placeName", "group", "source",
         "isReviewed", "isKept", "deletedAt", "appleMapsURL", "googleMapsURL",
     ]
@@ -87,7 +87,7 @@ enum PinExport {
             let fields: [String] = [
                 pin.id.uuidString, date(pin.capturedAt), date(pin.fixTimestamp),
                 number(pin.latitude), number(pin.longitude), number(pin.horizontalAccuracy),
-                number(pin.course), "\(pin.courseReliable)", number(pin.speed),
+                number(pin.course), "\(pin.courseReliable)",
                 pin.side, pin.distance, "\(pin.milesBack)",
                 number(pin.targetLatitude), number(pin.targetLongitude), pin.targetSource,
                 pin.label ?? "", pin.placeName ?? "", pin.group ?? "", pin.source,

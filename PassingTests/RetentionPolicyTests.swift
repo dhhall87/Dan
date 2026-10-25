@@ -77,7 +77,7 @@ struct PinExportTests {
             id: UUID(uuidString: "11111111-2222-3333-4444-555555555555")!,
             capturedAt: when, fixTimestamp: when,
             latitude: latitude, longitude: longitude, horizontalAccuracy: 5,
-            course: 225, courseReliable: true, speed: 27,
+            course: 225, courseReliable: true,
             side: "left", distance: "far", milesBack: 0,
             targetLatitude: nil, targetLongitude: nil, targetSource: "direct",
             trail: nil, label: label, placeName: nil, group: group, source: "app",
@@ -119,6 +119,12 @@ struct PinExportTests {
         #expect(document.app == "Passing")
         #expect(document.exportedAt == when)
         #expect(document.pins == pins)
+    }
+
+    @Test func exportsNeverIncludeSpeed() throws {
+        #expect(!PinExport.csvColumns.contains("speed"))
+        let json = String(decoding: try PinExport.json([record()], exportedAt: when), as: UTF8.self)
+        #expect(!json.contains("speed"))
     }
 
     @Test func csvIncludesTheGroup() throws {

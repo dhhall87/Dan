@@ -23,6 +23,11 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.listenAfterTap) private var listenAfterTap = false
     @AppStorage(SettingsKey.askBeforeListening) private var askBeforeListening = true
     @AppStorage(SettingsKey.lookUpPlaceNames) private var lookUpPlaceNames = true
+    @AppStorage(SettingsKey.deleteAfterExport) private var deleteAfterExport = false
+    /// In the App Group's shared settings, so the widget and Control Center follow it too.
+    @AppStorage(LocationPrivacy.key, store: AppGroup.defaults) private var preciseLocation = true
+    @State private var confirmingDeleteAll = false
+    @State private var deletedCount: Int?
     @State private var listenProblem: SpeechListener.Availability?
     #if DEBUG
     @AppStorage(SettingsKey.debugDayOffset) private var debugDayOffset = 0
@@ -115,20 +120,32 @@ struct SettingsView: View {
 
                 Section {
                     Toggle("Keep records indefinitely", isOn: $keepIndefinitely)
+                    Toggle("Delete pins after exporting", isOn: $deleteAfterExport)
                 } header: {
                     Text("Keeping pins")
                 } footer: {
-                    Text(keepIndefinitely
-                         ? "Pins stay until you delete them. Recently Deleted still empties itself after 30 days."
-                         : "Pins move to Recently Deleted 7 days after you pin them, unless you keep (star) them. Recently Deleted empties itself after 30 days.")
+                    Text((keepIndefinitely
+                          ? "Pins stay until you delete them. Recently Deleted still empties itself after 30 days."
+                          : "Pins move to Recently Deleted 7 days after you pin them, unless you keep (star) them. Recently Deleted empties itself after 30 days.")
+                         + (deleteAfterExport
+                            ? " After you share an export, the pins in it move to Recently Deleted too, except kept ones. Cancelling the share keeps them."
+                            : ""))
                 }
 
                 Section {
+                    Toggle("Precise location", isOn: $preciseLocation)
                     Toggle("Look up town names", isOn: $lookUpPlaceNames)
+                    Button("Delete All Pins…", role: .destructive) {
+                        confirmingDeleteAll = true
+                    }
+                    if let deletedCount {
+                        Text(deletedCount == 1 ? "Deleted 1 pin." : "Deleted \(deletedCount) pins.")
+                            .foregroundStyle(.secondary)
+                    }
                 } header: {
                     Text("Privacy")
                 } footer: {
-                    Text("Pins, labels and groups stay on this iPhone. Passing has no account, no analytics and no server. Town names are looked up by sending a pin's location to Apple Maps; turn this off and pin locations never leave the iPhone, except for map pictures and Look Around when you open them. Exports leave only when you share them, and Passing deletes its copy afterwards.")
+                    Text("Pins, labels and groups stay on this iPhone. Passing has no account, no analytics and no server.\n\n**Precise location** off keeps only roughly where each pin was (about 1 km) and its general direction, with no speed and no route. Enough to find the town, not the exact spot.\n\n**Town names** are looked up by sending a pin's location to Apple Maps. Turn this off and pin locations never leave the iPhone, except for map pictures and Look Around when you open them.\n\nExports leave only when you share them. They never include speed, and Passing deletes its copy afterwards. **Delete All Pins** erases every pin for good, including kept ones and Recently Deleted. Groups stay; delete those in Manage Groups.")
                 }
 
                 Section {
@@ -182,6 +199,14 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
+            }
+            .confirmationDialog("Delete all pins?", isPresented: $confirmingDeleteAll, titleVisibility: .visible) {
+                Button("Delete All Pins", role: .destructive) {
+                    deletedCount = RetentionService.shared.deleteAllPins()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Every pin is deleted for good, including kept pins and Recently Deleted. This can't be undone. Your groups stay.")
             }
             .onAppear {
                 // Permission can be taken away in iOS Settings; say so rather than silently not listening.

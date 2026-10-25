@@ -138,6 +138,19 @@ struct RetentionServiceTests {
         #expect(overdue.deletedAt == start, "the clean-up ran as soon as the export finished")
     }
 
+    @Test func deleteAllPinsErasesEveryPinButKeepsGroups() throws {
+        let kept = pin(capturedDaysAgo: 1, from: start, kept: true)
+        pin(capturedDaysAgo: 2, from: start)
+        pin(capturedDaysAgo: 3, from: start, deletedDaysAgo: 1)
+        let group = PinGroup(name: "Road trip")
+        container.mainContext.insert(group)
+        kept.group = group
+
+        #expect(retention.deleteAllPins() == 3)
+        #expect(try allPins().isEmpty)
+        #expect(try container.mainContext.fetch(FetchDescriptor<PinGroup>()).map(\.name) == ["Road trip"])
+    }
+
     @Test func severalPinsMoveToRecentlyDeletedTogether() throws {
         let first = pin(capturedDaysAgo: 1, from: start)
         let second = pin(capturedDaysAgo: 2, from: start)

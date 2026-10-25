@@ -10,6 +10,7 @@ struct PinListView: View {
     @Query(sort: \PinGroup.name) private var groups: [PinGroup]
     @Environment(\.modelContext) private var context
     @AppStorage(SettingsKey.keepIndefinitely) private var keepIndefinitely = false
+    @AppStorage(SettingsKey.deleteAfterExport) private var deleteAfterExport = false
     /// A plain count rather than a second live query: Recently Deleted has its own.
     @State private var recentlyDeletedCount = 0
     @State private var filter: GroupFilter = .all
@@ -76,8 +77,11 @@ struct PinListView: View {
             }
         }
         .sheet(item: $exportFile) { file in
-            ShareSheet(items: [file.url]) {
+            ShareSheet(items: [file.url]) { shared in
                 ExportService.removeExportedFiles()
+                if shared, deleteAfterExport {
+                    deleteExported(file.pinIDs)
+                }
             }
             .presentationDetents([.medium, .large])
             .ignoresSafeArea()
@@ -410,10 +414,19 @@ struct PinListView: View {
 
     private func export(_ format: ExportFormat) {
         do {
-            exportFile = ExportFile(url: try ExportService.exportActivePins(as: format, filter: filter, groupName: groupNameForExport))
+            let url = try ExportService.exportActivePins(as: format, filter: filter, groupName: groupNameForExport)
+            // The export holds exactly the pins shown now (active, in the group being shown).
+            exportFile = ExportFile(url: url, pinIDs: Set(shownPins.map(\.id)))
         } catch {
             exportError = error.localizedDescription
         }
+    }
+
+    /// "Delete pins after exporting" (off by default): once an export has actually been shared, the
+    /// pins in it move to Recently Deleted. Kept (starred) pins stay.
+    private func deleteExported(_ ids: Set<UUID>) {
+        let exported = pins.filter { ids.contains($0.id) && !$0.isKept }
+        RetentionService.shared.moveToRecentlyDeleted(exported)
     }
 
     private var groupNameForExport: String? {
@@ -500,12 +513,14 @@ enum PinFormat {
     /// "±8 m", "±40 m · approximate", or "No location".
     static func accuracy(of pin: Pin) -> String {
         guard pin.hasLocation, let accuracy = pin.horizontalAccuracy else { return "No location" }
-        let meters = "±\(Int(accuracy.rounded())) m"
-        return pin.isApproximate ? "\(meters) · approximate" : meters
+        let distance = accuracy >= 1_000 ? "±\(Int((accuracy / 1_000).rounded())) km" : "±\(Int(accuracy.rounded())) m"
+        return pin.isApproximate ? "\(distance) · approximate" : distance
     }
 }
 
 struct ExportFile: Identifiable {
     let id = UUID()
     let url: URL
+    /// The pins in the file, for "Delete pins after exporting".
+    var pinIDs: Set<UUID> = []
 }

@@ -38,10 +38,10 @@ Native iPhone app for capturing things you pass while driving so you can look th
 | id | UUID |
 | capturedAt | when the user acted |
 | fixTimestamp | when the GPS fix was taken (can differ from capturedAt) |
-| latitude, longitude | actual capture coordinates, never overwritten |
+| latitude, longitude | actual capture coordinates, never overwritten (rounded to ~1 km as the pin is saved when the "Precise location" setting is off) |
 | horizontalAccuracy | meters |
 | course, courseReliable | degrees; false when speed is too low for course to mean anything |
-| speed | m/s |
+| speed | m/s; not stored with "Precise location" off, and never exported |
 | side | left / right / unknown |
 | distance | near / far / unknown |
 | milesBack | Double, default 0 |
@@ -197,6 +197,7 @@ Later / maybe: native CarPlay app (only if publishing).
   - Per Apple's docs, widget buttons and controls run their intent in the widget extension. Widgets get location through `NSWidgetWantsLocation` ("While Using the App or Widgets"). Still unverified: whether CarPlay widget buttons work with the iPhone locked, and location from the widget in a real car (only testable in a car).
   - This environment can't build iOS. Pure-logic tests run on Linux through a scratch SwiftPM package; Dan runs ⌘U in Xcode.
 - **Schema changes:** after an update, the app and the widget extension can both open the store at once and both try the migration. `SharedStore` retries, then falls back to a private store, which would hide pins (in the widget, silently). Keep model changes additive (new optional fields, new models) so migrations stay lightweight.
+- **Privacy settings Dan chose (October 2026):** "Precise location" (on by default; off rounds each pin to ~1 km via `Pin.coarsenLocation()` at save, drops speed and the route, keeps the compass direction; stored in App Group defaults via `LocationPrivacy` so the widget follows it). "Delete pins after exporting" (off by default; only after a completed share; kept pins stay). "Delete All Pins" in Settings (permanent, groups stay). Exports never include speed. Groups are deleted by hand in Manage Groups (swipe, Edit, or tap → Delete Group).
 - **Privacy and footprint review (October 2026):** added App Store privacy manifests (`Passing/Resources/PrivacyInfo.xcprivacy`, `PassingWidget/PrivacyInfo.xcprivacy`; UserDefaults reasons CA92.1 app-only and 1C8F.1 App Group; no tracking, no collected data). Update them if a new required-reason API is used. Exports are deleted after sharing and at launch. Look Around loads only on tap. Town-name lookups can be turned off in Settings → Privacy. The capture screen warns when Precise Location is off (those fixes never pass `FixPolicy`). README "Privacy and footprint" is the user-facing summary.
 - **Reviewed and declined (October 2026):** keeping GPS on in the background or asking for Always (battery; Dan wants location only while the app is open, plus the short burst per capture); `requestLocation()` for intents (it can hand back a cached fix, and the burst keeps going until a fresh one arrives); `ModelActor` (all store access is already on the main actor, one container per process); `usesApplicationAudioSession = false` (speech would stop pausing or lowering music); background-task wrappers against `0xdead10cc` (every save finishes while the app is on screen or before the Siri/widget intent returns). Revisit the last one if a crash report ever shows `0xdead10cc`.
 - **Future, not now:** `ROADMAP.md` holds the Passing Pro and sales-workflow roadmap. Don't implement any of it or change the milestones until Dan asks. When it starts, inspect the code and propose a focused plan first.

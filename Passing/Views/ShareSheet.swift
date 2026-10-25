@@ -2,15 +2,15 @@ import SwiftUI
 import UIKit
 
 /// The system share sheet (AirDrop, Files, Mail, …) for an exported file. `onFinish` runs once the
-/// chosen app has taken the file (or the sheet was cancelled), so the copy can be deleted.
+/// chosen app has taken the file, or the sheet was cancelled; it's told which (true when shared).
 struct ShareSheet: UIViewControllerRepresentable {
     let items: [Any]
-    var onFinish: () -> Void = {}
+    var onFinish: (_ shared: Bool) -> Void = { _ in }
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
         let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
-        controller.completionWithItemsHandler = { _, _, _, _ in
-            onFinish()
+        controller.completionWithItemsHandler = { _, completed, _, _ in
+            onFinish(completed)
         }
         return controller
     }

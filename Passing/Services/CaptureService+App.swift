@@ -12,6 +12,7 @@ extension CaptureService {
             return await LocationProvider.shared.nextUsableFix(timeout: FixPolicy.lateFixWindow)
         },
         trail: { LocationProvider.shared.breadcrumbs },
-        confirm: { CaptureFeedback.shared.confirmCapture(of: $0) }
+        confirm: { CaptureFeedback.shared.confirmCapture(of: $0) },
+        isPrecise: { LocationPrivacy.isPrecise }
     )
 }

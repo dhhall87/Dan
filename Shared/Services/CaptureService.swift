@@ -20,9 +20,12 @@ final class CaptureService {
     private let lateFix: @MainActor () async -> CLLocation?
     private let trail: @MainActor () -> BreadcrumbBuffer
     private let confirm: @MainActor (Pin) -> Void
+    /// The "Precise location" setting. Off rounds each pin's position as it's saved.
+    private let isPrecise: @MainActor () -> Bool
     private var debouncer = TapDebouncer<String>(interval: 0.75)
-    /// The miles-back pin that further "+1" taps will bump, with the trail as it was at the first tap.
-    private var bump: (pin: Pin, trail: BreadcrumbBuffer, lastTap: Date)?
+    /// The miles-back pin that further "+1" taps will bump, with the trail and the car's exact
+    /// position as they were at the first tap (in memory only, even with precise location off).
+    private var bump: (pin: Pin, trail: BreadcrumbBuffer, lastTap: Date, start: TrailPoint?)?
     /// Pins still waiting for their first usable fix, so Siri can wait for them before finishing.
     private var lateFixTasks: [UUID: Task<Void, Never>] = [:]
 
@@ -32,13 +35,15 @@ final class CaptureService {
         currentFix: @escaping @MainActor () -> CLLocation?,
         lateFix: @escaping @MainActor () async -> CLLocation?,
         trail: @escaping @MainActor () -> BreadcrumbBuffer,
-        confirm: @escaping @MainActor (Pin) -> Void
+        confirm: @escaping @MainActor (Pin) -> Void,
+        isPrecise: @escaping @MainActor () -> Bool = { true }
     ) {
         self.context = context
         self.currentFix = currentFix
         self.lateFix = lateFix
         self.trail = trail
         self.confirm = confirm
+        self.isPrecise = isPrecise
     }
 
     /// Saves a pin now. Taps in the app get the haptic and tone; Siri and shortcuts confirm out loud
@@ -72,7 +77,10 @@ final class CaptureService {
            current.pin.modelContext != nil, !current.pin.isDeleted, current.pin.deletedAt == nil {
             let pin = current.pin
             pin.milesBack += 1
-            estimateTarget(for: pin, along: current.trail)
+            estimateTarget(for: pin, from: current.start ?? pin.captureTrailPoint, along: current.trail)
+            if !isPrecise() {
+                pin.coarsenLocation()
+            }
             bump?.lastTap = now
             persist()
             confirm(pin)
@@ -83,11 +91,13 @@ final class CaptureService {
         pin.milesBack = max(miles, 1)
         // Snapshot the trail now, so later bumps measure back from this tap, not from wherever the car is by then.
         let snapshot = trail()
+        var start: TrailPoint?
         save(newPin: pin) { pin in
-            self.estimateTarget(for: pin, along: snapshot)
+            start = pin.captureTrailPoint
+            self.estimateTarget(for: pin, from: start, along: snapshot)
         }
         if source == .app {
-            bump = (pin, snapshot, now)
+            bump = (pin, snapshot, now, start)
         }
         return pin
     }
@@ -113,6 +123,9 @@ final class CaptureService {
               FixPolicy.acceptsLateFix(capturedAt: pin.capturedAt, fixTimestamp: fix.timestamp)
         else { return }
         pin.applyFix(fix)
+        if !isPrecise() {
+            pin.coarsenLocation()
+        }
         persist()
     }
 
@@ -124,6 +137,9 @@ final class CaptureService {
             pin.applyFix(fix)
         }
         prepare(pin)
+        if !isPrecise() {
+            pin.coarsenLocation()
+        }
         context.insert(pin)
         persist()
         if pin.source == .app {
@@ -141,10 +157,8 @@ final class CaptureService {
 
     /// Walks back `pin.milesBack` miles from where the car was. Keeps the car's position and the
     /// estimate separate, and never claims a target the trail can't support.
-    private func estimateTarget(for pin: Pin, along trail: BreadcrumbBuffer) {
-        if let latitude = pin.latitude, let longitude = pin.longitude,
-           let walk = trail.walkBack(from: TrailPoint(latitude: latitude, longitude: longitude),
-                                     meters: pin.milesBack * Geo.metersPerMile) {
+    private func estimateTarget(for pin: Pin, from start: TrailPoint?, along trail: BreadcrumbBuffer) {
+        if let start, let walk = trail.walkBack(from: start, meters: pin.milesBack * Geo.metersPerMile) {
             pin.targetLatitude = walk.target.latitude
             pin.targetLongitude = walk.target.longitude
             pin.targetSource = .breadcrumb

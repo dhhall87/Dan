@@ -74,6 +74,13 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 
 **What stays on the iPhone:** everything Passing saves. That means pins (where the car was, when, speed and direction, side and distance, label, town, group), the short stretch of road on miles-back pins, and settings. There's no account, analytics, ads or server. The App Store privacy label would be **Data Not Collected**. The App Store's required privacy declarations are in `Passing/Resources/PrivacyInfo.xcprivacy` and `PassingWidget/PrivacyInfo.xcprivacy`.
 
+**Your controls** (Settings):
+- **Precise location** (on by default). Off keeps only roughly where each pin was (about 1 km) and its general direction: no speed and no miles-back route. Enough to find the town. It applies to the widgets and Control Center too.
+- **Look up town names** (on by default). Off means pin locations never go to Apple Maps for town names.
+- **Delete pins after exporting** (off by default). After an export is actually shared, the pins in it move to Recently Deleted, except kept ones. Pins still move there after 7 days either way.
+- **Delete All Pins.** Erases every pin for good, including kept ones and Recently Deleted. Groups stay; delete them in Manage Groups (swipe left, Edit, or tap a group → Delete Group).
+- **Exports never include speed.**
+
 **What leaves it, and when:**
 - **Town names:** each pin's location goes to Apple Maps to find its town. Settings → Privacy → **Look up town names** turns this off.
 - **Maps and Look Around:** opening a map, or tapping Show Look Around, asks Apple Maps for imagery of that area.
@@ -204,6 +211,16 @@ The Simulator uses your Mac's microphone. It usually has no on-device speech mod
 14. Tap the Pin widget when Passing isn't listening: it saves silently and doesn't listen.
 15. **New Group everywhere:** folder button → **New Group…**; touch and hold a pin → **New Group…** (the pin goes into it); Select a few pins → Group → **New Group…** (they all go into it); Manage Groups → **New Group…**. Typing a name that already exists files into that group instead of making a duplicate.
 16. **Select several pins:** Pins → **Select**. Tick three pins: the title says "3 Selected". Tap the star (**Keep**): all three get a star. Tap the folder (**Group**) → a group: all three move into it. Tap the trash (**Delete**): they move to Recently Deleted. **Select All** / **Deselect All** and **Done** work as expected, and opening a pin is back to normal after **Done**.
+
+## Privacy settings checklist
+
+1. Pull, then ⌘U and ⌘R.
+2. Settings → Privacy → turn off **Precise location**. Make a pin. In Pins its accuracy says "±1 km · approximate". Its screen shows no speed, and its coordinates have two decimal places. Tap the Pin widget: that pin is rough too. Turn **Precise location** back on: new pins are exact again, with speed.
+3. With precise location on, drive the KansasDrive route a few minutes and tap **+1 mi back**: the blue route still shows. With it off, a miles-back pin has a rough orange estimate and no route.
+4. Export a CSV and a JSON: there's no speed column or field.
+5. Settings → Keeping pins → turn on **Delete pins after exporting**. Star one pin. Export CSV → **Save to Files**. Back in Pins, the exported pins are in Recently Deleted, apart from the starred one. Export again but **cancel** the share sheet: nothing moves. Turn the setting off again.
+6. Settings → Privacy → **Delete All Pins…** → **Delete All Pins**. Settings says how many were deleted. Pins and Recently Deleted are empty, and your groups are still in the folder menu.
+7. Manage Groups: **Edit** shows delete buttons. Tapping a group offers **Delete Group** next to Save. Deleting a group keeps its pins.
 
 ## Set up the App Group (needed for your own iPhone)
 

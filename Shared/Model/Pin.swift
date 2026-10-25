@@ -74,6 +74,12 @@ extension Pin {
 
     var hasLocation: Bool { latitude != nil && longitude != nil }
 
+    /// Where the car was, as a point on the breadcrumb trail.
+    var captureTrailPoint: TrailPoint? {
+        guard let latitude, let longitude else { return nil }
+        return TrailPoint(latitude: latitude, longitude: longitude)
+    }
+
     /// True until the town has been looked up. Pins with no location have nothing to look up.
     var needsPlaceName: Bool { hasLocation && placeName == nil }
 
@@ -131,6 +137,23 @@ extension Pin {
     var googleMapsURL: URL? {
         guard let coordinate = lookUpCoordinate else { return nil }
         return MapLinks.google(latitude: coordinate.latitude, longitude: coordinate.longitude)
+    }
+
+    /// "Precise location" off: keep only roughly where (about 1 km), the rough direction, no speed and
+    /// no route. Done as the pin is saved, so the precise position is never stored.
+    func coarsenLocation() {
+        if let latitude, let longitude {
+            self.latitude = CoarseLocation.round(latitude)
+            self.longitude = CoarseLocation.round(longitude)
+        }
+        if let targetLatitude, let targetLongitude {
+            self.targetLatitude = CoarseLocation.round(targetLatitude)
+            self.targetLongitude = CoarseLocation.round(targetLongitude)
+        }
+        horizontalAccuracy = horizontalAccuracy.map { max($0, CoarseLocation.accuracy) }
+        speed = nil
+        course = course.map(CoarseLocation.roundCourse)
+        trail = nil
     }
 
     /// Stamps the car's position from a GPS fix. Does nothing if the pin already has one,

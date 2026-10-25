@@ -35,6 +35,8 @@ enum SettingsKey {
     static let listenAfterTap = "listenAfterTap"
     /// Ask "What are you passing?" before listening (otherwise just chime).
     static let askBeforeListening = "askBeforeListening"
+    /// After an export is shared, move the exported pins (except kept ones) to Recently Deleted.
+    static let deleteAfterExport = "deleteAfterExport"
     /// Ask Apple Maps for each pin's town. Off keeps pin locations entirely on the iPhone.
     static let lookUpPlaceNames = "lookUpPlaceNames"
     /// Debug builds only: pushes the retention clock forward this many days for testing.
@@ -54,6 +56,7 @@ enum AppSettings {
         SettingsKey.listenAfterTap: false,
         SettingsKey.askBeforeListening: true,
         SettingsKey.lookUpPlaceNames: true,
+        SettingsKey.deleteAfterExport: false,
     ]
 
     private static let defaults: UserDefaults = {
