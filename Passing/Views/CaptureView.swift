@@ -25,6 +25,7 @@ struct CaptureView: View {
             MilesBackStrip()
         }
         .background(Color.black.ignoresSafeArea())
+        .environment(\.colorScheme, .dark)
         .onAppear {
             // Keep the screen awake while it's mounted on the dash.
             UIApplication.shared.isIdleTimerDisabled = true

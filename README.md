@@ -57,6 +57,8 @@ Capture things you pass while driving, then look them up later. One tap saves a 
   - **File a pin:** touch and hold it in the list → **Group**, or use the **Group** picker on its screen.
 - **Map:** the map button on the Pins list shows the same pins on a map. Tap one for a card, then tap the card to open it.
 - **KML export for Google My Maps:** Export → **KML (Google My Maps)**. Each pin becomes a placemark with its label, time, side, town and group. Pins without a location are left out, and the file says how many.
+- **Recently Deleted → Select** recovers or deletes several pins at once (**Select All** is in the bar at the bottom).
+- **Appearance** (Settings): System (the default, following the iPhone's Light/Dark setting), Light or Dark. The capture screen always stays dark, so it's never bright on the dash at night.
 - **Exports follow what's shown.** With a group picked, JSON, CSV and KML contain just that group, and the file name says which. CSV and JSON now have a group column too.
 - **Select several pins:** **Select** on the Pins list, tick pins (or **Select All**), then use the bar at the bottom: **Keep**, **Reviewed**, **Group**, or **Delete** (to Recently Deleted).
 
@@ -75,7 +77,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 **What stays on the iPhone:** everything Passing saves. That means pins (where the car was, when, speed and direction, side and distance, label, town, group), the short stretch of road on miles-back pins, and settings. There's no account, analytics, ads or server. The App Store privacy label would be **Data Not Collected**. The App Store's required privacy declarations are in `Passing/Resources/PrivacyInfo.xcprivacy` and `PassingWidget/PrivacyInfo.xcprivacy`.
 
 **Your controls** (Settings):
-- **Precise location** (on by default). Off keeps only roughly where each pin was (about 1 km) and its general direction: no speed and no miles-back route. Enough to find the town. It applies to the widgets and Control Center too.
+- **Precise location** (on by default). Off keeps only roughly where each pin was (within about half a mile) and its general direction: no speed and no miles-back route. Enough to find the town. It applies to the widgets and Control Center too.
 - **Look up town names** (on by default). Off means pin locations never go to Apple Maps for town names.
 - **Delete pins after exporting** (off by default). After an export is actually shared, the pins in it move to Recently Deleted, except kept ones. Pins still move there after 7 days either way.
 - **Delete All Pins.** Erases every pin for good, including kept ones and Recently Deleted. Groups stay; delete them in Manage Groups (swipe left, Edit, or tap a group → Delete Group).
@@ -215,12 +217,19 @@ The Simulator uses your Mac's microphone. It usually has no on-device speech mod
 ## Privacy settings checklist
 
 1. Pull, then ⌘U and ⌘R.
-2. Settings → Privacy → turn off **Precise location**. Make a pin. In Pins its accuracy says "±1 km · approximate". Its screen shows no speed, and its coordinates have two decimal places. Tap the Pin widget: that pin is rough too. Turn **Precise location** back on: new pins are exact again, with speed.
+2. Settings → Privacy → turn off **Precise location**. Make a pin. In Pins its accuracy says "±0.6 mi · approximate". Its screen shows no speed, and its coordinates have two decimal places. Tap the Pin widget: that pin is rough too. Turn **Precise location** back on: new pins are exact again, with speed.
 3. With precise location on, drive the KansasDrive route a few minutes and tap **+1 mi back**: the blue route still shows. With it off, a miles-back pin has a rough orange estimate and no route.
 4. Export a CSV and a JSON: there's no speed column or field.
 5. Settings → Keeping pins → turn on **Delete pins after exporting**. Star one pin. Export CSV → **Save to Files**. Back in Pins, the exported pins are in Recently Deleted, apart from the starred one. Export again but **cancel** the share sheet: nothing moves. Turn the setting off again.
 6. Settings → Privacy → **Delete All Pins…** → **Delete All Pins**. Settings says how many were deleted. Pins and Recently Deleted are empty, and your groups are still in the folder menu.
 7. Manage Groups: **Edit** shows delete buttons. Tapping a group offers **Delete Group** next to Save. Deleting a group keeps its pins.
+
+## Appearance and Recently Deleted checklist
+
+1. Pull, then ⌘U and ⌘R.
+2. Settings → **Appearance** shows **System** selected. Switch the Simulator to Light (Settings app → Developer → Dark Appearance off, or ⇧⌘A in the Simulator): Pins, a pin's screen and Settings turn light; the capture screen and its title bar stay dark. Pick **Dark** in Passing's Settings: everything is dark whatever the iPhone is set to. Pick **Light**: the same, light. Set it back to **System**.
+3. In light mode, check the yellow-ish highlights (Recover buttons, ticks, links) are readable. They switch to a deeper amber in light mode.
+4. Delete three pins, then open **Recently Deleted** → **Select**. Tick two → **Recover**: both are back in Pins. Select the last one → **Delete Now** → confirm: it's gone. **Select All** / **Deselect All** work, and **Done** brings back the per-pin Recover buttons.
 
 ## Set up the App Group (needed for your own iPhone)
 

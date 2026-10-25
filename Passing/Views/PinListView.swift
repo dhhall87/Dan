@@ -513,7 +513,8 @@ enum PinFormat {
     /// "±8 m", "±40 m · approximate", or "No location".
     static func accuracy(of pin: Pin) -> String {
         guard pin.hasLocation, let accuracy = pin.horizontalAccuracy else { return "No location" }
-        let distance = accuracy >= 1_000 ? "±\(Int((accuracy / 1_000).rounded())) km" : "±\(Int(accuracy.rounded())) m"
+        // Rough pins (Precise location off) in miles, like the rest of the app; GPS precision in meters.
+        let distance = accuracy >= 1_000 ? "±" + String(format: "%.1f", accuracy / Geo.metersPerMile) + " mi" : "±\(Int(accuracy.rounded())) m"
         return pin.isApproximate ? "\(distance) · approximate" : distance
     }
 }

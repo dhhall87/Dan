@@ -35,6 +35,8 @@ enum SettingsKey {
     static let listenAfterTap = "listenAfterTap"
     /// Ask "What are you passing?" before listening (otherwise just chime).
     static let askBeforeListening = "askBeforeListening"
+    /// System, Light or Dark (`Appearance`). The capture screen is always dark.
+    static let appearance = "appearance"
     /// After an export is shared, move the exported pins (except kept ones) to Recently Deleted.
     static let deleteAfterExport = "deleteAfterExport"
     /// Ask Apple Maps for each pin's town. Off keeps pin locations entirely on the iPhone.
@@ -57,6 +59,7 @@ enum AppSettings {
         SettingsKey.askBeforeListening: true,
         SettingsKey.lookUpPlaceNames: true,
         SettingsKey.deleteAfterExport: false,
+        SettingsKey.appearance: "system",
     ]
 
     private static let defaults: UserDefaults = {

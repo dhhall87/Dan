@@ -138,6 +138,19 @@ struct RetentionServiceTests {
         #expect(overdue.deletedAt == start, "the clean-up ran as soon as the export finished")
     }
 
+    @Test func severalPinsRecoverOrDeleteTogether() throws {
+        let recent = pin(capturedDaysAgo: 2, from: start, deletedDaysAgo: 1)
+        let old = pin(capturedDaysAgo: 10, from: start, deletedDaysAgo: 3)
+        let doomed = pin(capturedDaysAgo: 3, from: start, deletedDaysAgo: 1)
+
+        retention.recover([recent, old], now: start)
+        #expect(recent.deletedAt == nil && !recent.isKept)
+        #expect(old.deletedAt == nil && old.isKept, "past 7 days, so it's kept or it would expire again")
+
+        retention.deleteNow([doomed])
+        #expect(try allPins().count == 2)
+    }
+
     @Test func deleteAllPinsErasesEveryPinButKeepsGroups() throws {
         let kept = pin(capturedDaysAgo: 1, from: start, kept: true)
         pin(capturedDaysAgo: 2, from: start)

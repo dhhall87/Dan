@@ -73,15 +73,29 @@ final class RetentionService {
     }
 
     func recover(_ pin: Pin, now: Date = AppClock.now) {
-        if RetentionPolicy.keepOnRecover(capturedAt: pin.capturedAt, now: now) {
-            pin.isKept = true
+        recover([pin], now: now)
+    }
+
+    /// Several at once (Select in Recently Deleted), saved together.
+    func recover(_ pins: [Pin], now: Date = AppClock.now) {
+        for pin in pins {
+            if RetentionPolicy.keepOnRecover(capturedAt: pin.capturedAt, now: now) {
+                pin.isKept = true
+            }
+            pin.deletedAt = nil
         }
-        pin.deletedAt = nil
         save()
     }
 
     func deleteNow(_ pin: Pin) {
-        context.delete(pin)
+        deleteNow([pin])
+    }
+
+    /// Several at once (Select in Recently Deleted), gone for good.
+    func deleteNow(_ pins: [Pin]) {
+        for pin in pins {
+            context.delete(pin)
+        }
         save()
     }
 

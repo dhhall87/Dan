@@ -3,6 +3,8 @@ import SwiftUI
 
 @main
 struct PassingApp: App {
+    @AppStorage(SettingsKey.appearance) private var appearance: Appearance = .system
+
     init() {
         // An export left behind if the app was closed while sharing it.
         ExportService.removeExportedFiles()
@@ -11,7 +13,7 @@ struct PassingApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(appearance.colorScheme)
         }
         .modelContainer(SharedStore.container)
         .backgroundTask(.appRefresh(RetentionScheduler.taskIdentifier)) {
@@ -42,6 +44,11 @@ struct RootView: View {
             CaptureView()
                 .navigationTitle("Passing")
                 .navigationBarTitleDisplayMode(.inline)
+                // The capture screen is dark and high-contrast in every appearance, so it's never a
+                // bright screen on the dash at night. Its title bar matches.
+                .toolbarColorScheme(.dark, for: .navigationBar)
+                .toolbarBackground(Color.black, for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Button {

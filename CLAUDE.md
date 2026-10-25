@@ -67,7 +67,7 @@ Keep capture coordinates and target coordinates separate. The app records where 
 
 ## Main screen
 
-Dark, high contrast, no map, no clutter. Mode switch lives in Settings, not on the capture screen.
+Dark, high contrast, no map, no clutter. Mode switch lives in Settings, not on the capture screen. The rest of the app follows Settings → Appearance (System by default, or Light/Dark); the capture screen stays dark in every appearance.
 
 **Quick mode (default):** the entire screen is one capture button.
 

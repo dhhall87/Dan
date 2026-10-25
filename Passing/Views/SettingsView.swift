@@ -13,6 +13,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @AppStorage(SettingsKey.captureMode) private var mode: CaptureMode = .quick
+    @AppStorage(SettingsKey.appearance) private var appearance: Appearance = .system
     @AppStorage(SettingsKey.confirmationTone) private var confirmationTone = true
     @AppStorage(SettingsKey.spokenConfirmation) private var spokenConfirmation = false
     @AppStorage(SettingsKey.keepIndefinitely) private var keepIndefinitely = false
@@ -51,6 +52,19 @@ struct SettingsView: View {
                     Text(mode == .quick
                          ? "The whole screen is one button."
                          : "Tap the side of the road the thing was on. Inner columns are right by the road, outer columns are farther away. Tap the car if you're not sure which side.")
+                }
+
+                Section {
+                    Picker("Appearance", selection: $appearance) {
+                        ForEach(Appearance.allCases) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                } header: {
+                    Text("Appearance")
+                } footer: {
+                    Text("System follows your iPhone's Light or Dark setting. The capture screen always stays dark, so it's never bright on the dash at night.")
                 }
 
                 Section {
@@ -145,7 +159,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Privacy")
                 } footer: {
-                    Text("Pins, labels and groups stay on this iPhone. Passing has no account, no analytics and no server.\n\n**Precise location** off keeps only roughly where each pin was (about 1 km) and its general direction, with no speed and no route. Enough to find the town, not the exact spot.\n\n**Town names** are looked up by sending a pin's location to Apple Maps. Turn this off and pin locations never leave the iPhone, except for map pictures and Look Around when you open them.\n\nExports leave only when you share them. They never include speed, and Passing deletes its copy afterwards. **Delete All Pins** erases every pin for good, including kept ones and Recently Deleted. Groups stay; delete those in Manage Groups.")
+                    Text("Pins, labels and groups stay on this iPhone. Passing has no account, no analytics and no server.\n\n**Precise location** off keeps only roughly where each pin was (within about half a mile) and its general direction, with no speed and no route. Enough to find the town, not the exact spot.\n\n**Town names** are looked up by sending a pin's location to Apple Maps. Turn this off and pin locations never leave the iPhone, except for map pictures and Look Around when you open them.\n\nExports leave only when you share them. They never include speed, and Passing deletes its copy afterwards. **Delete All Pins** erases every pin for good, including kept ones and Recently Deleted. Groups stay; delete those in Manage Groups.")
                 }
 
                 Section {
