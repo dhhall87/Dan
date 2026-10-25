@@ -20,6 +20,8 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.confirmationPhrases) private var storedPhrases = SpokenConfirmation.defaultPhrase
     @AppStorage(SettingsKey.sayClueFirst) private var sayClueFirst = true
     @AppStorage(SettingsKey.pauseAudioWhileSpeaking) private var pauseAudioWhileSpeaking = true
+    @AppStorage(SettingsKey.listenAfterTap) private var listenAfterTap = false
+    @State private var listenProblem: SpeechListener.Availability?
     #if DEBUG
     @AppStorage(SettingsKey.debugDayOffset) private var debugDayOffset = 0
     #endif
@@ -55,7 +57,11 @@ struct SettingsView: View {
                             LabeledContent("Phrases", value: phrasesSummary)
                         }
                         Toggle("Say side and distance first", isOn: $sayClueFirst)
-                        Toggle("Pause music while speaking", isOn: $pauseAudioWhileSpeaking)
+                    }
+                    if spokenConfirmation || listenAfterTap {
+                        Toggle(listenAfterTap ? "Pause music while speaking or listening" : "Pause music while speaking", isOn: $pauseAudioWhileSpeaking)
+                    }
+                    if spokenConfirmation {
                         Button("Preview") {
                             CaptureFeedback.shared.preview(SpokenConfirmation.text(
                                 side: .left,
@@ -72,6 +78,25 @@ struct SettingsView: View {
                     Text(spokenConfirmation
                          ? "Every pin gets a haptic. The tone plays even with the ring switch on silent. After each pin, Passing says one of your phrases, like “Left, far. Got it boss.” “+1 mi back” says the distance instead. Music and podcasts pause while Passing speaks and pick up again after, unless you turn that off (then they're just lowered)."
                          : "Every pin gets a haptic. The tone plays even with the ring switch on silent. Turn on spoken confirmation to choose a voice and your own phrases.")
+                }
+
+                Section {
+                    Toggle("Listen after tap", isOn: listenBinding)
+                    if let listenProblem {
+                        Text(listenProblemText(listenProblem))
+                            .foregroundStyle(.orange)
+                        if listenProblem == .needsPermission {
+                            Button("Open iOS Settings") {
+                                if let url = URL(string: UIApplication.openSettingsURLString) {
+                                    openURL(url)
+                                }
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Labels by voice")
+                } footer: {
+                    Text("After a tap on the capture screen, Passing chimes and listens for a few seconds. Say what you saw, like “red barn”, and it becomes the label. Say nothing (or “cancel”) and the pin just stays unlabeled. The chime plays even with the tone turned off, because it's your cue. Speech is recognized on your iPhone and never leaves it. With spoken confirmation on, Passing reads the label back.")
                 }
 
                 Section {
@@ -145,6 +170,43 @@ struct SettingsView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .onAppear {
+                // Permission can be taken away in iOS Settings; say so rather than silently not listening.
+                if listenAfterTap, SpeechListener.availability != .ready {
+                    listenProblem = SpeechListener.availability
+                }
+            }
+        }
+    }
+
+    /// Turning listening on asks for microphone and speech recognition access here in Settings,
+    /// so no permission prompt can ever appear on the capture screen.
+    private var listenBinding: Binding<Bool> {
+        Binding(
+            get: { listenAfterTap },
+            set: { turnOn in
+                guard turnOn else {
+                    listenAfterTap = false
+                    listenProblem = nil
+                    return
+                }
+                Task {
+                    let availability = await SpeechListener.requestPermission()
+                    listenAfterTap = availability == .ready
+                    listenProblem = availability == .ready ? nil : availability
+                }
+            }
+        )
+    }
+
+    private func listenProblemText(_ problem: SpeechListener.Availability) -> String {
+        switch problem {
+        case .ready:
+            return ""
+        case .needsPermission:
+            return "Passing needs microphone and speech recognition access to listen. Turn both on for Passing in iOS Settings."
+        case .notSupported:
+            return "This iPhone can't recognize speech in its language without the internet, so listening is off. Passing only uses on-device recognition."
         }
     }
 

@@ -29,8 +29,10 @@ enum SettingsKey {
     static let confirmationPhrases = "confirmationPhrases"
     /// Say "Left, far." before the phrase.
     static let sayClueFirst = "sayClueFirst"
-    /// Pause music and podcasts while Passing speaks (otherwise lower them).
+    /// Pause music and podcasts while Passing speaks or listens (otherwise lower them).
     static let pauseAudioWhileSpeaking = "pauseAudioWhileSpeaking"
+    /// After a tap on the capture screen, chime and listen a few seconds for a spoken label.
+    static let listenAfterTap = "listenAfterTap"
     /// Debug builds only: pushes the retention clock forward this many days for testing.
     static let debugDayOffset = "debugDayOffset"
 }
@@ -45,6 +47,7 @@ enum AppSettings {
         SettingsKey.confirmationPhrases: SpokenConfirmation.defaultPhrase,
         SettingsKey.sayClueFirst: true,
         SettingsKey.pauseAudioWhileSpeaking: true,
+        SettingsKey.listenAfterTap: false,
     ]
 
     private static let defaults: UserDefaults = {
@@ -72,4 +75,6 @@ enum AppSettings {
     static var sayClueFirst: Bool { defaults.bool(forKey: SettingsKey.sayClueFirst) }
 
     static var pauseAudioWhileSpeaking: Bool { defaults.bool(forKey: SettingsKey.pauseAudioWhileSpeaking) }
+
+    static var listenAfterTap: Bool { defaults.bool(forKey: SettingsKey.listenAfterTap) }
 }

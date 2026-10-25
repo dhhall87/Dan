@@ -181,8 +181,12 @@ Later / maybe: native CarPlay app (only if publishing).
 
 ## Current status
 
-- Milestones 1–5 are done and confirmed by Dan (Milestone 5 in the Simulator, including its CarPlay window). Work happens on branch `claude/road-marker-pin-app-flj2qm`.
-- **Milestone 6 is built and waiting for Dan's test run** (README, "Milestone 6 manual test checklist"). Don't start Milestone 7 until he confirms. Notes:
+- Milestones 1–6 are done and confirmed by Dan (Milestone 5 in the Simulator, including its CarPlay window). Work happens on branch `claude/road-marker-pin-app-flj2qm`.
+- **Milestone 7 is built and waiting for Dan's test run** (README, "Milestone 7 manual test checklist"). It's the last planned milestone. Notes:
+  - Listen-after-tap uses `SFSpeechRecognizer` with `requiresOnDeviceRecognition` (not deprecated in iOS 26; simpler than `SpeechAnalyzer`). On iPhone it's on-device only, and the setting stays off if the language isn't supported on device. In the Simulator only, it may fall back to server recognition so the feature can be tried.
+  - `CaptureFeedback` owns the whole flow: a `.playAndRecord` session (pausing or ducking other audio per the existing setting), the chime, `SpeechListener.listen()`, then `CaptureService.setLabel`. Only `.app` taps listen. Permission is requested only from Settings.
+  - The audio-thread and Speech callbacks are built in `nonisolated` helpers, so they never run as main-actor closures on other threads.
+- Notes from Milestone 6:
   - Town names use iOS 26's `MKReverseGeocodingRequest` (`try await request.mapItems`, `addressRepresentations.cityWithContext`), and Look Around uses `MKLookAroundSceneRequest(...).scene`. Both async forms come from Apple's own examples rather than the reference pages, which only list the completion-handler methods. If either doesn't compile, switch to `getMapItems(completionHandler:)` / `getSceneWithCompletionHandler(_:)`.
   - Groups added `PinGroup` and `Pin.group` (lightweight migration). `SharedStore` now tries the App Group store three times, 0.5 s apart, before falling back, in case the app and widget open it mid-migration.
 - Notes from Milestone 5:

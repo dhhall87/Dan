@@ -2,7 +2,7 @@
 
 Capture things you pass while driving, then look them up later. One tap saves a pin, and identifying the thing happens afterwards. The full spec is in [CLAUDE.md](CLAUDE.md).
 
-**Status:** Milestones 1–5 are done. Milestone 6 (review polish) is built and waiting for its test run. Listen-after-tap moved to an optional Milestone 7.
+**Status:** Milestones 1–6 are done. Milestone 7 (listen after tap) is built and waiting for its test run. It's the last milestone in the plan.
 
 ## What it does so far
 
@@ -57,6 +57,15 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Map:** the map button on the Pins list shows the same pins on a map. Tap one for a card, then tap the card to open it.
 - **KML export for Google My Maps:** Export → **KML (Google My Maps)**. Each pin becomes a placemark with its label, time, side, town and group. Pins without a location are left out, and the file says how many.
 - **Exports follow what's shown.** With a group picked, JSON, CSV and KML contain just that group, and the file name says which. CSV and JSON now have a group column too.
+
+**Listen after tap (Milestone 7, optional, off by default)**
+- Settings → **Labels by voice** → **Listen after tap**. After a tap on the capture screen, Passing chimes and listens for a few seconds. Say what you saw ("red barn") and it becomes the label. Say nothing, or "cancel", and the pin stays unlabeled, silently.
+- It stops listening about 1.5 seconds after you stop talking, after 4 seconds if you say nothing, and after 10 seconds at most.
+- The pin is saved before Passing listens, so a missed or garbled answer never loses it. You can fix the label later in Pins.
+- With **Spoken confirmation** on, Passing reads the label back ("red barn") instead of saying your phrase.
+- Music pauses while it listens (or is lowered, with "Pause music while speaking or listening" off), so the microphone hears you rather than the radio.
+- Speech is recognized on the iPhone and the audio never leaves it. iOS shows its orange microphone dot while Passing listens.
+- Only taps on the capture screen listen. The widgets, Control Center and Siri work as before.
 
 ## Run it
 
@@ -149,6 +158,22 @@ Before you start: in Xcode, choose **Integrate → Pull** (or **Source Control �
 10. Export → **CSV** with All Pins showing. The file has a **group** column.
 11. Tap the Pin widget on the home screen. The new pin shows up in Pins as before.
 
+## Milestone 7 manual test checklist
+
+The Simulator uses your Mac's microphone. It usually has no on-device speech model, so there (only) recognition may go through Apple's servers. On an iPhone it's on-device only.
+
+1. Pull, then ⌘U and ⌘R.
+2. Settings → **Labels by voice** → turn on **Listen after tap**. iOS asks for the microphone and for speech recognition: allow both. The switch stays on.
+3. On the capture screen, tap. You hear the chime. Say "red barn". About a second and a half after you stop, you feel a haptic. In **Pins**, the new pin is labeled "red barn".
+4. Tap and say nothing. After about 4 seconds it stops listening, with no sound or haptic. The pin is there, "Unlabeled".
+5. Tap and say "cancel". The pin stays unlabeled.
+6. Turn on **Spoken confirmation**, tap, and say "water tower". Passing says "water tower" back.
+7. **+1 mi back:** tap it twice within 4 seconds, then say "diner". You get one pin, "2 mi back", labeled "diner".
+8. **Music:** play something in Music. Tap a zone: the music pauses while Passing listens and comes back after. Turn off **Pause music while speaking or listening** and try again: the music just gets quieter.
+9. Tap one zone, say "barn", then quickly tap another zone and say "silo". The first pin is "barn" and the second "silo".
+10. iOS Settings → Privacy & Security → Microphone → turn Passing off. Open Passing's Settings: an orange note says listening needs access. Taps still save pins with the normal tone. Turn the microphone back on.
+11. Tap the Pin widget: it saves silently and doesn't listen.
+
 ## Set up the App Group (needed for your own iPhone)
 
 The project ships with the App Group `group.com.example.passing`. To run on your phone, the bundle IDs and App Group have to be yours. There are two targets to change, the app and the widget:
@@ -188,6 +213,11 @@ If the App Group doesn't match, the app still works, but Settings shows an orang
 - **KML placemarks go where map links go:** the estimated spot for miles-back pins, otherwise where the car was.
 - **Listen-after-tap is now its own optional Milestone 7.** It's the only remaining piece that changes how capture works, and it needs microphone and speech-recognition permission.
 
+- **Listening only follows taps on the capture screen.** Widgets and Control Center stay silent per the spec, and Siri asks its own question.
+- **The chime always plays when listening**, even with the tone turned off, because it's the cue to start talking.
+- **Microphone and speech permission are asked for in Settings**, when you turn listening on, so no permission prompt can appear on the capture screen.
+- **`SFSpeechRecognizer` rather than iOS 26's new `SpeechAnalyzer`.** It's simpler, still supported, and on-device on iPhone. If the iPhone can't recognize its language on the device, the setting stays off rather than sending audio to a server.
+
 ## Project layout
 
 | Piece | Where |
@@ -204,6 +234,7 @@ If the App Group doesn't match, the app still works, but Settings shows an orang
 | Retention rules and clean-up | `Shared/Model/RetentionPolicy.swift`, `Passing/Services/RetentionService.swift` |
 | Export (JSON, CSV, KML) | `Passing/Services/PinExport.swift`, `Passing/Services/ExportService.swift` |
 | Haptic, tone and speech | `Passing/Services/CaptureFeedback.swift` |
+| Listen after tap | `Passing/Services/SpeechListener.swift`, `Passing/Model/ListenPolicy.swift`, `Passing/Services/CaptureFeedback.swift` |
 | Review screens | `Passing/Views/PinListView.swift`, `PinDetailView.swift`, `PinsMapView.swift`, `RecentlyDeletedView.swift` |
 | Groups | `Shared/Model/PinGroup.swift`, `Passing/Services/PinGroups.swift`, `Passing/Model/GroupFilter.swift`, `Passing/Views/GroupsView.swift` |
 | Town names | `Passing/Services/PlaceNameService.swift`, `Passing/Model/PlaceNaming.swift` |

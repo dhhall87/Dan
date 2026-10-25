@@ -6,6 +6,10 @@
 	<array>
 		<string>$(PRODUCT_BUNDLE_IDENTIFIER).retention</string>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>With “Listen after tap” on, Passing listens for a few seconds after you pin something, so you can say what it was. Nothing is recorded or kept.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Passing turns what you say after a tap into the pin's label, using speech recognition on your iPhone.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Passing saves where your car is when you tap the capture screen, a Passing widget or Control Center, or ask Siri, so you can look up what you passed later. Location is only used for those captures and while the capture screen is open.</string>
 	<key>PassingAppGroup</key>
