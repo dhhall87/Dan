@@ -5,10 +5,10 @@ import SwiftUI
 struct PinListView: View {
     @Query(filter: #Predicate<Pin> { $0.deletedAt == nil }, sort: \Pin.capturedAt, order: .reverse)
     private var pins: [Pin]
-    @Query(filter: #Predicate<Pin> { $0.deletedAt != nil })
-    private var recentlyDeleted: [Pin]
     @Environment(\.modelContext) private var context
     @AppStorage(SettingsKey.keepIndefinitely) private var keepIndefinitely = false
+    /// A plain count rather than a second live query: Recently Deleted has its own.
+    @State private var recentlyDeletedCount = 0
     @State private var exportFile: ExportFile?
     @State private var exportError: String?
 
@@ -24,9 +24,7 @@ struct PinListView: View {
             ForEach(days, id: \.self) { day in
                 Section {
                     ForEach(pinsByDay[day] ?? []) { pin in
-                        NavigationLink {
-                            PinDetailView(pin: pin)
-                        } label: {
+                        NavigationLink(value: pin) {
                             PinRow(pin: pin, keepIndefinitely: keepIndefinitely)
                         }
                         .swipeActions(edge: .leading) {
@@ -51,11 +49,9 @@ struct PinListView: View {
                 }
             }
             Section {
-                NavigationLink {
-                    RecentlyDeletedView()
-                } label: {
+                NavigationLink(value: Route.recentlyDeleted) {
                     LabeledContent {
-                        Text("\(recentlyDeleted.count)")
+                        Text("\(recentlyDeletedCount)")
                     } label: {
                         Label("Recently Deleted", systemImage: "trash")
                     }
@@ -92,7 +88,16 @@ struct PinListView: View {
         .onAppear {
             // Catch up on anything that expired while this screen was closed.
             RetentionService.shared.run()
+            refreshRecentlyDeletedCount()
         }
+        .onChange(of: pins.count) {
+            refreshRecentlyDeletedCount()
+        }
+    }
+
+    private func refreshRecentlyDeletedCount() {
+        let descriptor = FetchDescriptor<Pin>(predicate: #Predicate { $0.deletedAt != nil })
+        recentlyDeletedCount = (try? context.fetchCount(descriptor)) ?? 0
     }
 
     private var pinsByDay: [Date: [Pin]] {

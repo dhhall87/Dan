@@ -15,19 +15,28 @@ struct PassingApp: App {
     }
 }
 
+/// Screens pushed on the navigation stack. Using values (instead of building the next screen
+/// inside the current one) means a screen is only created when it opens. Building Recently Deleted
+/// inside the Pins list made the two feed back into each other and froze the app.
+enum Route: Hashable {
+    case pins
+    case recentlyDeleted
+}
+
 struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @State private var path = NavigationPath()
     @State private var showingSettings = false
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             CaptureView()
                 .navigationTitle("Passing")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        NavigationLink {
-                            PinListView()
+                        Button {
+                            path.append(Route.pins)
                         } label: {
                             Label("Pins", systemImage: "list.bullet")
                         }
@@ -39,6 +48,15 @@ struct RootView: View {
                             Label("Settings", systemImage: "gearshape")
                         }
                     }
+                }
+                .navigationDestination(for: Route.self) { route in
+                    switch route {
+                    case .pins: PinListView()
+                    case .recentlyDeleted: RecentlyDeletedView()
+                    }
+                }
+                .navigationDestination(for: Pin.self) { pin in
+                    PinDetailView(pin: pin)
                 }
         }
         .sheet(isPresented: $showingSettings) {
