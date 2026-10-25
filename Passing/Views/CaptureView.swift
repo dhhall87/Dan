@@ -72,10 +72,11 @@ struct ModeTitleButton: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 0) {
-                // Big, heavy and wide, about twice a standard title; the layout line stays small.
+                // Big and bold, about twice a standard title, in the same rounded face as the zone
+                // labels; the layout line stays small.
                 Text("Passing")
-                    .font(.system(size: 36, weight: .heavy))
-                    .fontWidth(.expanded)
+                    .font(.system(size: 38, weight: .bold, design: .rounded))
+                    .tracking(-0.5)
                     .foregroundStyle(.white)
                     .minimumScaleFactor(0.7)
                 HStack(spacing: 4) {
@@ -303,20 +304,22 @@ private struct MilesBackStrip: View {
         Button {
             CaptureService.shared.captureMilesBack(source: .app)
         } label: {
-            HStack(spacing: 12) {
+            // Narrower and quieter than the zones, but still a big target with a yellow arrow to find it by.
+            HStack(spacing: 10) {
                 Image(systemName: "arrow.uturn.backward")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.system(size: 19, weight: .bold))
                     .foregroundStyle(Color.pinYellow)
                 Text("+1 mi back")
-                    .font(.system(size: 21, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.9))
             }
-            .frame(maxWidth: .infinity, minHeight: 66)
-            .background(Color.white.opacity(0.09), in: Capsule())
-            .overlay(Capsule().strokeBorder(.white.opacity(0.16)))
+            .padding(.horizontal, 36)
+            .frame(minWidth: 220, minHeight: 54)
+            .background(Color.white.opacity(0.07), in: Capsule())
+            .overlay(Capsule().strokeBorder(.white.opacity(0.12)))
             .contentShape(Capsule())
         }
-        .buttonStyle(PressHighlightStyle(cornerRadius: 33))
+        .buttonStyle(PressHighlightStyle(cornerRadius: 27))
         .padding(.horizontal, 12)
         .padding(.bottom, 10)
         .accessibilityLabel("Save a pin one mile back. Tap again to move it further back.")
