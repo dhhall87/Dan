@@ -1,0 +1,47 @@
+import Foundation
+
+enum CaptureMode: String, CaseIterable, Identifiable {
+    /// The whole screen is one capture button.
+    case quick
+    /// Far left | Near left | car | Near right | Far right.
+    case fourZone
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .quick: return "Quick"
+        case .fourZone: return "Four zones"
+        }
+    }
+}
+
+/// UserDefaults keys shared by the views (@AppStorage) and the services.
+/// The @AppStorage defaults in the views must match `AppSettings.defaultValues`.
+enum SettingsKey {
+    static let captureMode = "captureMode"
+    static let confirmationTone = "confirmationTone"
+    static let spokenConfirmation = "spokenConfirmation"
+}
+
+enum AppSettings {
+    static let defaultValues: [String: Any] = [
+        SettingsKey.captureMode: CaptureMode.quick.rawValue,
+        SettingsKey.confirmationTone: true,
+        SettingsKey.spokenConfirmation: false,
+    ]
+
+    private static let defaults: UserDefaults = {
+        let defaults = UserDefaults.standard
+        defaults.register(defaults: defaultValues)
+        return defaults
+    }()
+
+    static var captureMode: CaptureMode {
+        CaptureMode(rawValue: defaults.string(forKey: SettingsKey.captureMode) ?? "") ?? .quick
+    }
+
+    static var confirmationTone: Bool { defaults.bool(forKey: SettingsKey.confirmationTone) }
+
+    static var spokenConfirmation: Bool { defaults.bool(forKey: SettingsKey.spokenConfirmation) }
+}

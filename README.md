@@ -1,74 +1,81 @@
-# RoadPin
+# Passing
 
-Tap once while driving to mark something you're passing, then look it up later when it's safe.
+Capture things you pass while driving, then look them up later. One tap saves a pin, and identifying the thing happens afterwards. The full spec is in [CLAUDE.md](CLAUDE.md).
 
-- **Four zones around a car.** Tap left or right of the car: the inside columns are for things right by the road, the outside columns for things farther away. There's also a "one big button" mode where you can touch anywhere.
-- **"What do you want to look up?"** After a tap on the phone, RoadPin asks out loud and listens for a few seconds ("large building", "name of that town"). The pin is saved before it asks, so you never lose the spot.
-- **+1 mi back.** If you missed something, tap the bar along the bottom. Tap again within 4 seconds to make it 2 miles, 3 miles, and so on. RoadPin keeps a trail of the last 50 miles you drove, so the pin lands back on the road you were actually on, even around curves. If it hadn't recorded that far back yet, the pin says how much further back to look.
-- **Apple Maps or Google Maps.** Every pin opens in either one, with the nearest street and town filled in.
-- **Weekly clean-up.** Pins are deleted 7 days after you drop them, unless you star them or turn on **Keep pins forever** in Settings.
-- **CarPlay.** The same zones (or one big button) plus "+1 mi back" appear as large buttons on the car's screen, with a "Recent" tab. Tapping a recent pin starts directions back to it.
-- **Siri, hands-free.** No screen at all:
-  - "Hey Siri, **drop a RoadPin**" → "What do you want to look up?" → "that red barn"
-  - "Hey Siri, **I missed something in RoadPin**" → "How many miles back was it?" → "two" → …
-  - "Hey Siri, **name my last RoadPin**" adds a note to a pin you dropped with a CarPlay tap.
+**Status: Milestone 1 (core capture).** Retention, miles back, Siri, the widget/CarPlay path and review polish come in milestones 2–6.
 
-  These also work from the steering-wheel voice button, AirPods, or the iPhone Action Button (Settings → Action Button → Shortcut → RoadPin).
+## What Milestone 1 does
 
-## Running it
+- **Quick mode (default):** the whole screen is one capture button.
+- **Four-zone mode** (Settings → Capture screen): `| Far left | Near left | car | Near right | Far right |` as full-height columns. Near zones are green, far zones blue. Tapping the car saves a pin with the side unknown.
+- **Save first:** a tap writes the pin immediately with no label. If GPS has no usable fix yet, the pin is still saved, marked "No location", and picks up the first good fix within 15 seconds (flagged approximate). An old position is never used.
+- **Non-visual confirmation:** a haptic and a short tone. Spoken "Left, far, saved" is optional (off by default).
+- Repeat taps on the same zone within 0.75 s are ignored. The screen stays awake while the capture screen is showing.
+- **Review:** pins grouped by day, showing time, label or "Unlabeled", side/distance and accuracy. The detail screen has a map, editable label/side/distance, a Reviewed toggle, Apple Maps and Google Maps links, and the raw GPS details.
+- Pins are stored with SwiftData in an App Group container, so Siri and the widget can share them later.
 
-You need a Mac with **Xcode 16 or later**. The app runs on **iOS 17 or later**.
+## Run it
 
-1. Open `RoadPin.xcodeproj`.
-2. Pick an iPhone simulator and press **Run** (⌘R).
-3. Give the simulator a moving location so pins have somewhere to go: **Features → Location → Freeway Drive**.
+You need **Xcode 26** (the app targets **iOS 26**).
 
-### Trying CarPlay in the simulator
+1. Open `Passing.xcodeproj`.
+2. Pick an iPhone simulator and press Run (⌘R).
+3. Give the simulator a location: **Features → Location → Freeway Drive** (moving) or **Apple** (parked).
 
-With the app running in the simulator, choose **I/O → External Displays → CarPlay**. RoadPin shows up on the CarPlay home screen. The simulator build already includes the CarPlay entitlement (`Support/RoadPin-CarPlay.entitlements`), so this works without Apple's approval.
+If Xcode asks for a development team even for the Simulator, pick your Personal Team under **Signing & Capabilities**.
 
-### Putting it on your own iPhone
+### Build and test from Terminal
 
-1. Select the **RoadPin** target → **Signing & Capabilities** → choose your **Team**.
-2. Change the **Bundle Identifier** from `com.example.roadpin` to something unique, like `com.yourname.roadpin`.
-3. Plug in your phone and press Run.
+```sh
+xcodebuild -project Passing.xcodeproj -scheme Passing \
+  -destination 'platform=iOS Simulator,name=iPhone 17' build
 
-Everything except CarPlay works on a real phone straight away, including Siri. CarPlay on a real car needs Apple's approval (see below).
+xcodebuild -project Passing.xcodeproj -scheme Passing \
+  -destination 'platform=iOS Simulator,name=iPhone 17' test
+```
 
-## Getting CarPlay into a real car
+Run `xcrun simctl list devices available` if you don't have an "iPhone 17" simulator, and use a name from that list.
 
-Apple only lets apps onto CarPlay in specific categories, and each one needs an entitlement that Apple approves by hand. RoadPin is written as a **Driving Task** app (`com.apple.developer.carplay-driving-task`).
+## Set up the App Group (needed for your own iPhone)
 
-1. Request it at <https://developer.apple.com/carplay/> (you need a paid Apple Developer account).
-2. Once approved, regenerate your provisioning profile. In the target's build settings, change **Code Signing Entitlements** so `Support/RoadPin-CarPlay.entitlements` is used for device builds too, not just the simulator.
+The project ships with the App Group `group.com.example.passing`. To run on your phone, the bundle ID and App Group have to be yours:
 
-**Heads-up:** Apple's guidelines say driving task apps must "actually help with the drive, not just be tasks that are done while driving," so approval isn't guaranteed. When you apply, it helps to pitch RoadPin as a safety tool: it replaces fumbling with a phone or a maps app at speed with one large tap or a voice command.
+1. In Xcode, click the blue **Passing** project at the top of the file list, then the **Passing** target, then the **Signing & Capabilities** tab.
+2. **Team:** choose your team.
+3. **Bundle Identifier:** change `com.example.passing` to something unique, e.g. `com.yourname.passing`.
+4. In the **App Groups** section, click **+** and add `group.com.yourname.passing` (the bundle ID with `group.` in front). Untick or remove `group.com.example.passing`.
+5. Open `Support/Info.plist` and set **PassingAppGroup** to exactly the same `group.…` value.
+6. Run on your phone. If the App Group doesn't match, the app still works, but Settings shows an orange **Storage** warning. Fix it before milestones 4–5, or Siri and widget pins won't show up.
 
-If Apple says no, Siri still works in the car today with no approval needed. Since iOS 26, CarPlay can also show widgets from any app, so a "Drop Pin" CarPlay widget is a good plan B (see Next ideas).
+## Milestone 1 manual test checklist (parked)
 
-### What CarPlay doesn't allow (and what RoadPin does instead)
+1. Fresh install, Quick mode: tap once. You feel a haptic, hear a tone, and the location permission prompt appears (first capture only). Allow it.
+2. Open **Pins**. The pin says "Unlabeled", today's time, and an accuracy like "±5 m". This first pin may say "approximate", because permission was granted after the tap, or "No location" if the prompt took more than 15 seconds to answer.
+3. Tap again on the capture screen: haptic and tone, no pop-up, no screen change. Double-tap quickly: only one new pin.
+4. Settings → **Four zones**. Tap each column once, left to right, then the car. In Pins, check you get Far left, Near left, Near right, Far right, and one with no side.
+5. Open a pin and tap **Open in Apple Maps** and **Open in Google Maps**. Both should show where you were parked.
+6. Edit a label, side and distance, then go back. The list updates.
+7. Force-quit the app and reopen it. All pins are still there.
+8. iOS Settings → Passing → Location → **Never**, then reopen Passing. An orange "Location is off" strip appears. Tap: the pin saves as "No location" and never takes an old position.
+9. Turn on Airplane Mode and capture a pin, then review it. Everything works except map tiles.
+10. Settings → Spoken confirmation on: a four-zone tap says "Left, far, saved".
 
-- **No custom drawing.** CarPlay apps must use Apple's templates, so the four zones are a grid of four big buttons with little road icons instead of the phone's car picture.
-- **No microphone.** Apple doesn't allow driving task apps to record audio while CarPlay is connected. CarPlay taps save the pin immediately and can speak a short "Saved". For the note, use "Hey Siri, name my last RoadPin", or start with "Hey Siri, drop a RoadPin". The phone's own listen-after-tap feature switches off while CarPlay is connected.
+## Decisions in this milestone
 
-## How it works
+- **Fix freshness:** a fix up to 10 s old and within 200 m accuracy can be used. More than 3 s from the tap or worse than 50 m counts as approximate. These numbers are in `Passing/Model/FixPolicy.swift`.
+- **The tone plays even with the ring switch on silent**, because a haptic is easy to miss with the phone in a dash mount. It mixes with music rather than pausing it.
+- **Darker zone colors than the mock-up** (deep green and blue with white text), so the screen isn't glaring at night.
+- **Location permission is requested on the first capture** (privacy rule), so that one tap gets a system prompt. Do your first capture while parked.
+- **Deleting is permanent for now.** Milestone 2 turns it into Recently Deleted.
 
-| Piece | File |
+## Project layout
+
+| Piece | Where |
 | --- | --- |
-| Drive screen (zones, big button, +1 mi back) | `RoadPin/Views/DriveView.swift` |
-| Pin list / pin details / settings | `RoadPin/Views/` |
-| Saving pins, miles-back logic, notes | `RoadPin/Services/PinRecorder.swift` |
-| GPS and the road trail | `RoadPin/Services/LocationTracker.swift`, `RoadPin/Model/BreadcrumbTrail.swift` |
-| "What do you want to look up?" (speech) | `RoadPin/Services/VoicePrompter.swift` |
-| Database and weekly clean-up | `RoadPin/Services/PinStore.swift`, `RoadPin/Model/Pin.swift` |
-| Apple / Google Maps links | `RoadPin/Services/MapLinks.swift` |
-| CarPlay screen | `RoadPin/CarPlay/` |
-| Siri phrases | `RoadPin/Intents/PinIntents.swift` |
-
-Pins are stored only on the phone (SwiftData). Speech is transcribed on-device when the phone supports it. Location is used while RoadPin is open or in CarPlay. iOS shows the blue location pill if the phone is locked mid-drive, and turns GPS off by itself once you've been parked for a while.
-
-## Next ideas
-
-- **CarPlay / Lock Screen / Control Center widget** with a single "Drop Pin" button (an interactive widget that runs `DropPinIntent`). This works in CarPlay on iOS 26 without the CarPlay entitlement.
-- Kilometers option.
-- iCloud sync of pins between devices.
+| Capture screen | `Passing/Views/CaptureView.swift` |
+| Single save entry point | `Passing/Services/CaptureService.swift` |
+| GPS and freshness rules | `Passing/Services/LocationProvider.swift`, `Passing/Model/FixPolicy.swift` |
+| Pin model and App Group store | `Passing/Model/Pin.swift`, `Passing/Services/SharedStore.swift` |
+| Haptic, tone and speech | `Passing/Services/CaptureFeedback.swift` |
+| Review list and detail | `Passing/Views/PinListView.swift`, `Passing/Views/PinDetailView.swift` |
+| Tests | `PassingTests/` |
