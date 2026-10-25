@@ -40,6 +40,8 @@ enum TargetSource: String, Codable {
     case breadcrumb
     /// Only a description ("about 2 mi back"), because the trail was too short.
     case textOnly
+    /// Moved by hand on a map while reviewing, to where the thing actually is.
+    case manual
 }
 
 /// What triggered the capture.
@@ -113,6 +115,8 @@ enum PinDescription {
         guard milesBack > 0 else { return nil }
         let miles = Geo.milesText(milesBack)
         switch targetSource {
+        case .manual:
+            return "You moved this pin to the spot yourself. It was saved about \(miles) back."
         case .breadcrumb:
             return "Placed \(miles) back along the road you drove. The orange pin is the estimate and the blue line is your route."
         case .textOnly, .direct:

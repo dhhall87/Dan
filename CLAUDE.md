@@ -46,7 +46,7 @@ Native iPhone app for capturing things you pass while driving so you can look th
 | distance | near / far / unknown |
 | milesBack | Double, default 0 |
 | targetLatitude, targetLongitude | optional estimated location of the thing itself |
-| targetSource | direct / breadcrumb / textOnly |
+| targetSource | direct / breadcrumb / textOnly / manual (moved by hand in review via `Pin.moveTarget`) |
 | trail | optional encoded breadcrumb segment for miles-back pins |
 | label | optional, spoken or typed |
 | placeName | optional, reverse geocoded town/area, filled lazily |
@@ -124,7 +124,7 @@ Dark, high contrast, no map, no clutter. Settings picks the layout Passing opens
 ## Review screen
 
 - List grouped by day, plus a map view. Each row: time, label or "Unlabeled", side/distance, miles back, place name, accuracy, "expires in X days".
-- Detail: map with capture point, target, and trail if present; Look Around preview at the target (or capture point); edit label/side/distance; mark reviewed; keep (star); delete.
+- Detail: map with capture point, target, and trail if present; **Move Pin** (`MovePinView`) drags a crosshair map to set the target by hand, never touching the capture point; Look Around preview at the target (or capture point); edit label/side/distance; mark reviewed; keep (star); delete.
 - Map links use the target if present, otherwise capture point:
   - Apple: `https://maps.apple.com/?ll=LAT,LON&q=LABEL`
   - Google: `https://www.google.com/maps/search/?api=1&query=LAT,LON`

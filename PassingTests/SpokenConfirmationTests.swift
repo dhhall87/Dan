@@ -51,6 +51,11 @@ struct MilesBackHintTests {
         #expect(hint.hasPrefix("Placed 2 miles back along the road you drove."))
     }
 
+    @Test func movedPinsSayYouPlacedThem() throws {
+        let hint = try #require(PinDescription.milesBackHint(milesBack: 2, targetSource: .manual, course: 225, courseReliable: true))
+        #expect(hint == "You moved this pin to the spot yourself. It was saved about 2 miles back.")
+    }
+
     @Test func textOnlyPinsSayWhichWayToLook() throws {
         let hint = try #require(PinDescription.milesBackHint(milesBack: 2, targetSource: .textOnly, course: 225, courseReliable: true))
         #expect(hint.contains("About 2 miles back the way you came."))

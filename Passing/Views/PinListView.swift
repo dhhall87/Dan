@@ -527,7 +527,7 @@ struct PinRow: View {
                 if !pin.isNote {
                     Text(PinFormat.accuracy(of: pin))
                         .font(.caption)
-                        .foregroundStyle(pin.hasLocation ? Color.secondary : Color.orange)
+                        .foregroundStyle(pin.lookUpCoordinate != nil ? Color.secondary : Color.orange)
                 }
                 if showsGroup, let group = pin.group {
                     Label(group.name, systemImage: "folder")
@@ -577,9 +577,11 @@ struct PinRow: View {
 enum PinFormat {
     /// "±8 m", "±40 m · approximate", or "No location".
     static func accuracy(of pin: Pin) -> String {
-        guard pin.hasLocation, let accuracy = pin.horizontalAccuracy else { return "No location" }
+        let moved = pin.targetSource == .manual
+        guard pin.hasLocation, let accuracy = pin.horizontalAccuracy else { return moved ? "Placed by you" : "No location" }
         // Rough pins (Precise location off) in miles, like the rest of the app; GPS precision in meters.
         let distance = accuracy >= 1_000 ? "±" + String(format: "%.1f", accuracy / Geo.metersPerMile) + " mi" : "±\(Int(accuracy.rounded())) m"
+        if moved { return "Moved by you · car \(distance)" }
         return pin.isApproximate ? "\(distance) · approximate" : distance
     }
 }

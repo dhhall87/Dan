@@ -10,6 +10,7 @@ struct PinDetailView: View {
     @Query(sort: \PinGroup.name) private var groups: [PinGroup]
     @State private var lookAround: LookAroundState = .notRequested
     @State private var addingGroup = false
+    @State private var movingPin = false
 
     private enum LookAroundState {
         /// Nothing is fetched until asked: it sends the spot to Apple and downloads imagery.
@@ -23,24 +24,33 @@ struct PinDetailView: View {
         Form {
             if !pin.isNote {
             Section {
-                if let coordinate = pin.captureCoordinate {
+                if let coordinate = pin.lookUpCoordinate {
                     Map(initialPosition: mapPosition(around: coordinate)) {
-                        Marker("Your car", systemImage: "car.fill", coordinate: coordinate)
-                            .tint(.blue)
+                        if let car = pin.captureCoordinate {
+                            Marker("Your car", systemImage: "car.fill", coordinate: car)
+                                .tint(.blue)
+                        }
                         if pin.trailCoordinates.count > 1 {
                             MapPolyline(coordinates: pin.trailCoordinates)
                                 .stroke(.blue, lineWidth: 4)
                         }
                         if let target = pin.targetCoordinate {
-                            Marker(pin.milesBack > 0 ? "About here" : pin.displayLabel, systemImage: "scope", coordinate: target)
+                            Marker(pin.milesBack > 0 && pin.targetSource != .manual ? "About here" : pin.displayLabel, systemImage: "scope", coordinate: target)
                                 .tint(.orange)
                         }
                     }
+                    // A new map after a move, so it frames the new spot.
+                    .id("\(pin.targetLatitude ?? 0),\(pin.targetLongitude ?? 0)")
                     .frame(height: 260)
                     .listRowInsets(EdgeInsets())
                 } else {
-                    Label("No location was recorded for this pin. GPS didn't have a usable fix in time, so Passing saved the time only.", systemImage: "location.slash")
+                    Label("No location was recorded for this pin. GPS didn't have a usable fix in time, so Passing saved the time only. You can place it on the map yourself.", systemImage: "location.slash")
                         .foregroundStyle(.orange)
+                }
+                Button {
+                    movingPin = true
+                } label: {
+                    Label(pin.lookUpCoordinate == nil ? "Place on Map" : "Move Pin", systemImage: "hand.point.up.left")
                 }
                 if let hint = pin.milesBackHint {
                     Text(hint)
@@ -124,11 +134,15 @@ struct PinDetailView: View {
 
             Section("Details") {
                 LabeledContent(pin.isNote ? "Written" : "Pinned", value: pin.capturedAt.formatted(date: .abbreviated, time: .standard))
-                if pin.hasLocation {
+                if pin.lookUpCoordinate != nil {
                     LabeledContent("Town", value: pin.placeName ?? "Not looked up yet")
                 }
                 if let latitude = pin.latitude, let longitude = pin.longitude {
                     LabeledContent("Coordinates", value: MapLinks.coordinateString(latitude: latitude, longitude: longitude))
+                        .textSelection(.enabled)
+                }
+                if pin.targetSource == .manual, let latitude = pin.targetLatitude, let longitude = pin.targetLongitude {
+                    LabeledContent("Moved to", value: MapLinks.coordinateString(latitude: latitude, longitude: longitude))
                         .textSelection(.enabled)
                 }
                 if !pin.isNote {
@@ -157,6 +171,9 @@ struct PinDetailView: View {
         }
         .navigationTitle(pin.displayLabel)
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $movingPin) {
+            MovePinView(pin: pin)
+        }
         .newGroupAlert(isPresented: $addingGroup, message: "This pin goes into the new group.") { group in
             PinGroups.move(pin, to: group, in: context)
         }

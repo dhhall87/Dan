@@ -48,6 +48,27 @@ struct CaptureServiceTests {
         try container.mainContext.fetch(FetchDescriptor<Pin>())
     }
 
+    @Test func movingAPinKeepsWhereTheCarWas() throws {
+        let pin = try #require(service(currentFix: fix(at: tap)).capture(side: .left, distance: .far, source: .widget, now: tap))
+        pin.placeName = "Garden City, KS"
+        pin.moveTarget(to: CLLocationCoordinate2D(latitude: 40.72, longitude: -74.01))
+
+        #expect(pin.latitude == 40.7128 && pin.longitude == -74.006, "the capture point is never overwritten")
+        #expect(pin.targetLatitude == 40.72 && pin.targetLongitude == -74.01)
+        #expect(pin.targetSource == .manual)
+        #expect(pin.lookUpCoordinate?.latitude == 40.72, "map links go to the moved spot")
+        #expect(pin.needsPlaceName, "the town is looked up again for the new spot")
+    }
+
+    @Test func aPinWithNoLocationCanBePlacedByHand() throws {
+        let pin = try #require(service(currentFix: nil).capture(side: .unknown, distance: .unknown, source: .widget, now: tap))
+        #expect(!pin.hasLocation)
+        pin.moveTarget(to: CLLocationCoordinate2D(latitude: 37.97, longitude: -100.87))
+        #expect(!pin.hasLocation, "still no car position")
+        #expect(pin.lookUpCoordinate != nil)
+        #expect(PinFormat.accuracy(of: pin) == "Placed by you")
+    }
+
     @Test func notesSaveTextWithoutLocationOrConfirmation() throws {
         let confirmations = Confirmations()
         let note = service(currentFix: fix(at: tap), confirmations: confirmations)

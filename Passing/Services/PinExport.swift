@@ -167,7 +167,9 @@ enum PinExport {
             ]
             let shown = fields.compactMap { name, value in value.map { (name, $0) } }
             var note = shown.filter { $0.0 != "Apple Maps" && $0.0 != "Miles back" }.map { $0.1 }.joined(separator: " · ")
-            if pin.milesBack > 0 {
+            if pin.targetSource == TargetSource.manual.rawValue {
+                note += note.isEmpty ? "Moved to the spot by hand." : ". Moved to the spot by hand."
+            } else if pin.milesBack > 0 {
                 let miles = Geo.milesText(pin.milesBack)
                 note += pin.targetSource == TargetSource.breadcrumb.rawValue
                     ? ". Estimated spot, \(miles) back along the road driven."

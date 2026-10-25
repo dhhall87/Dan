@@ -83,8 +83,9 @@ extension Pin {
         return TrailPoint(latitude: latitude, longitude: longitude)
     }
 
-    /// True until the town has been looked up. Pins with no location have nothing to look up.
-    var needsPlaceName: Bool { hasLocation && placeName == nil }
+    /// True until the town has been looked up. Pins with no location have nothing to look up,
+    /// unless they've been placed on the map by hand.
+    var needsPlaceName: Bool { lookUpCoordinate != nil && placeName == nil }
 
     /// The car's position, if a usable fix was recorded.
     var captureCoordinate: CLLocationCoordinate2D? {
@@ -100,6 +101,15 @@ extension Pin {
     /// Where map links point: the estimated target if there is one, otherwise where the car was.
     var lookUpCoordinate: CLLocationCoordinate2D? {
         targetCoordinate ?? captureCoordinate
+    }
+
+    /// Moves the pin to where the thing actually is, picked on a map while reviewing. Where the car
+    /// was stays as recorded; map links, Look Around, the town and exports follow the new spot.
+    func moveTarget(to coordinate: CLLocationCoordinate2D) {
+        targetLatitude = coordinate.latitude
+        targetLongitude = coordinate.longitude
+        targetSource = .manual
+        placeName = nil
     }
 
     /// True when the fix was imprecise, or the car could have moved a fair way between fix and tap.
