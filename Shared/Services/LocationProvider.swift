@@ -4,6 +4,7 @@ import Observation
 
 /// Supplies fresh GPS fixes. Runs continuous updates while the capture screen is showing, plus a
 /// short burst when a capture happens elsewhere (Siri, Shortcuts) or before the first fix.
+/// The widget extension has its own copy, which only ever runs the short burst.
 /// When In Use only, no background location, and never hands out a stale fix as current.
 @MainActor
 @Observable

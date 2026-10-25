@@ -2,7 +2,7 @@
 
 Capture things you pass while driving, then look them up later. One tap saves a pin, and identifying the thing happens afterwards. The full spec is in [CLAUDE.md](CLAUDE.md).
 
-**Status:** Milestones 1–4 are done. Milestone 5 is next. The widget/CarPlay path (with the Control Center control) and review polish (groups, maps export) come in milestones 5–6.
+**Status:** Milestones 1–4 are done. Milestone 5 (widgets, CarPlay and Control Center) is built and waiting for its test run. Review polish (groups, maps export) comes in Milestone 6.
 
 ## What it does so far
 
@@ -37,6 +37,15 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Quick Pin**: saves without asking anything. Use it for the Action Button and Back Tap, where a question would appear on screen and need typing.
 - Siri replies with one short line ("Saved “red barn”.") and says so if it couldn't get a location.
 - **Music pauses while Passing speaks** (spoken confirmations and previews), then picks up again. Turn off **Pause music while speaking** in Settings to have it lowered instead. The short tone never interrupts music.
+
+**Widgets, CarPlay and Control Center (Milestone 5)**
+- **Pin widget:** a small home-screen widget that's one big button. Tap it to save a pin. Passing doesn't open and nothing is asked.
+- **Pin by Side widget:** four buttons. The left column is the left side of the road and the right column the right side, as on the phone. The top row is far and the bottom row near, like looking up the road. Near is green and far is blue, as on the capture screen.
+- **CarPlay:** both widgets are small, so they can go on CarPlay's Widgets screen. On a touchscreen car, tapping a button saves a pin. Passing doesn't need its own CarPlay app for this.
+- **Control Center:** a **Pin That** control. It can also go on the Lock Screen, or on the Action Button on recent iPhones.
+- Widget and Control Center pins are **silent**: no tone, no voice. For about 5 seconds, the button you tapped shows a tick with "Saved", or "No location" if no GPS reading arrived. Labels get added later in Pins.
+- **Location:** when you add a widget, iOS asks whether Passing's widgets may use your location. Allow it, and Passing's location setting becomes "While Using the App or Widgets". Each widget tap saves the pin first, then waits up to 15 seconds for a GPS reading, as Siri does.
+- Repeat taps on the same widget button within 0.75 s count as one, as on the capture screen.
 
 ## Run it
 
@@ -100,21 +109,38 @@ Siri works best on your iPhone (see "Set up the App Group" below for running it 
 7. **Music pausing:** play something in Music or Podcasts. In Passing, turn on **Spoken confirmation**, then tap a zone. The music pauses, Passing speaks, and the music resumes. Turn off **Pause music while speaking**, tap again, and the music just gets quieter.
 8. Settings now has a **Siri and the Action Button** section with a Siri tip and a Shortcuts button.
 
+## Milestone 5 manual test checklist
+
+Before you start: in Xcode, choose **Integrate → Pull** (or **Source Control → Pull**) to get the new code, and keep the **Passing** scheme selected next to the Run button. A new **PassingWidgetExtension** scheme may appear. Ignore it, because running Passing installs the widgets too. If you've set a Team on the Passing target, set the same Team on **PassingWidgetExtension** too (Signing & Capabilities).
+
+1. Press ⌘U. All tests pass. Then press ⌘R. Set the Simulator's location (location arrow in the debug bar → a city).
+2. **Add the Pin widget:** go to the Simulator's home screen (⇧⌘H). Click and hold an empty spot → **Edit** → **Add Widget** → search **Passing** → **Pin** → **Add Widget** → **Done**. If iOS asks whether Passing's widgets may use your location, choose **Allow**.
+3. **Tap the widget.** Within a few seconds it shows a tick and **Saved**, then goes back to normal after about 5 seconds. Open Passing → **Pins**: there's a new unlabeled pin with a location, and **Saved from** says **Widget**.
+4. **Add Pin by Side** the same way. Tap each of the four buttons, a few seconds apart. Each one gets the tick. In Pins they read Left, far / Right, far / Left, near / Right, near, matching what you tapped.
+5. Double-tap one widget button quickly. Only one pin is saved.
+6. **List refresh:** open Passing's Pins list, go to the home screen, tap a widget, then switch back to Passing. The new pin is in the list.
+7. **Control Center:** swipe down from the top-right corner of the Simulator screen. Click and hold an empty spot (or tap **+**) → **Add a Control** → search **Passing** → **Pin That**. Close the editor and tap the control. Open Passing → Pins: a new pin, and **Saved from** says **Control Center**. **Does it have a location?** Tell me either way. Apple doesn't document whether Control Center counts as "in use" for location.
+8. **CarPlay:** in the Simulator's menu bar choose **I/O → External Displays → CarPlay**. In the CarPlay window, go to the **Widgets** screen, click and hold to edit, and add Passing's **Pin** or **Pin by Side**. Tap a button in the CarPlay window. **Tell me:** does the button respond, does the tick appear, and does the pin in Pins have a location? Apple's docs say buttons work on touchscreen cars, but CarPlay's handling of widget location isn't documented.
+9. **No location:** iOS Settings → Privacy & Security → Location Services → Passing → choose **While Using the App** (not "…or Widgets"). Tap the Pin widget. After about 15 seconds it shows **No location**, and the pin is saved anyway with no position. Set it back to **While Using the App or Widgets**.
+10. iOS Settings → Privacy & Security → Location Services → Passing: the purpose text now mentions widgets, Control Center and Siri.
+
 ## Set up the App Group (needed for your own iPhone)
 
-The project ships with the App Group `group.com.example.passing`. To run on your phone, the bundle ID and App Group have to be yours:
+The project ships with the App Group `group.com.example.passing`. To run on your phone, the bundle IDs and App Group have to be yours. There are two targets to change, the app and the widget:
 
 1. In Xcode, click the blue **Passing** project at the top of the file list, then the **Passing** target, then **Signing & Capabilities**.
 2. **Team:** choose your team.
 3. **Bundle Identifier:** change `com.example.passing` to something unique, e.g. `com.yourname.passing`.
 4. In **App Groups**, click **+** and add `group.com.yourname.passing`. Untick or remove `group.com.example.passing`.
 5. Open `Support/Info.plist` and set **PassingAppGroup** to exactly the same `group.…` value.
+6. Now click the **PassingWidgetExtension** target and repeat: same **Team**, Bundle Identifier `com.yourname.passing.widget` (it must start with the app's ID), and tick the same App Group.
+7. Open `Support/PassingWidget-Info.plist` and set **PassingAppGroup** to the same value.
 
-If the App Group doesn't match, the app still works, but Settings shows an orange **Storage** warning. Fix it before milestones 4–5, or Siri and widget pins won't show up.
+If the App Group doesn't match, the app still works, but Settings shows an orange **Storage** warning, and the widgets show **Not set up** instead of their buttons, because their pins would never reach the app.
 
 ## Decisions so far
 
-- **Fix freshness:** a reading up to 10 s old and within 200 m accuracy can be used. The numbers are in `Passing/Model/FixPolicy.swift`.
+- **Fix freshness:** a reading up to 10 s old and within 200 m accuracy can be used. The numbers are in `Shared/Model/FixPolicy.swift`.
 - **The tone plays even with the ring switch on silent**, because a haptic is easy to miss with the phone in a dash mount. It mixes with music rather than pausing it.
 - **Darker zone colors than the mock-up**, so the screen isn't glaring at night.
 - **Location permission is requested on the first capture** (privacy rule), so that one tap gets a system prompt. Do your first capture while parked.
@@ -125,21 +151,26 @@ If the App Group doesn't match, the app still works, but Settings shows an orang
 - **"+1" taps aren't debounced**, because quick taps are how you say "3 miles". Each extra tap measures back from where you first tapped, not from where the car is by then.
 - **Miles-back confirmations say the distance, not your phrase**, so you always know how far back it went.
 - **Two kinds of shortcut:** "Pin That" asks a question through Siri. "Quick Pin" never asks, because outside Siri the question would pop up on screen and need typing.
-- **The Control Center button moves to Milestone 5.** It needs the same widget extension as the CarPlay widget, so it's simpler to add both at once.
+- **The Control Center button moved to Milestone 5.** It needs the same widget extension as the CarPlay widget, so it was simpler to add both at once.
+- **Widget and Control Center taps run in the widget extension, not the app.** Apple's docs say so, and say widgets can use location once you allow it for them. The widget extension shares the capture code in `Shared/` with the app, so there's still one save path. Whether Control Center and CarPlay count as "in use" for location isn't documented, so the checklist asks you to check.
+- **No "+1 mi back" on the widgets.** It needs the trail, which only exists while the app's capture screen is open.
+- **The grid widget is 2x2, unlike the phone screen.** The spec asks for that, and a small widget is too narrow for five columns you can hit while driving.
 - **No automatic Apple Maps Guide:** Apple doesn't let apps create Guides or add places to them. Milestone 6 adds a KML export that Google My Maps turns into a "Passing pins" map. Each pin also keeps "Open in Apple Maps", where you can tap "Add to Guide" yourself.
 
 ## Project layout
 
 | Piece | Where |
 | --- | --- |
+| Code used by both the app and the widget | `Shared/` |
 | Capture screen | `Passing/Views/CaptureView.swift` |
-| Single save entry point | `Passing/Services/CaptureService.swift` |
-| Siri, Shortcuts, Action Button | `Passing/Intents/CaptureIntents.swift`, `Passing/Services/SiriCapture.swift` |
-| GPS and freshness rules | `Passing/Services/LocationProvider.swift`, `Passing/Model/FixPolicy.swift` |
-| Pin model and App Group store | `Passing/Model/Pin.swift`, `Passing/Services/SharedStore.swift` |
-| Miles back (trail and estimate) | `Passing/Model/BreadcrumbBuffer.swift`, `Passing/Services/CaptureService.swift` |
-| Voice and phrases | `Passing/Model/SpokenConfirmation.swift`, `Passing/Views/VoicePickerView.swift`, `PhrasesView.swift` |
-| Retention rules and clean-up | `Passing/Model/RetentionPolicy.swift`, `Passing/Services/RetentionService.swift` |
+| Single save entry point | `Shared/Services/CaptureService.swift`, wired up per target in `Passing/Services/CaptureService+App.swift` and `PassingWidget/CaptureService+Widget.swift` |
+| Siri, Shortcuts, Action Button | `Passing/Intents/CaptureIntents.swift`, `Shared/Services/IntentCapture.swift` |
+| Widgets and Control Center | `PassingWidget/`, `Shared/Intents/WidgetIntents.swift` |
+| GPS and freshness rules | `Shared/Services/LocationProvider.swift`, `Shared/Model/FixPolicy.swift` |
+| Pin model and App Group store | `Shared/Model/Pin.swift`, `Shared/Services/SharedStore.swift`, `Shared/Services/AppGroup.swift` |
+| Miles back (trail and estimate) | `Shared/Model/BreadcrumbBuffer.swift`, `Shared/Services/CaptureService.swift` |
+| Voice and phrases | `Shared/Model/SpokenConfirmation.swift`, `Passing/Views/VoicePickerView.swift`, `PhrasesView.swift` |
+| Retention rules and clean-up | `Shared/Model/RetentionPolicy.swift`, `Passing/Services/RetentionService.swift` |
 | Export | `Passing/Services/PinExport.swift`, `Passing/Services/ExportService.swift` |
 | Haptic, tone and speech | `Passing/Services/CaptureFeedback.swift` |
 | Review screens | `Passing/Views/PinListView.swift`, `PinDetailView.swift`, `RecentlyDeletedView.swift` |

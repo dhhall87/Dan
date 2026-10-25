@@ -1,24 +1,6 @@
 import AppIntents
 import Foundation
 
-extension Side: AppEnum {
-    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Side of the road"
-    static let caseDisplayRepresentations: [Side: DisplayRepresentation] = [
-        .left: "Left",
-        .right: "Right",
-        .unknown: "Not sure",
-    ]
-}
-
-extension Distance: AppEnum {
-    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Distance from the road"
-    static let caseDisplayRepresentations: [Distance: DisplayRepresentation] = [
-        .near: "Near",
-        .far: "Far",
-        .unknown: "Not sure",
-    ]
-}
-
 /// "Hey Siri, pin that in Passing" → saves the pin → "What did you see?" → "a red barn".
 /// The pin is saved before Siri asks, so ignoring or cancelling the question keeps it.
 struct CapturePinIntent: AppIntent {
@@ -39,7 +21,7 @@ struct CapturePinIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let pin = await SiriCapture.run(
+        let pin = await IntentCapture.run(
             service: .shared,
             source: .siri,
             side: side ?? .unknown,
@@ -50,7 +32,7 @@ struct CapturePinIntent: AppIntent {
         ) {
             try await $label.requestValue("What did you see?")
         }
-        return .result(dialog: "\(SiriCapture.dialog(for: pin))")
+        return .result(dialog: "\(IntentCapture.dialog(for: pin))")
     }
 }
 
@@ -67,7 +49,7 @@ struct PinMilesBackIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let pin = await SiriCapture.run(
+        let pin = await IntentCapture.run(
             service: .shared,
             source: .siri,
             milesBack: min(max(miles, 1), 25),
@@ -76,7 +58,7 @@ struct PinMilesBackIntent: AppIntent {
         ) {
             try await $label.requestValue("What did you see?")
         }
-        return .result(dialog: "\(SiriCapture.dialog(for: pin))")
+        return .result(dialog: "\(IntentCapture.dialog(for: pin))")
     }
 }
 
@@ -88,8 +70,8 @@ struct QuickPinIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let pin = await SiriCapture.run(service: .shared, source: .actionButton, ask: false) { nil }
-        return .result(dialog: "\(SiriCapture.dialog(for: pin))")
+        let pin = await IntentCapture.run(service: .shared, source: .actionButton, ask: false) { nil }
+        return .result(dialog: "\(IntentCapture.dialog(for: pin))")
     }
 }
 

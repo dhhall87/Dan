@@ -27,6 +27,9 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var path = NavigationPath()
     @State private var showingSettings = false
+    /// Bumped to rebuild the pin list after the widget or Control Center saved pins.
+    @State private var listRefresh = 0
+    @State private var seenWidgetCapture = WidgetActivity.lastCaptureAt
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -51,7 +54,7 @@ struct RootView: View {
                 }
                 .navigationDestination(for: Route.self) { route in
                     switch route {
-                    case .pins: PinListView()
+                    case .pins: PinListView().id(listRefresh)
                     case .recentlyDeleted: RecentlyDeletedView()
                     }
                 }
@@ -66,11 +69,21 @@ struct RootView: View {
             switch phase {
             case .active:
                 RetentionService.shared.run()
+                refreshIfWidgetSaved()
             case .background:
                 RetentionScheduler.schedule()
             default:
                 break
             }
         }
+    }
+
+    /// The widget and Control Center save pins from their own process, and SwiftData's queries don't
+    /// reliably notice changes saved by another process. Rebuild the list when they've saved since we last looked.
+    private func refreshIfWidgetSaved() {
+        let latest = WidgetActivity.lastCaptureAt
+        guard latest != seenWidgetCapture else { return }
+        seenWidgetCapture = latest
+        listRefresh += 1
     }
 }

@@ -59,6 +59,15 @@ enum CaptureSource: String, Codable {
         case .actionButton: return "Action Button or Shortcut"
         }
     }
+
+    /// A finger on a button (rather than a spoken or automated request), so a bounce or double
+    /// tap within 0.75 s shouldn't make a second pin.
+    var isTap: Bool {
+        switch self {
+        case .app, .widget, .control: return true
+        case .siri, .actionButton: return false
+        }
+    }
 }
 
 /// The tap targets on the four-zone screen, left to right exactly as the road looks.

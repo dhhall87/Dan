@@ -89,6 +89,28 @@ struct CaptureServiceTests {
         #expect(try savedPins().count == 3)
     }
 
+    @Test func widgetAndControlCenterTapsAreDebouncedToo() throws {
+        let capture = service(currentFix: fix(at: tap))
+        #expect(capture.capture(side: .left, distance: .near, source: .widget, now: tap) != nil)
+        #expect(capture.capture(side: .left, distance: .near, source: .widget, now: tap.addingTimeInterval(0.3)) == nil,
+                "a bounce on the widget button")
+        #expect(capture.capture(side: .unknown, distance: .unknown, source: .control, now: tap) != nil)
+        #expect(capture.capture(side: .unknown, distance: .unknown, source: .control, now: tap.addingTimeInterval(0.3)) == nil)
+        #expect(capture.capture(side: .unknown, distance: .unknown, source: .siri, now: tap) != nil)
+        #expect(capture.capture(side: .unknown, distance: .unknown, source: .siri, now: tap.addingTimeInterval(0.3)) != nil,
+                "two Siri requests are two pins")
+        #expect(try savedPins().count == 4)
+    }
+
+    @Test func widgetCapturesAreSilent() throws {
+        let confirmations = Confirmations()
+        let capture = service(currentFix: fix(at: tap), confirmations: confirmations)
+        capture.capture(side: .right, distance: .far, source: .widget, now: tap)
+        capture.capture(side: .unknown, distance: .unknown, source: .control, now: tap)
+        #expect(confirmations.count == 0, "no tone or haptic from the widget or Control Center")
+        #expect(try savedPins().map(\.source).sorted { $0.rawValue < $1.rawValue } == [.control, .widget])
+    }
+
     @Test func lateFixIsAttachedAndFlaggedApproximate() async throws {
         let late = fix(at: tap.addingTimeInterval(6))
         let capture = service(currentFix: nil, lateFix: late)

@@ -181,9 +181,9 @@ Later / maybe: native CarPlay app (only if publishing).
 ## Current status
 
 - Milestones 1–4 are done and confirmed by Dan. Work happens on branch `claude/road-marker-pin-app-flj2qm`.
-- **Next: Milestone 5.** Notes from planning:
-  - `Passing.xcodeproj/project.pbxproj` was written by hand. Per the rules above, Dan adds the Widget Extension target in Xcode (File → New → Target → Widget Extension, with "Include Control" ticked) and gives it the same App Group. Then the template files get replaced.
-  - The control and the widget buttons should run `QuickPinIntent` (never asks). The 2x2 widget needs side/distance variants of it.
-  - Verify first: which process runs a widget or control intent, and whether it can get a location under When In Use. Check Apple's docs for `AppIntent.allowedExecutionTargets` / `IntentExecutionTargets` (listed in the current AppIntent docs) before choosing an approach.
+- **Milestone 5 is built and waiting for Dan's test run** (README, "Milestone 5 manual test checklist"). Don't start Milestone 6 until he confirms. Notes:
+  - The widget extension target (`PassingWidgetExtension`, folder `PassingWidget/`) was added to the hand-written `project.pbxproj` directly instead of through Xcode's New Target wizard. The wizard would have needed a round trip and several manual file moves, and the project file was hand-written to begin with.
+  - Code used by both targets lives in `Shared/` (a synced folder in both targets). `CaptureService.shared` is defined per target: `Passing/Services/CaptureService+App.swift` and `PassingWidget/CaptureService+Widget.swift`. Siri intents and `PassingShortcuts` stay app-only, so the system never runs them in the extension (`allowedExecutionTargets` is iOS 27+, so it can't be used to pin them).
+  - Per Apple's docs, widget buttons and controls run their intent in the widget extension. Widgets get location through `NSWidgetWantsLocation` ("While Using the App or Widgets"). Still unverified: whether Control Center and CarPlay widget taps get a fix, and whether CarPlay widget buttons work with the iPhone locked (only testable in a real car).
   - This environment can't build iOS. Pure-logic tests run on Linux through a scratch SwiftPM package; Dan runs ⌘U in Xcode.
 - **Future, not now:** `ROADMAP.md` holds the Passing Pro and sales-workflow roadmap. Don't implement any of it or change the milestones until Dan asks. When it starts, inspect the code and propose a focused plan first.

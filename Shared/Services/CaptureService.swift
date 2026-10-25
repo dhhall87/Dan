@@ -2,24 +2,16 @@ import CoreLocation
 import Foundation
 import SwiftData
 
-/// The single entry point that saves a pin. The phone screen, Siri and the Action Button call it;
-/// the widget and Control Center will in Milestone 5. Never duplicate save logic.
+/// The single entry point that saves a pin. The phone screen, Siri, the Action Button, the widget
+/// and Control Center all call it. Never duplicate save logic.
 ///
 /// Save first: the pin is written synchronously before anything else happens. It never waits on
 /// the network, never asks a question, and never substitutes an old coordinate.
+///
+/// `CaptureService.shared` is defined once per target, because the app and the widget extension
+/// wire it up differently: see `CaptureService+App.swift` and `CaptureService+Widget.swift`.
 @MainActor
 final class CaptureService {
-    static let shared = CaptureService(
-        context: SharedStore.context,
-        currentFix: { LocationProvider.shared.freshFix() },
-        lateFix: {
-            LocationProvider.shared.requestPermissionIfNeeded()
-            return await LocationProvider.shared.nextUsableFix(timeout: FixPolicy.lateFixWindow)
-        },
-        trail: { LocationProvider.shared.breadcrumbs },
-        confirm: { CaptureFeedback.shared.confirmCapture(of: $0) }
-    )
-
     /// Tapping "+1 mi back" again within this many seconds bumps the same pin another mile back.
     static let bumpWindow: TimeInterval = 4
 
@@ -49,15 +41,18 @@ final class CaptureService {
         self.confirm = confirm
     }
 
-    /// Saves a pin now. Taps in the app get the haptic and tone; Siri and shortcuts confirm out loud themselves.
+    /// Saves a pin now. Taps in the app get the haptic and tone; Siri and shortcuts confirm out loud
+    /// themselves, and widget and Control Center captures are silent.
     ///
-    /// - Returns: the saved pin, or nil if this was a repeat tap on the same zone within 0.75 s.
+    /// - Returns: the saved pin, or nil if this was a repeat tap on the same button within 0.75 s.
     @discardableResult
     func capture(side: Side, distance: Distance, source: CaptureSource, label: String? = nil, now: Date = .now) -> Pin? {
-        if source == .app {
-            guard debouncer.shouldAccept("\(side.rawValue)-\(distance.rawValue)", at: now) else {
+        if source.isTap {
+            guard debouncer.shouldAccept("\(source.rawValue)-\(side.rawValue)-\(distance.rawValue)", at: now) else {
                 return nil
             }
+        }
+        if source == .app {
             bump = nil
         }
 

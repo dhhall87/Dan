@@ -1,12 +1,12 @@
 import Foundation
 
-/// What every Siri and Shortcuts capture does, in order:
+/// What every capture from an App Intent does (Siri, Shortcuts, the widget, Control Center), in order:
 /// 1. Save the pin through `CaptureService`, straight away.
-/// 2. If there's no label and asking is allowed, ask "What did you see?". A cancelled, unanswered or
-///    failed question just leaves the pin unlabeled; it never loses it.
+/// 2. If there's no label and asking is allowed (Siri only), ask "What did you see?". A cancelled,
+///    unanswered or failed question just leaves the pin unlabeled; it never loses it.
 /// 3. Give the location a moment to arrive before finishing, so iOS doesn't suspend Passing first.
 @MainActor
-enum SiriCapture {
+enum IntentCapture {
     static let question = "What did you see?"
 
     @discardableResult
