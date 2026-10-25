@@ -1,3 +1,4 @@
+import AppIntents
 import CoreLocation
 import SwiftUI
 import UIKit
@@ -18,6 +19,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.voiceIdentifier) private var voiceIdentifier = ""
     @AppStorage(SettingsKey.confirmationPhrases) private var storedPhrases = SpokenConfirmation.defaultPhrase
     @AppStorage(SettingsKey.sayClueFirst) private var sayClueFirst = true
+    @AppStorage(SettingsKey.pauseAudioWhileSpeaking) private var pauseAudioWhileSpeaking = true
     #if DEBUG
     @AppStorage(SettingsKey.debugDayOffset) private var debugDayOffset = 0
     #endif
@@ -53,6 +55,7 @@ struct SettingsView: View {
                             LabeledContent("Phrases", value: phrasesSummary)
                         }
                         Toggle("Say side and distance first", isOn: $sayClueFirst)
+                        Toggle("Pause music while speaking", isOn: $pauseAudioWhileSpeaking)
                         Button("Preview") {
                             CaptureFeedback.shared.preview(SpokenConfirmation.text(
                                 side: .left,
@@ -67,8 +70,17 @@ struct SettingsView: View {
                     Text("Confirmation")
                 } footer: {
                     Text(spokenConfirmation
-                         ? "Every pin gets a haptic. The tone plays even with the ring switch on silent. After each pin, Passing says one of your phrases, like “Left, far. Got it boss.” “+1 mi back” says the distance instead."
+                         ? "Every pin gets a haptic. The tone plays even with the ring switch on silent. After each pin, Passing says one of your phrases, like “Left, far. Got it boss.” “+1 mi back” says the distance instead. Music and podcasts pause while Passing speaks and pick up again after, unless you turn that off (then they're just lowered)."
                          : "Every pin gets a haptic. The tone plays even with the ring switch on silent. Turn on spoken confirmation to choose a voice and your own phrases.")
+                }
+
+                Section {
+                    SiriTipView(intent: CapturePinIntent())
+                    ShortcutsLink()
+                } header: {
+                    Text("Siri and the Action Button")
+                } footer: {
+                    Text("Say “Pin that in Passing” or “I missed something in Passing.” Siri asks what you saw, but the pin is already saved, so you can ignore the question. For the Action Button, use **Quick Pin**, which never asks anything.")
                 }
 
                 Section {

@@ -2,8 +2,9 @@ import CoreLocation
 import Foundation
 import Observation
 
-/// Supplies fresh GPS fixes. Runs continuous updates only while the capture screen is showing
-/// (When In Use only, no background location), and never hands out a stale fix as current.
+/// Supplies fresh GPS fixes. Runs continuous updates while the capture screen is showing, plus a
+/// short burst when a capture happens elsewhere (Siri, Shortcuts) or before the first fix.
+/// When In Use only, no background location, and never hands out a stale fix as current.
 @MainActor
 @Observable
 final class LocationProvider: NSObject, CLLocationManagerDelegate {
@@ -52,7 +53,7 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
         if visible {
             startUpdatesIfAuthorized()
         } else {
-            stopUpdates()
+            stopIfIdle()
         }
     }
 
@@ -64,22 +65,26 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
     }
 
     /// Waits for the next usable fix, up to `timeout` seconds. Returns nil rather than an old fix.
+    /// If GPS isn't running (a Siri capture, say), it runs a short burst and stops again afterwards.
     func nextUsableFix(timeout: TimeInterval) async -> CLLocation? {
         if isUpdating {
             // Restarting makes Core Location deliver a new fix right away, even if we aren't moving.
             manager.stopUpdatingLocation()
             manager.startUpdatingLocation()
         } else if isAuthorized {
-            manager.requestLocation()
+            manager.startUpdatingLocation()
+            isUpdating = true
         }
         let id = UUID()
-        return await withCheckedContinuation { continuation in
+        let fix = await withCheckedContinuation { continuation in
             waiters[id] = continuation
             Task { @MainActor [weak self] in
                 try? await Task.sleep(for: .seconds(timeout))
                 self?.resolveWaiter(id, with: nil)
             }
         }
+        stopIfIdle()
+        return fix
     }
 
     // MARK: Private
@@ -88,6 +93,12 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
         guard captureScreenVisible, isAuthorized, !isUpdating else { return }
         manager.startUpdatingLocation()
         isUpdating = true
+    }
+
+    /// Stops GPS unless the capture screen is showing or a capture is still waiting for a fix.
+    private func stopIfIdle() {
+        guard !captureScreenVisible, waiters.isEmpty else { return }
+        stopUpdates()
     }
 
     private func stopUpdates() {
@@ -130,7 +141,8 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
             startUpdatesIfAuthorized()
             // Someone is waiting on a fix (e.g. the very first capture, made before permission was granted).
             if !waiters.isEmpty && !isUpdating {
-                manager.requestLocation()
+                manager.startUpdatingLocation()
+                isUpdating = true
             }
         } else if isDenied {
             stopUpdates()

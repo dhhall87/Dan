@@ -2,7 +2,7 @@
 
 Capture things you pass while driving, then look them up later. One tap saves a pin, and identifying the thing happens afterwards. The full spec is in [CLAUDE.md](CLAUDE.md).
 
-**Status:** Milestones 1–2 are done. Milestone 3 (miles back and voice options) is ready to test. Siri, the widget/CarPlay path and review polish come in milestones 4–6.
+**Status:** Milestones 1–3 are done. Milestone 4 (Siri) is ready to test. The widget/CarPlay path (with the Control Center control) and review polish (groups, maps export) come in milestones 5–6.
 
 ## What it does so far
 
@@ -30,6 +30,13 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Not enough trail yet** (app just opened): no estimate goes on the map. Instead the pin says "About 2 miles back the way you came. You were heading southwest, so look northeast of this spot."
 - **Voice** (Settings → Spoken confirmation → Voice): every voice installed on the iPhone, best quality first, each with ▶︎ to preview. Siri's own voices aren't available to apps. Better ones are free downloads in iOS Settings → Accessibility → Spoken Content → Voices. Your Personal Voice can be used too, with permission.
 - **Phrases** (Settings → Spoken confirmation → Phrases): type your own, like "Got it boss" or "I'll look this up later". One is picked at random after each pin. "Say side and distance first" adds "Left, far." before it. Phrases max out at 60 characters. "+1 mi back" always says the distance instead ("2 miles back").
+
+**Siri, Action Button and Back Tap (Milestone 4)**
+- **"Hey Siri, pin that in Passing"** (or "pin this", "mark that", "mark this"): the pin is saved straight away, then Siri asks **"What did you see?"**. Answer and it becomes the label. Say "cancel" or stay quiet and the pin is still kept, unlabeled. Works from CarPlay's voice button, AirPods and the phone.
+- **"Hey Siri, I missed something in Passing"**: a pin 1 mile back along the road, then the same question.
+- **Quick Pin**: saves without asking anything. Use it for the Action Button and Back Tap, where a question would appear on screen and need typing.
+- Siri replies with one short line ("Saved “red barn”.") and says so if it couldn't get a location.
+- **Music pauses while Passing speaks** (spoken confirmations and previews), then picks up again. Turn off **Pause music while speaking** in Settings to have it lowered instead. The short tone never interrupts music.
 
 ## Run it
 
@@ -80,6 +87,19 @@ Debug builds (what ⌘R makes) have a **Testing** section at the bottom of Setti
 8. On the capture screen in Four zones, tap a few zones. You should hear things like "Left, far. Got it boss." Turn off **Say side and distance first** and you just hear the phrase.
 9. Tap **+1 mi back** twice quickly. You hear "1 mile back", then "2 miles back".
 
+## Milestone 4 manual test checklist
+
+Siri works best on your iPhone (see "Set up the App Group" below for running it there). In the Simulator, you can run the same actions from the Shortcuts app (**Shortcuts → App Shortcuts → Passing**) and type the answer.
+
+1. With Passing open on the capture screen, say **"Hey Siri, pin that in Passing."** Siri asks "What did you see?". Say "red barn". Siri replies "Saved “red barn”." In Pins, the pin is labeled "red barn" and has a location.
+2. Do it again, but say **"cancel"** (or say nothing) when Siri asks. The pin is still in Pins, "Unlabeled".
+3. **The important one:** swipe Passing away completely in the app switcher, then say "Hey Siri, pin that in Passing". Afterwards, open Passing. **Does that pin have a location?** Tell me either way. Apple's docs don't say whether this works, and the spec asks us to check rather than assume.
+4. Say **"Hey Siri, I missed something in Passing."** Siri replies "Saved, 1 mile back."
+5. **Action Button** (iPhone 15 Pro or newer): iOS **Settings → Action Button**, swipe to **Shortcut**, tap **Choose a Shortcut → Passing → Quick Pin**. Press the Action Button: a pin is saved with no question.
+6. **Back Tap:** in the **Shortcuts** app tap **+**, search for **Quick Pin**, add it and tap **Done**. Then iOS **Settings → Accessibility → Touch → Back Tap → Double Tap**, and pick that shortcut. Double-tap the back of the phone: a pin is saved.
+7. **Music pausing:** play something in Music or Podcasts. In Passing, turn on **Spoken confirmation**, then tap a zone. The music pauses, Passing speaks, and the music resumes. Turn off **Pause music while speaking**, tap again, and the music just gets quieter.
+8. Settings now has a **Siri and the Action Button** section with a Siri tip and a Shortcuts button.
+
 ## Set up the App Group (needed for your own iPhone)
 
 The project ships with the App Group `group.com.example.passing`. To run on your phone, the bundle ID and App Group have to be yours:
@@ -104,6 +124,9 @@ If the App Group doesn't match, the app still works, but Settings shows an orang
 - **The trail only records while the capture screen is open** (no background location). Opening the Pins list mid-drive pauses it. A gap of more than 2 minutes, or an impossible jump (faster than ~155 mph, like a GPS glitch), starts a fresh trail. Passing can't know which road joined the two ends.
 - **"+1" taps aren't debounced**, because quick taps are how you say "3 miles". Each extra tap measures back from where you first tapped, not from where the car is by then.
 - **Miles-back confirmations say the distance, not your phrase**, so you always know how far back it went.
+- **Two kinds of shortcut:** "Pin That" asks a question through Siri. "Quick Pin" never asks, because outside Siri the question would pop up on screen and need typing.
+- **The Control Center button moves to Milestone 5.** It needs the same widget extension as the CarPlay widget, so it's simpler to add both at once.
+- **No automatic Apple Maps Guide:** Apple doesn't let apps create Guides or add places to them. Milestone 6 adds a KML export that Google My Maps turns into a "Passing pins" map. Each pin also keeps "Open in Apple Maps", where you can tap "Add to Guide" yourself.
 
 ## Project layout
 
@@ -111,6 +134,7 @@ If the App Group doesn't match, the app still works, but Settings shows an orang
 | --- | --- |
 | Capture screen | `Passing/Views/CaptureView.swift` |
 | Single save entry point | `Passing/Services/CaptureService.swift` |
+| Siri, Shortcuts, Action Button | `Passing/Intents/CaptureIntents.swift`, `Passing/Services/SiriCapture.swift` |
 | GPS and freshness rules | `Passing/Services/LocationProvider.swift`, `Passing/Model/FixPolicy.swift` |
 | Pin model and App Group store | `Passing/Model/Pin.swift`, `Passing/Services/SharedStore.swift` |
 | Miles back (trail and estimate) | `Passing/Model/BreadcrumbBuffer.swift`, `Passing/Services/CaptureService.swift` |

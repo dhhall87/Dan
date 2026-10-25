@@ -29,6 +29,8 @@ enum SettingsKey {
     static let confirmationPhrases = "confirmationPhrases"
     /// Say "Left, far." before the phrase.
     static let sayClueFirst = "sayClueFirst"
+    /// Pause music and podcasts while Passing speaks (otherwise lower them).
+    static let pauseAudioWhileSpeaking = "pauseAudioWhileSpeaking"
     /// Debug builds only: pushes the retention clock forward this many days for testing.
     static let debugDayOffset = "debugDayOffset"
 }
@@ -42,6 +44,7 @@ enum AppSettings {
         SettingsKey.voiceIdentifier: "",
         SettingsKey.confirmationPhrases: SpokenConfirmation.defaultPhrase,
         SettingsKey.sayClueFirst: true,
+        SettingsKey.pauseAudioWhileSpeaking: true,
     ]
 
     private static let defaults: UserDefaults = {
@@ -67,4 +70,6 @@ enum AppSettings {
     }
 
     static var sayClueFirst: Bool { defaults.bool(forKey: SettingsKey.sayClueFirst) }
+
+    static var pauseAudioWhileSpeaking: Bool { defaults.bool(forKey: SettingsKey.pauseAudioWhileSpeaking) }
 }

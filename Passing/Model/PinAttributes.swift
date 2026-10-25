@@ -56,7 +56,7 @@ enum CaptureSource: String, Codable {
         case .siri: return "Siri"
         case .widget: return "Widget"
         case .control: return "Control Center"
-        case .actionButton: return "Action Button"
+        case .actionButton: return "Action Button or Shortcut"
         }
     }
 }

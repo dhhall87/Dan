@@ -89,6 +89,7 @@ Dark, high contrast, no map, no clutter. Mode switch lives in Settings, not on t
 ## Voice confirmation options
 
 - Spoken confirmation stays optional and off by default.
+- When Passing speaks, other audio (music, podcasts) pauses and resumes afterwards, rather than playing underneath. A setting switches this to lowering the volume instead. The short tone always mixes with music.
 - **Voice picker:** choose from the voices installed on the phone (`AVSpeechSynthesisVoice.speechVoices()`), labeled by quality (Default / Enhanced / Premium), with a preview button. The default is the system voice for the phone's language. Siri voices aren't available to third-party apps, and no voice files are bundled. Better voices are free downloads in iOS Settings → Accessibility → Spoken Content → Voices, and the app explains how to get them. Refresh the list when installed voices change. Optionally offer the user's Personal Voice, with their permission.
 - **Custom phrases:** Dan can type his own confirmation phrases ("Location saved", "Got it boss", "I'll look this up later", "Writing this down for you now"). One is picked at random per capture. Option to say the side/distance first ("Left, far. Got it boss."). Keep phrases short (about 60 characters max) so confirmations stay brief, and add a preview button. Miles-back bumps still say the number ("2 miles back").
 
@@ -105,6 +106,7 @@ Dark, high contrast, no map, no clutter. Mode switch lives in Settings, not on t
 - In `perform()`: capture and save the pin first. Then, if label is nil, ask with the parameter's `requestValue` ("What did you see?"). On an answer, update the pin. On cancel, timeout, or error, keep the pin unlabeled. A failed or skipped label must never lose the pin. Verify this flow in the simulator and through CarPlay.
 - **AppShortcutsProvider** phrases. App Shortcut phrases must include the app name, so the final app name should sound natural spoken aloud ("Pin that in Passing", "Mark this in Passing").
 - The same intent powers a Control Center control (ControlWidget), the Action Button, and Back Tap via Shortcuts.
+- **QuickPinIntent** saves without asking anything. Use it for the Action Button, Back Tap and Control Center: outside Siri, a `requestValue` question appears on screen and needs typing, which breaks the safety rules. It calls the same CaptureService path.
 - Runs without opening the app.
 
 ## Widget (CarPlay path, no entitlement needed)
@@ -123,6 +125,8 @@ Dark, high contrast, no map, no clutter. Mode switch lives in Settings, not on t
   - Google: `https://www.google.com/maps/search/?api=1&query=LAT,LON`
 - Reverse geocode lazily when online to fill `placeName` (answers "what town was that" automatically).
 - Export JSON and CSV through the share sheet.
+- **Groups (folders):** Dan can put pins into named groups in the review list (e.g. "Road trip", "Houses to check") and filter by group. A pin belongs to at most one group. Deleting a group never deletes its pins.
+- **"Passing pins" collection in a maps app:** Apple Maps has no public API for creating Guides or adding places to them (checked October 2026), so the app can't fill an Apple Maps Guide automatically. Instead, export a KML file that Google My Maps imports as a "Passing pins" map, and keep "Open in Apple Maps" on each pin so it can be added to a Guide by hand. Revisit if Apple adds an API.
 - Optional (later): in-app "listen after tap" setting - chime, listen a few seconds with on-device speech recognition, save silently if nothing is said.
 
 ## Retention
@@ -145,9 +149,9 @@ Dark, high contrast, no map, no clutter. Mode switch lives in Settings, not on t
 1. **Core capture.** Quick and four-zone modes, CaptureService, LocationProvider with freshness rules, App Group SwiftData store with the full Pin model, review list and detail with map links, haptic/tone confirmation, screen stays awake.
 2. **Retention.** 7-day rolling expiry, keep star, keep-forever setting, Recently Deleted with 30-day purge, export, tests.
 3. **Miles back and voice options.** BreadcrumbBuffer, +1 mi back button with bump-on-repeat, target estimation, trail on review map. Voice picker and custom confirmation phrases.
-4. **Siri.** CapturePinIntent with save-then-ask label flow, App Shortcuts, Control Center control, Action Button.
-5. **Widget / CarPlay.** systemSmall widget (single and 2x2), tested in the CarPlay Simulator.
-6. **Review polish.** Look Around, reverse geocoding, optional listen-after-tap.
+4. **Siri.** CapturePinIntent with save-then-ask label flow, Quick Pin (never asks), App Shortcuts, Action Button and Back Tap setup, spoken confirmations pause other audio. The Control Center control moves to Milestone 5, because it needs the same widget extension target as the widget.
+5. **Widget / CarPlay.** Widget extension with the systemSmall widget (single and 2x2) and the Control Center control, tested in the CarPlay Simulator.
+6. **Review polish.** Look Around, reverse geocoding, pin groups (folders), KML export for a Google My Maps "Passing pins" map, optional listen-after-tap.
 
 Later / maybe: native CarPlay app (only if publishing).
 

@@ -43,7 +43,7 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
 
         deactivateTask?.cancel()
         if spokenText != nil { speechInProgress = true }
-        audio.activateAndPlay(tone: playTone, ducking: spokenText != nil) {
+        audio.activateAndPlay(tone: playTone, mode: spokenText == nil ? .toneOnly : Self.speechMode) {
             Task { @MainActor in
                 self.audioIsActive(speech: spokenText)
             }
@@ -56,11 +56,17 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         deactivateTask?.cancel()
         speechInProgress = true
         let voice = voiceIdentifier ?? AppSettings.voiceIdentifier
-        audio.activateAndPlay(tone: false, ducking: true) {
+        audio.activateAndPlay(tone: false, mode: Self.speechMode) {
             Task { @MainActor in
                 self.speak(text, voiceIdentifier: voice)
             }
         }
+    }
+
+    /// Speech pauses whatever else is playing (and lets it resume after) unless the driver chose
+    /// to have it lowered instead.
+    private static var speechMode: AudioWorker.Mode {
+        AppSettings.pauseAudioWhileSpeaking ? .speechPausingOthers : .speechLoweringOthers
     }
 
     /// The voice for an identifier from settings. Nil means the system voice for the phone's
@@ -134,9 +140,18 @@ private final class AudioWorker: @unchecked Sendable {
     }
 
     /// Turns the session on, plays the tone if asked, then calls `activated` (on the queue).
-    func activateAndPlay(tone: Bool, ducking: Bool, activated: @escaping @Sendable () -> Void) {
+    enum Mode {
+        /// Just the tone: mixes with music without interrupting it.
+        case toneOnly
+        /// Speech: other audio pauses, then resumes when Passing deactivates its session.
+        case speechPausingOthers
+        /// Speech: other audio is lowered while Passing talks.
+        case speechLoweringOthers
+    }
+
+    func activateAndPlay(tone: Bool, mode: Mode, activated: @escaping @Sendable () -> Void) {
         queue.async {
-            Self.activateSession(ducking: ducking)
+            Self.activateSession(mode)
             if tone, let tonePlayer = self.tonePlayer {
                 tonePlayer.currentTime = 0
                 tonePlayer.play()
@@ -145,7 +160,7 @@ private final class AudioWorker: @unchecked Sendable {
         }
     }
 
-    /// Lets ducked music come back up.
+    /// Lets paused or lowered audio come back.
     func deactivate() {
         queue.async {
             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
@@ -153,14 +168,19 @@ private final class AudioWorker: @unchecked Sendable {
     }
 
     /// The tone mixes with whatever is playing and still plays with the ring switch on silent,
-    /// because the haptic is easy to miss with the phone in a dash mount. Speech ducks the music briefly.
-    private static func activateSession(ducking: Bool) {
+    /// because the haptic is easy to miss with the phone in a dash mount. Speech either pauses
+    /// other audio (a non-mixing session interrupts it; deactivating with `notifyOthersOnDeactivation`
+    /// tells it to resume) or lowers it, depending on the driver's setting.
+    private static func activateSession(_ mode: Mode) {
         let session = AVAudioSession.sharedInstance()
         do {
-            if ducking {
-                try session.setCategory(.playback, mode: .voicePrompt, options: [.duckOthers, .interruptSpokenAudioAndMixWithOthers])
-            } else {
+            switch mode {
+            case .toneOnly:
                 try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            case .speechPausingOthers:
+                try session.setCategory(.playback, mode: .voicePrompt, options: [])
+            case .speechLoweringOthers:
+                try session.setCategory(.playback, mode: .voicePrompt, options: [.duckOthers, .interruptSpokenAudioAndMixWithOthers])
             }
             try session.setActive(true)
         } catch {
