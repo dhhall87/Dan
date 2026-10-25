@@ -23,6 +23,12 @@ enum SettingsKey {
     static let confirmationTone = "confirmationTone"
     static let spokenConfirmation = "spokenConfirmation"
     static let keepIndefinitely = "keepRecordsIndefinitely"
+    /// Identifier of the chosen speech voice; empty means the system voice for the phone's language.
+    static let voiceIdentifier = "voiceIdentifier"
+    /// Spoken confirmation phrases, one per line.
+    static let confirmationPhrases = "confirmationPhrases"
+    /// Say "Left, far." before the phrase.
+    static let sayClueFirst = "sayClueFirst"
     /// Debug builds only: pushes the retention clock forward this many days for testing.
     static let debugDayOffset = "debugDayOffset"
 }
@@ -33,6 +39,9 @@ enum AppSettings {
         SettingsKey.confirmationTone: true,
         SettingsKey.spokenConfirmation: false,
         SettingsKey.keepIndefinitely: false,
+        SettingsKey.voiceIdentifier: "",
+        SettingsKey.confirmationPhrases: SpokenConfirmation.defaultPhrase,
+        SettingsKey.sayClueFirst: true,
     ]
 
     private static let defaults: UserDefaults = {
@@ -50,4 +59,12 @@ enum AppSettings {
     static var spokenConfirmation: Bool { defaults.bool(forKey: SettingsKey.spokenConfirmation) }
 
     static var keepIndefinitely: Bool { defaults.bool(forKey: SettingsKey.keepIndefinitely) }
+
+    static var voiceIdentifier: String { defaults.string(forKey: SettingsKey.voiceIdentifier) ?? "" }
+
+    static var confirmationPhrases: [String] {
+        SpokenConfirmation.phrases(from: defaults.string(forKey: SettingsKey.confirmationPhrases) ?? "")
+    }
+
+    static var sayClueFirst: Bool { defaults.bool(forKey: SettingsKey.sayClueFirst) }
 }

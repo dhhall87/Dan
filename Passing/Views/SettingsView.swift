@@ -2,6 +2,12 @@ import CoreLocation
 import SwiftUI
 import UIKit
 
+/// Screens pushed inside Settings.
+enum SettingsRoute: Hashable {
+    case voice
+    case phrases
+}
+
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -9,6 +15,9 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.confirmationTone) private var confirmationTone = true
     @AppStorage(SettingsKey.spokenConfirmation) private var spokenConfirmation = false
     @AppStorage(SettingsKey.keepIndefinitely) private var keepIndefinitely = false
+    @AppStorage(SettingsKey.voiceIdentifier) private var voiceIdentifier = ""
+    @AppStorage(SettingsKey.confirmationPhrases) private var storedPhrases = SpokenConfirmation.defaultPhrase
+    @AppStorage(SettingsKey.sayClueFirst) private var sayClueFirst = true
     #if DEBUG
     @AppStorage(SettingsKey.debugDayOffset) private var debugDayOffset = 0
     #endif
@@ -36,10 +45,30 @@ struct SettingsView: View {
                 Section {
                     Toggle("Confirmation tone", isOn: $confirmationTone)
                     Toggle("Spoken confirmation", isOn: $spokenConfirmation)
+                    if spokenConfirmation {
+                        NavigationLink(value: SettingsRoute.voice) {
+                            LabeledContent("Voice", value: VoiceOption.displayName(for: voiceIdentifier))
+                        }
+                        NavigationLink(value: SettingsRoute.phrases) {
+                            LabeledContent("Phrases", value: phrasesSummary)
+                        }
+                        Toggle("Say side and distance first", isOn: $sayClueFirst)
+                        Button("Preview") {
+                            CaptureFeedback.shared.preview(SpokenConfirmation.text(
+                                side: .left,
+                                distance: .far,
+                                milesBack: 0,
+                                phrases: SpokenConfirmation.phrases(from: storedPhrases),
+                                sayClueFirst: sayClueFirst
+                            ))
+                        }
+                    }
                 } header: {
                     Text("Confirmation")
                 } footer: {
-                    Text("Every pin gets a haptic. The tone plays even with the ring switch on silent. Spoken confirmation says things like “Left, far, saved.”")
+                    Text(spokenConfirmation
+                         ? "Every pin gets a haptic. The tone plays even with the ring switch on silent. After each pin, Passing says one of your phrases, like “Left, far. Got it boss.” “+1 mi back” says the distance instead."
+                         : "Every pin gets a haptic. The tone plays even with the ring switch on silent. Turn on spoken confirmation to choose a voice and your own phrases.")
                 }
 
                 Section {
@@ -70,6 +99,7 @@ struct SettingsView: View {
                 #if DEBUG
                 Section {
                     Stepper("Clock: +\(debugDayOffset) \(debugDayOffset == 1 ? "day" : "days")", value: $debugDayOffset, in: 0...60)
+                    LabeledContent("Trail recorded", value: Geo.milesText(location.breadcrumbs.length / Geo.metersPerMile))
                     LabeledContent("Pretend it's", value: AppClock.now.formatted(date: .abbreviated, time: .shortened))
                     Button("Run clean-up now") {
                         RetentionService.shared.run()
@@ -92,11 +122,26 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(for: SettingsRoute.self) { route in
+                switch route {
+                case .voice: VoicePickerView()
+                case .phrases: PhrasesView()
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
             }
+        }
+    }
+
+    private var phrasesSummary: String {
+        let count = SpokenConfirmation.phrases(from: storedPhrases).count
+        switch count {
+        case 0: return "“\(SpokenConfirmation.defaultPhrase)”"
+        case 1: return "1 phrase"
+        default: return "\(count) phrases"
         }
     }
 

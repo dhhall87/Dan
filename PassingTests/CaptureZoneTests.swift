@@ -18,13 +18,6 @@ struct CaptureZoneTests {
         #expect(CaptureZone.car.side == .unknown)
         #expect(CaptureZone.car.distance == .unknown)
     }
-
-    @Test func spokenConfirmationNamesTheZone() {
-        #expect(PinDescription.spokenConfirmation(side: .left, distance: .far) == "Left, far, saved")
-        #expect(PinDescription.spokenConfirmation(side: .right, distance: .near) == "Right, near, saved")
-        #expect(PinDescription.spokenConfirmation(side: .right, distance: .unknown) == "Right, saved")
-        #expect(PinDescription.spokenConfirmation(side: .unknown, distance: .unknown) == "Saved")
-    }
 }
 
 struct TapDebouncerTests {

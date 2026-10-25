@@ -172,11 +172,11 @@ struct PinRow: View {
 
     private var details: String {
         let time = pin.capturedAt.formatted(date: .omitted, time: .shortened)
-        guard let clue = pin.sideAndDistance else { return time }
-        return "\(time) · \(clue)"
+        return ([time] + [pin.milesBackText, pin.sideAndDistance].compactMap { $0 }).joined(separator: " · ")
     }
 
     private var icon: String {
+        if pin.milesBack > 0 { return "arrow.uturn.backward.circle.fill" }
         switch pin.side {
         case .left: return "arrow.up.left.circle.fill"
         case .right: return "arrow.up.right.circle.fill"

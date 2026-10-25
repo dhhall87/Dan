@@ -29,11 +29,17 @@ struct CaptureServiceTests {
         )
     }
 
-    private func service(currentFix: CLLocation?, lateFix: CLLocation? = nil, confirmations: Confirmations = Confirmations()) -> CaptureService {
+    private func service(
+        currentFix: CLLocation?,
+        lateFix: CLLocation? = nil,
+        trail: BreadcrumbBuffer = BreadcrumbBuffer(),
+        confirmations: Confirmations = Confirmations()
+    ) -> CaptureService {
         CaptureService(
             context: container.mainContext,
             currentFix: { currentFix },
             lateFix: { lateFix },
+            trail: { trail },
             confirm: { _ in confirmations.count += 1 }
         )
     }
@@ -141,5 +147,90 @@ struct CaptureServiceTests {
         #expect(pin.googleMapsURL?.absoluteString == "https://www.google.com/maps/search/?api=1&query=40.700000,-74.020000")
         // The car's position is untouched.
         #expect(pin.latitude == 40.7128)
+    }
+
+    // MARK: Miles back
+
+    /// A trail heading north that ends where the test fix puts the car (40.7128, -74.006).
+    private func trailEndingAtFix(miles: Double) -> BreadcrumbBuffer {
+        var buffer = BreadcrumbBuffer()
+        let startLatitude = 40.7128 - miles * Geo.metersPerMile / TestDrive.metersPerDegreeLatitude
+        _ = TestDrive.north(miles: miles, from: startLatitude, longitude: -74.006, into: &buffer)
+        return buffer
+    }
+
+    @Test func milesBackPlacesTheTargetAlongTheTrail() throws {
+        let confirmations = Confirmations()
+        let capture = service(currentFix: fix(at: tap), trail: trailEndingAtFix(miles: 3), confirmations: confirmations)
+        let pin = capture.captureMilesBack(source: .app, now: tap)
+
+        #expect(pin.milesBack == 1)
+        #expect(pin.side == .unknown)
+        #expect(pin.targetSource == .breadcrumb)
+        let car = try TrailPoint(latitude: #require(pin.latitude), longitude: #require(pin.longitude))
+        let target = try TrailPoint(latitude: #require(pin.targetLatitude), longitude: #require(pin.targetLongitude))
+        #expect(abs(Geo.distance(car, target) - Geo.metersPerMile) < 30)
+        #expect(pin.latitude == 40.7128, "the car's position is kept separately from the estimate")
+        #expect(TrailCoding.decode(pin.trail).count > 2)
+        #expect(confirmations.count == 1)
+    }
+
+    @Test func tappingAgainWithinFourSecondsBumpsTheSamePin() throws {
+        let confirmations = Confirmations()
+        let capture = service(currentFix: fix(at: tap), trail: trailEndingAtFix(miles: 5), confirmations: confirmations)
+        let first = capture.captureMilesBack(source: .app, now: tap)
+        let second = capture.captureMilesBack(source: .app, now: tap.addingTimeInterval(2))
+        let third = capture.captureMilesBack(source: .app, now: tap.addingTimeInterval(5.5))
+
+        #expect(first === second && second === third, "one pin, bumped")
+        #expect(third.milesBack == 3)
+        #expect(try savedPins().count == 1)
+        #expect(confirmations.count == 3, "haptic and tone on every step")
+        let car = try TrailPoint(latitude: #require(third.latitude), longitude: #require(third.longitude))
+        let target = try TrailPoint(latitude: #require(third.targetLatitude), longitude: #require(third.targetLongitude))
+        #expect(abs(Geo.distance(car, target) - 3 * Geo.metersPerMile) < 30)
+    }
+
+    @Test func waitingLongerThanFourSecondsStartsANewPin() throws {
+        let capture = service(currentFix: fix(at: tap), trail: trailEndingAtFix(miles: 3))
+        let first = capture.captureMilesBack(source: .app, now: tap)
+        let second = capture.captureMilesBack(source: .app, now: tap.addingTimeInterval(4.5))
+        #expect(first !== second)
+        #expect(second.milesBack == 1)
+        #expect(try savedPins().count == 2)
+    }
+
+    @Test func aZoneTapEndsTheBump() {
+        let capture = service(currentFix: fix(at: tap), trail: trailEndingAtFix(miles: 3))
+        let first = capture.captureMilesBack(source: .app, now: tap)
+        capture.capture(side: .left, distance: .far, source: .app, now: tap.addingTimeInterval(1))
+        let next = capture.captureMilesBack(source: .app, now: tap.addingTimeInterval(2))
+        #expect(first !== next)
+        #expect(first.milesBack == 1)
+    }
+
+    @Test func aBumpedPinThatWasDeletedIsNotReused() {
+        let capture = service(currentFix: fix(at: tap), trail: trailEndingAtFix(miles: 3))
+        let first = capture.captureMilesBack(source: .app, now: tap)
+        first.deletedAt = tap
+        let second = capture.captureMilesBack(source: .app, now: tap.addingTimeInterval(1))
+        #expect(first !== second)
+    }
+
+    @Test func shortTrailFallsBackToADescription() {
+        let capture = service(currentFix: fix(at: tap), trail: trailEndingAtFix(miles: 0.3))
+        let pin = capture.captureMilesBack(source: .app, now: tap)
+        #expect(pin.targetSource == .textOnly)
+        #expect(pin.targetCoordinate == nil && pin.trail == nil)
+        #expect(pin.hasLocation, "the car's own position is still saved")
+        #expect(pin.milesBackHint?.contains("You were heading southwest") == true)
+    }
+
+    @Test func milesBackWithNoGPSStillSavesAPin() throws {
+        let capture = service(currentFix: nil, trail: BreadcrumbBuffer())
+        let pin = capture.captureMilesBack(source: .app, now: tap)
+        #expect(try savedPins().count == 1)
+        #expect(!pin.hasLocation)
+        #expect(pin.targetSource == .textOnly)
     }
 }

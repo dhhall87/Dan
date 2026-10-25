@@ -103,6 +103,21 @@ extension Pin {
         PinDescription.sideAndDistance(side: side, distance: distance)
     }
 
+    /// "2 mi back", or nil for ordinary pins.
+    var milesBackText: String? {
+        milesBack > 0 ? "\(Geo.shortMilesText(milesBack)) back" : nil
+    }
+
+    /// How to find a miles-back pin's spot ("Placed 2 miles back along the road you drove…").
+    var milesBackHint: String? {
+        PinDescription.milesBackHint(milesBack: milesBack, targetSource: targetSource, course: course, courseReliable: courseReliable)
+    }
+
+    /// The road driven between the miles-back estimate and the tap, for the review map.
+    var trailCoordinates: [CLLocationCoordinate2D] {
+        TrailCoding.decode(trail).map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+    }
+
     var appleMapsURL: URL? {
         guard let coordinate = lookUpCoordinate else { return nil }
         return MapLinks.apple(latitude: coordinate.latitude, longitude: coordinate.longitude, label: label)

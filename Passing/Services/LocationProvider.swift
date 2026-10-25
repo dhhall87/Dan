@@ -12,6 +12,8 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
     private(set) var authorization: CLAuthorizationStatus = .notDetermined
     /// The most recent fix of any age, for display. Use `freshFix()` for capturing.
     private(set) var latestFix: CLLocation?
+    /// The last ~25 miles driven while the capture screen was open, for "+1 mi back". Memory only.
+    @ObservationIgnored private(set) var breadcrumbs = BreadcrumbBuffer()
 
     @ObservationIgnored private let manager = CLLocationManager()
     @ObservationIgnored private var captureScreenVisible = false
@@ -108,6 +110,13 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
         for location in locations where location.horizontalAccuracy >= 0 {
             if latestFix == nil || location.timestamp >= latestFix!.timestamp {
                 latestFix = location
+            }
+            // Only precise fixes go on the trail, so miles-back estimates don't zigzag.
+            if location.horizontalAccuracy <= FixPolicy.exactAccuracy {
+                breadcrumbs.add(
+                    TrailPoint(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude),
+                    at: location.timestamp
+                )
             }
         }
         if let fix = freshFix() {

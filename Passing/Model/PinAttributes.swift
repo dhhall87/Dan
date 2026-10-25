@@ -98,9 +98,20 @@ enum PinDescription {
         }
     }
 
-    /// Spoken after a capture when spoken confirmation is on: "Left, far, saved".
-    static func spokenConfirmation(side: Side, distance: Distance) -> String {
-        guard let clue = sideAndDistance(side: side, distance: distance) else { return "Saved" }
-        return "\(clue), saved"
+    /// How to find a miles-back pin's spot, for the review screen. Nil for ordinary pins.
+    /// `course` is the direction of travel at the tap; it's only used when `courseReliable`.
+    static func milesBackHint(milesBack: Double, targetSource: TargetSource, course: Double?, courseReliable: Bool) -> String? {
+        guard milesBack > 0 else { return nil }
+        let miles = Geo.milesText(milesBack)
+        switch targetSource {
+        case .breadcrumb:
+            return "Placed \(miles) back along the road you drove. The orange pin is the estimate and the blue line is your route."
+        case .textOnly, .direct:
+            var hint = "About \(miles) back the way you came."
+            if courseReliable, let course {
+                hint += " You were heading \(Geo.compassName(for: course)), so look \(Geo.compassName(for: course + 180)) of this spot."
+            }
+            return hint + " Passing hadn't recorded enough of the drive yet to place it on the map."
+        }
     }
 }

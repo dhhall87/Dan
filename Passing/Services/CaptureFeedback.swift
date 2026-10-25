@@ -2,7 +2,7 @@ import AVFoundation
 import UIKit
 
 /// Non-visual confirmation that a pin was saved: a haptic, a short tone, and (if turned on)
-/// a spoken "Left, far, saved". The driver never has to look at the screen.
+/// a spoken phrase like "Left, far. Got it boss." The driver never has to look at the screen.
 @MainActor
 final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
     static let shared = CaptureFeedback()
@@ -31,7 +31,13 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
 
         let playTone = AppSettings.confirmationTone && audio.hasTone
         let spokenText = AppSettings.spokenConfirmation
-            ? PinDescription.spokenConfirmation(side: pin.side, distance: pin.distance)
+            ? SpokenConfirmation.text(
+                side: pin.side,
+                distance: pin.distance,
+                milesBack: pin.milesBack,
+                phrases: AppSettings.confirmationPhrases,
+                sayClueFirst: AppSettings.sayClueFirst
+            )
             : nil
         guard playTone || spokenText != nil else { return }
 
@@ -44,13 +50,39 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
+    /// Settings preview: speaks `text` in the given voice (or the chosen one), whatever the
+    /// spoken-confirmation switch says.
+    func preview(_ text: String, voiceIdentifier: String? = nil) {
+        deactivateTask?.cancel()
+        speechInProgress = true
+        let voice = voiceIdentifier ?? AppSettings.voiceIdentifier
+        audio.activateAndPlay(tone: false, ducking: true) {
+            Task { @MainActor in
+                self.speak(text, voiceIdentifier: voice)
+            }
+        }
+    }
+
+    /// The voice for an identifier from settings. Nil means the system voice for the phone's
+    /// language, which is also the fallback if the chosen voice has been deleted.
+    static func voice(identifier: String) -> AVSpeechSynthesisVoice? {
+        guard !identifier.isEmpty else { return nil }
+        return AVSpeechSynthesisVoice(identifier: identifier)
+    }
+
     private func audioIsActive(speech: String?) {
         if let speech {
-            synthesizer.stopSpeaking(at: .immediate)
-            synthesizer.speak(AVSpeechUtterance(string: speech))
+            speak(speech, voiceIdentifier: AppSettings.voiceIdentifier)
         } else {
             scheduleDeactivation(after: audio.toneDuration + 0.2)
         }
+    }
+
+    private func speak(_ text: String, voiceIdentifier: String) {
+        synthesizer.stopSpeaking(at: .immediate)
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = Self.voice(identifier: voiceIdentifier)
+        synthesizer.speak(utterance)
     }
 
     private func scheduleDeactivation(after delay: TimeInterval) {

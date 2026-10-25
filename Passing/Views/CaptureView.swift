@@ -23,6 +23,7 @@ struct CaptureView: View {
             case .quick: QuickCapture()
             case .fourZone: FourZoneCapture()
             }
+            MilesBackStrip()
         }
         .background(Color.black.ignoresSafeArea())
         .onAppear {
@@ -138,6 +139,29 @@ private struct CarDivider: View {
     }
 }
 
+// MARK: +1 mi back
+
+/// One tap saves a pin 1 mile back along the road just driven; each extra tap within 4 seconds
+/// pushes that same pin another mile back. Confirmed by haptic and tone on every tap, never by reading.
+private struct MilesBackStrip: View {
+    var body: some View {
+        Button {
+            CaptureService.shared.captureMilesBack(source: .app)
+        } label: {
+            Label("+1 mi back", systemImage: "arrow.uturn.backward")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, minHeight: 64)
+                .background(Color.milesBackSurface, in: RoundedRectangle(cornerRadius: 16))
+                .contentShape(RoundedRectangle(cornerRadius: 16))
+        }
+        .buttonStyle(PressHighlightStyle(cornerRadius: 16))
+        .padding(.horizontal, 6)
+        .padding(.bottom, 6)
+        .accessibilityLabel("Save a pin one mile back. Tap again to move it further back.")
+    }
+}
+
 /// Lights up whatever is being pressed. This is the only visual feedback, and it's optional to see.
 struct PressHighlightStyle: ButtonStyle {
     var cornerRadius: CGFloat = 0
@@ -157,6 +181,8 @@ extension Color {
     /// Far zones: blue, like the distance.
     static let farZone = Color(red: 0.15, green: 0.28, blue: 0.55)
     static let quickSurface = Color(white: 0.13)
+    /// Dark amber, so "+1 mi back" stands apart from the zones.
+    static let milesBackSurface = Color(red: 0.42, green: 0.29, blue: 0.04)
 }
 
 #Preview("Four zones") {

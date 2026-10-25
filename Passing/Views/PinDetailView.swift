@@ -11,11 +11,15 @@ struct PinDetailView: View {
         Form {
             Section {
                 if let coordinate = pin.captureCoordinate {
-                    Map(initialPosition: .region(MKCoordinateRegion(center: coordinate, latitudinalMeters: 1_200, longitudinalMeters: 1_200))) {
+                    Map(initialPosition: mapPosition(around: coordinate)) {
                         Marker("Your car", systemImage: "car.fill", coordinate: coordinate)
                             .tint(.blue)
+                        if pin.trailCoordinates.count > 1 {
+                            MapPolyline(coordinates: pin.trailCoordinates)
+                                .stroke(.blue, lineWidth: 4)
+                        }
                         if let target = pin.targetCoordinate {
-                            Marker(pin.displayLabel, systemImage: "scope", coordinate: target)
+                            Marker(pin.milesBack > 0 ? "About here" : pin.displayLabel, systemImage: "scope", coordinate: target)
                                 .tint(.orange)
                         }
                     }
@@ -24,6 +28,10 @@ struct PinDetailView: View {
                 } else {
                     Label("No location was recorded for this pin. GPS didn't have a usable fix in time, so Passing saved the time only.", systemImage: "location.slash")
                         .foregroundStyle(.orange)
+                }
+                if let hint = pin.milesBackHint {
+                    Text(hint)
+                        .font(.callout)
                 }
             }
 
@@ -91,6 +99,14 @@ struct PinDetailView: View {
         }
         .navigationTitle(pin.displayLabel)
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// Close in on an ordinary pin; fit the car, the estimate and the route for a miles-back pin.
+    private func mapPosition(around coordinate: CLLocationCoordinate2D) -> MapCameraPosition {
+        if pin.targetCoordinate != nil || pin.trailCoordinates.count > 1 {
+            return .automatic
+        }
+        return .region(MKCoordinateRegion(center: coordinate, latitudinalMeters: 1_200, longitudinalMeters: 1_200))
     }
 
     private var keepFooter: String {

@@ -2,7 +2,7 @@
 
 Capture things you pass while driving, then look them up later. One tap saves a pin, and identifying the thing happens afterwards. The full spec is in [CLAUDE.md](CLAUDE.md).
 
-**Status:** Milestone 1 (core capture) is verified. Milestone 2 (retention and export) is ready to test. Miles back, Siri, the widget/CarPlay path and review polish come in milestones 3–6.
+**Status:** Milestones 1–2 are done. Milestone 3 (miles back and voice options) is ready to test. Siri, the widget/CarPlay path and review polish come in milestones 4–6.
 
 ## What it does so far
 
@@ -22,6 +22,14 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Deleting** a pin (swipe left, or Delete on its detail screen) moves it to Recently Deleted.
 - **Export** (share button on the Pins list): JSON or CSV of all active pins, through the share sheet (AirDrop, Files, Mail, …).
 - **When the clean-up runs:** on launch, whenever the app comes back to the front, when you open the Pins list, and in the background when iOS allows. It never runs in the middle of an export.
+
+**Miles back and voice (Milestone 3)**
+- **+1 mi back** (amber strip at the bottom of the capture screen): one tap saves a pin 1 mile back along the road you just drove. Tap again within 4 seconds and the same pin moves to 2 miles, 3 miles, and so on, with a haptic and tone each time.
+- **How it knows the road:** while the capture screen is open, Passing keeps a trail of the last ~25 miles in memory, a point every ~50 m. It's never saved and never recorded in the background.
+- **On the map:** the pin's detail screen shows your car (blue), the estimate (orange "About here") and the road between them. Apple and Google Maps links go to the estimate.
+- **Not enough trail yet** (app just opened): no estimate goes on the map. Instead the pin says "About 2 miles back the way you came. You were heading southwest, so look northeast of this spot."
+- **Voice** (Settings → Spoken confirmation → Voice): every voice installed on the iPhone, best quality first, each with ▶︎ to preview. Siri's own voices aren't available to apps. Better ones are free downloads in iOS Settings → Accessibility → Spoken Content → Voices. Your Personal Voice can be used too, with permission.
+- **Phrases** (Settings → Spoken confirmation → Phrases): type your own, like "Got it boss" or "I'll look this up later". One is picked at random after each pin. "Say side and distance first" adds "Left, far." before it. Phrases max out at 60 characters. "+1 mi back" always says the distance instead ("2 miles back").
 
 ## Run it
 
@@ -56,6 +64,18 @@ Debug builds (what ⌘R makes) have a **Testing** section at the bottom of Setti
 8. Pins → share button → **Export JSON**, then **Export CSV (spreadsheet)**. Save each to Files and open it. Every active pin is there, and Recently Deleted pins are not.
 9. Force-quit and reopen the app. Stars, Recently Deleted and settings are all still there.
 
+## Milestone 3 manual test checklist
+
+1. In the Simulator choose **Features → Location → Freeway Drive**, open the capture screen, and leave it open for about 4 minutes. In debug builds, Settings → Testing shows **Trail recorded** growing.
+2. Tap **+1 mi back** once. In **Pins**, the new pin says "1 mi back". Open it: the map shows the blue car, the orange "About here" about a mile back along the road, and a blue line between them. **Open in Google Maps** goes to the orange spot.
+3. Back on the capture screen, tap **+1 mi back** three times, less than 4 seconds apart. You get one new pin, "3 mi back", with a haptic and tone on each tap.
+4. Wait 5 seconds and tap **+1 mi back** again. That makes a separate new pin, "1 mi back".
+5. Force-quit and reopen, then immediately tap **+1 mi back**. That pin has no orange spot and says "About 1 mile back the way you came…" instead, because the trail starts empty.
+6. Settings → turn on **Spoken confirmation** → **Voice**. Tap ▶︎ on a few voices, then tap one to choose it. The Simulator has fewer voices than a real iPhone.
+7. **Phrases:** add "Got it boss" and "I'll look this up later", and swipe left to remove "Saved". Tap ▶︎ to hear each one. Back in Settings, tap **Preview**.
+8. On the capture screen in Four zones, tap a few zones. You should hear things like "Left, far. Got it boss." Turn off **Say side and distance first** and you just hear the phrase.
+9. Tap **+1 mi back** twice quickly. You hear "1 mile back", then "2 miles back".
+
 ## Set up the App Group (needed for your own iPhone)
 
 The project ships with the App Group `group.com.example.passing`. To run on your phone, the bundle ID and App Group have to be yours:
@@ -77,6 +97,9 @@ If the App Group doesn't match, the app still works, but Settings shows an orang
 - **Expired pins are stamped with when they moved, not when they hit 7 days.** Every pin gets its full 30 days in Recently Deleted, even after weeks away from the app, or after turning off "Keep records indefinitely" with old pins.
 - **Recovering a pin that's more than 7 days old also keeps (stars) it.** Otherwise it would expire again on the next clean-up.
 - **Exports include active pins only**, not Recently Deleted.
+- **The trail only records while the capture screen is open** (no background location). Opening the Pins list mid-drive pauses it, and a gap of more than 2 minutes starts a fresh trail. Passing can't know which road joined the two ends.
+- **"+1" taps aren't debounced**, because quick taps are how you say "3 miles". Each extra tap measures back from where you first tapped, not from where the car is by then.
+- **Miles-back confirmations say the distance, not your phrase**, so you always know how far back it went.
 
 ## Project layout
 
@@ -86,6 +109,8 @@ If the App Group doesn't match, the app still works, but Settings shows an orang
 | Single save entry point | `Passing/Services/CaptureService.swift` |
 | GPS and freshness rules | `Passing/Services/LocationProvider.swift`, `Passing/Model/FixPolicy.swift` |
 | Pin model and App Group store | `Passing/Model/Pin.swift`, `Passing/Services/SharedStore.swift` |
+| Miles back (trail and estimate) | `Passing/Model/BreadcrumbBuffer.swift`, `Passing/Services/CaptureService.swift` |
+| Voice and phrases | `Passing/Model/SpokenConfirmation.swift`, `Passing/Views/VoicePickerView.swift`, `PhrasesView.swift` |
 | Retention rules and clean-up | `Passing/Model/RetentionPolicy.swift`, `Passing/Services/RetentionService.swift` |
 | Export | `Passing/Services/PinExport.swift`, `Passing/Services/ExportService.swift` |
 | Haptic, tone and speech | `Passing/Services/CaptureFeedback.swift` |
