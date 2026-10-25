@@ -82,6 +82,28 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
+    /// The "Label last pin" button on the capture screen: asks "What did you pass?" and listens. What's
+    /// said becomes the label of the newest pin from the last 30 minutes (from the phone, Siri, a widget
+    /// or Control Center), replacing any label it had. With no recent pin, it makes one first. Saying
+    /// nothing changes nothing. Permission is only ever asked in Settings, never here.
+    func labelLastPin() {
+        guard SpeechListener.availability == .ready else {
+            haptics.notificationOccurred(.warning)
+            haptics.prepare()
+            preview("Voice labels are off. Turn on Listen after tap in Settings once to allow them.")
+            return
+        }
+        let service = CaptureService.shared
+        if let pin = service.latestPin(since: Date.now.addingTimeInterval(-ListenPolicy.lastPinWindow)) {
+            haptics.notificationOccurred(.success)
+            haptics.prepare()
+            listenForLabel(on: pin, question: ListenPolicy.lastPinQuestion)
+        } else if let pin = service.capture(side: .unknown, distance: .unknown, source: .app), listeningPin == nil {
+            // The capture already gave its haptic (and listened itself if Listen after tap is on).
+            listenForLabel(on: pin, question: ListenPolicy.lastPinQuestion)
+        }
+    }
+
     /// Settings preview: speaks `text` in the given voice (or the chosen one), whatever the
     /// spoken-confirmation switch says.
     func preview(_ text: String, voiceIdentifier: String? = nil) {
@@ -174,7 +196,7 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
     /// Passing asks "What are you passing?" (or chimes, if the driver turned the question off), then
     /// listens for a few seconds. Whatever the driver says becomes the pin's label; saying nothing
     /// leaves it unlabeled, silently. The pin is already saved, so none of this can lose it.
-    private func listenForLabel(on pin: Pin) {
+    private func listenForLabel(on pin: Pin, question: String = ListenPolicy.question) {
         if let listeningPin, listeningPin === pin {
             // Another "+1 mi back" tap on the same pin: chime again and start the waiting time over.
             audio.playTone()
@@ -203,7 +225,7 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
                 }
             }
             if ask {
-                await self.say(ListenPolicy.question)
+                await self.say(question)
             }
             // A short gap, so the microphone doesn't catch the end of the question or chime.
             try? await Task.sleep(for: .seconds(ask ? 0.15 : self.audio.toneDuration + 0.1))

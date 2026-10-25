@@ -83,6 +83,8 @@ Dark, high contrast, no map, no clutter. Settings picks the layout Passing opens
 - Near and far zones use two distinct colors, mirrored on both sides.
 - The center divider is narrow and drawn as the road with the car on it. Tapping it saves a pin with side unknown.
 
+**"Label last pin" button** (bottom strip, next to "+1 mi back", Dan's request): asks "What did you pass?" and listens (same flow as listen-after-tap, `CaptureFeedback.labelLastPin()`). The answer labels the newest active pin from the last 30 minutes, from any source, so widget and CarPlay pins can get a spoken label; with none it captures a new pin first. Never prompts for permission on the capture screen; without speech permission it says how to enable it.
+
 **"+1 mi back" button** (bottom strip, both modes):
 - One action. A tap creates a pin placed 1 mile back along the breadcrumb trail.
 - Tapping again within ~4 s bumps that same pin to 2 mi, 3 mi, and so on, with tone/haptic per step (and spoken "2 miles back" if spoken confirmation is on).

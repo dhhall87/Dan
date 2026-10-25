@@ -102,6 +102,16 @@ final class CaptureService {
         return pin
     }
 
+    /// The newest active pin made at or after `cutoff`, from any source (app, Siri, widget, Control Center).
+    func latestPin(since cutoff: Date) -> Pin? {
+        var descriptor = FetchDescriptor<Pin>(
+            predicate: #Predicate { $0.deletedAt == nil && $0.capturedAt >= cutoff },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+        return (try? context.fetch(descriptor))?.first
+    }
+
     /// Adds or replaces a pin's label (e.g. Siri's answer to "What did you see?").
     func setLabel(_ label: String?, on pin: Pin) {
         guard pin.modelContext != nil, !pin.isDeleted else { return }

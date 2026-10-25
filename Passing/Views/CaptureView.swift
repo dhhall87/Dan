@@ -33,7 +33,7 @@ struct CaptureView: View {
             case .quick: QuickCapture()
             case .fourZone: FourZoneCapture()
             }
-            MilesBackStrip()
+            BottomButtons()
         }
         .background(Color.captureBackground.ignoresSafeArea())
         .environment(\.colorScheme, .dark)
@@ -299,12 +299,23 @@ private struct RoadMarkings: View {
 
 /// One tap saves a pin 1 mile back along the road just driven; each extra tap within 4 seconds
 /// pushes that same pin another mile back. Confirmed by haptic and tone on every tap, never by reading.
-private struct MilesBackStrip: View {
+/// "+1 mi back" and "Label last pin", side by side under the capture area.
+private struct BottomButtons: View {
+    var body: some View {
+        HStack(spacing: 10) {
+            MilesBackButton()
+            LabelLastPinButton()
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 10)
+    }
+}
+
+private struct MilesBackButton: View {
     var body: some View {
         Button {
             CaptureService.shared.captureMilesBack(source: .app)
         } label: {
-            // Narrower and quieter than the zones, but still a big target with a yellow arrow to find it by.
             HStack(spacing: 10) {
                 Image(systemName: "arrow.uturn.backward")
                     .font(.system(size: 19, weight: .bold))
@@ -313,16 +324,46 @@ private struct MilesBackStrip: View {
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.9))
             }
-            .padding(.horizontal, 36)
-            .frame(minWidth: 220, minHeight: 54)
+            .bottomButtonShape()
+        }
+        .buttonStyle(PressHighlightStyle(cornerRadius: 27))
+        .accessibilityLabel("Save a pin one mile back. Tap again to move it further back.")
+    }
+}
+
+/// Asks "What did you pass?" and puts the answer on the newest pin from the last 30 minutes, such as
+/// one dropped from a widget or CarPlay, or makes a new pin if there isn't one. Never asks for typing.
+private struct LabelLastPinButton: View {
+    var body: some View {
+        Button {
+            CaptureFeedback.shared.labelLastPin()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 19, weight: .bold))
+                    .foregroundStyle(Color.pinYellow)
+                Text("Label last pin")
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.9))
+            }
+            .bottomButtonShape()
+        }
+        .buttonStyle(PressHighlightStyle(cornerRadius: 27))
+        .accessibilityLabel("Label the last pin by voice")
+        .accessibilityHint("Asks what you passed, then listens")
+    }
+}
+
+private extension View {
+    func bottomButtonShape() -> some View {
+        self
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, minHeight: 54)
             .background(Color.white.opacity(0.07), in: Capsule())
             .overlay(Capsule().strokeBorder(.white.opacity(0.12)))
             .contentShape(Capsule())
-        }
-        .buttonStyle(PressHighlightStyle(cornerRadius: 27))
-        .padding(.horizontal, 12)
-        .padding(.bottom, 10)
-        .accessibilityLabel("Save a pin one mile back. Tap again to move it further back.")
     }
 }
 
