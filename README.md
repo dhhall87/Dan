@@ -18,7 +18,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **7-day expiry:** pins move to **Recently Deleted** 7 days after you pin them. Each pin's row counts down ("Expires in 3 days").
 - **Keep:** swipe right on a pin, or use the Keep toggle on its detail screen, to star it. Kept pins never expire.
 - **Keep records indefinitely** (Settings) stops expiry for every pin.
-- **Recently Deleted** (bottom of the Pins list): tap a pin to Recover it or Delete it now, or use **Delete All**. Pins there are deleted for good 30 days after they arrive. That happens even with "Keep records indefinitely" on.
+- **Recently Deleted** (bottom of the Pins list): tap **Recover** on a pin, swipe left to delete it now, or use **Delete All Now**. Pins there are deleted for good 30 days after they arrive. That happens even with "Keep records indefinitely" on.
 - **Deleting** a pin (swipe left, or Delete on its detail screen) moves it to Recently Deleted.
 - **Export** (share button on the Pins list): JSON or CSV of all active pins, through the share sheet (AirDrop, Files, Mail, …).
 - **When the clean-up runs:** on launch, whenever the app comes back to the front, when you open the Pins list, and in the background when iOS allows. It never runs in the middle of an export.
@@ -49,7 +49,7 @@ Debug builds (what ⌘R makes) have a **Testing** section at the bottom of Setti
 1. Make 3 pins. In **Pins**, each row says "Expires in 7 days".
 2. Swipe right on one pin and tap **Keep**. It gets a star and loses its countdown.
 3. Settings → Testing → set the clock to **+7 days**. Go back to **Pins**. The two un-starred pins have moved to **Recently Deleted** (bottom of the list), and the starred one is still there.
-4. Open **Recently Deleted**. Each pin says "Deleted for good in 30 days". Tap one and choose **Recover**. It's back in Pins with a star, because it was already past 7 days.
+4. Open **Recently Deleted**. Each pin says "Deleted for good in 30 days". Tap **Recover** on one. It's back in Pins with a star, because it was already past 7 days.
 5. Swipe left on a pin in Pins: it goes to Recently Deleted. In Recently Deleted, swipe left and tap **Delete Now**: it's gone.
 6. Set the clock to **+40 days**. Open Recently Deleted: it's empty.
 7. Turn on **Keep records indefinitely**, make a pin, and set the clock to **+60**. The pin stays and shows no countdown. Set the clock back to **0** first, then turn the setting off.

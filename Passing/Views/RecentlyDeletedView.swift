@@ -2,43 +2,48 @@ import SwiftData
 import SwiftUI
 
 /// Deleted and expired pins wait here for 30 days, then they're gone for good.
+///
+/// Kept deliberately plain (no tappable rows, one dialog, no toolbar that comes and goes, no
+/// clean-up on appear) after the first version froze when opened. The Pins list already runs
+/// the clean-up before you get here.
 struct RecentlyDeletedView: View {
     @Query(filter: #Predicate<Pin> { $0.deletedAt != nil })
     private var pins: [Pin]
-    @State private var selected: Pin?
     @State private var confirmingDeleteAll = false
 
     private let retention = RetentionService.shared
 
     var body: some View {
         List {
-            if !pins.isEmpty {
-                Section {
-                    ForEach(newestFirst) { pin in
-                        Button {
-                            selected = pin
+            Section {
+                ForEach(newestFirst) { pin in
+                    HStack(spacing: 12) {
+                        DeletedPinRow(pin: pin)
+                        Spacer(minLength: 0)
+                        Button("Recover") {
+                            retention.recover(pin)
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            retention.deleteNow(pin)
                         } label: {
-                            DeletedPinRow(pin: pin)
-                        }
-                        .tint(Color.primary)
-                        .swipeActions(edge: .leading) {
-                            Button {
-                                retention.recover(pin)
-                            } label: {
-                                Label("Recover", systemImage: "arrow.uturn.backward")
-                            }
-                            .tint(.blue)
-                        }
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                retention.deleteNow(pin)
-                            } label: {
-                                Label("Delete Now", systemImage: "trash")
-                            }
+                            Label("Delete Now", systemImage: "trash")
                         }
                     }
-                } footer: {
-                    Text("Pins are deleted for good 30 days after they land here, even with “Keep records indefinitely” on. Recovering a pin that's more than 7 days old also keeps it, so it doesn't expire again.")
+                }
+            } footer: {
+                if !pins.isEmpty {
+                    Text("Swipe left on a pin to delete it now. Pins here are deleted for good 30 days after they arrive, even with “Keep records indefinitely” on. Recovering a pin that's more than 7 days old also keeps it, so it doesn't expire again.")
+                }
+            }
+
+            if !pins.isEmpty {
+                Section {
+                    Button("Delete All Now", role: .destructive) {
+                        confirmingDeleteAll = true
+                    }
                 }
             }
         }
@@ -52,35 +57,17 @@ struct RecentlyDeletedView: View {
             }
         }
         .navigationTitle("Recently Deleted")
-        .toolbar {
-            if !pins.isEmpty {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Delete All", role: .destructive) {
-                        confirmingDeleteAll = true
-                    }
-                }
-            }
-        }
-        .confirmationDialog(selected?.displayLabel ?? "Pin", isPresented: selectionShown, titleVisibility: .visible, presenting: selected) { pin in
-            Button("Recover") { retention.recover(pin) }
-            Button("Delete Now", role: .destructive) { retention.deleteNow(pin) }
-        }
         .confirmationDialog("Delete everything in Recently Deleted?", isPresented: $confirmingDeleteAll, titleVisibility: .visible) {
-            Button("Delete All", role: .destructive) { retention.emptyRecentlyDeleted() }
+            Button("Delete All", role: .destructive) {
+                retention.emptyRecentlyDeleted()
+            }
         } message: {
             Text("This can't be undone.")
-        }
-        .onAppear {
-            retention.run()
         }
     }
 
     private var newestFirst: [Pin] {
         pins.sorted { ($0.deletedAt ?? .distantPast) > ($1.deletedAt ?? .distantPast) }
-    }
-
-    private var selectionShown: Binding<Bool> {
-        Binding(get: { selected != nil }, set: { if !$0 { selected = nil } })
     }
 }
 
