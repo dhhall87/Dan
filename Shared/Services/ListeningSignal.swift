@@ -7,7 +7,7 @@ enum ListeningSignal {
     private static let untilKey = "listeningUntil"
     /// The longest a listening session can run (question, listening and wrap-up), so a Stop button
     /// can't get stuck on a widget if the app is closed mid-session.
-    static let maxSession: TimeInterval = 20
+    static let maxSession: TimeInterval = 25
 
     /// Posted on the app's main thread when a widget asks it to stop listening.
     static let stopRequested = Notification.Name("PassingStopListening")

@@ -6,7 +6,7 @@ struct GroupsView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \PinGroup.name) private var groups: [PinGroup]
-    @State private var newName = ""
+    @State private var addingGroup = false
     @State private var renaming: PinGroup?
     @State private var renameText = ""
     @State private var problem: String?
@@ -15,12 +15,11 @@ struct GroupsView: View {
         NavigationStack {
             List {
                 Section {
-                    HStack {
-                        TextField("New group, e.g. Road trip", text: $newName)
-                            .submitLabel(.done)
-                            .onSubmit(add)
-                        Button("Add", action: add)
-                            .disabled(newName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    Button {
+                        problem = nil
+                        addingGroup = true
+                    } label: {
+                        Label("New Group…", systemImage: "folder.badge.plus")
                     }
                 } footer: {
                     if let problem {
@@ -63,6 +62,7 @@ struct GroupsView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .newGroupAlert(isPresented: $addingGroup)
             .alert("Rename Group", isPresented: renamingShown) {
                 TextField("Name", text: $renameText)
                 Button("Save") { saveRename() }
@@ -80,15 +80,6 @@ struct GroupsView: View {
         group.pins.filter { $0.deletedAt == nil }.count
     }
 
-    private func add() {
-        if PinGroups.create(named: newName, in: context) != nil {
-            newName = ""
-            problem = nil
-        } else {
-            problem = nameProblem(newName)
-        }
-    }
-
     private func saveRename() {
         guard let group = renaming else { return }
         if !PinGroups.rename(group, to: renameText, in: context) {
@@ -100,5 +91,42 @@ struct GroupsView: View {
     private func nameProblem(_ name: String) -> String {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? "A group needs a name." : "There's already a group called “\(trimmed)”."
+    }
+}
+
+/// The "New Group" name prompt, used wherever a group can be made: the Pins list's folder menu,
+/// a pin's long-press menu, Select mode, a pin's screen and Manage Groups. If the name is already
+/// taken, that group is used instead of making a second one.
+private struct NewGroupAlert: ViewModifier {
+    @Binding var isPresented: Bool
+    let message: String?
+    let onCreate: (PinGroup) -> Void
+    @Environment(\.modelContext) private var context
+    @State private var name = ""
+
+    func body(content: Content) -> some View {
+        content.alert("New Group", isPresented: $isPresented) {
+            TextField("Name, e.g. Road trip", text: $name)
+            Button("Create") {
+                if let group = PinGroups.createOrFind(named: name, in: context) {
+                    onCreate(group)
+                }
+                name = ""
+            }
+            Button("Cancel", role: .cancel) {
+                name = ""
+            }
+        } message: {
+            if let message {
+                Text(message)
+            }
+        }
+    }
+}
+
+extension View {
+    /// Shows the "New Group" prompt. `onCreate` gets the new (or same-named existing) group.
+    func newGroupAlert(isPresented: Binding<Bool>, message: String? = nil, onCreate: @escaping (PinGroup) -> Void = { _ in }) -> some View {
+        modifier(NewGroupAlert(isPresented: isPresented, message: message, onCreate: onCreate))
     }
 }

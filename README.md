@@ -51,9 +51,10 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Town names:** each pin picks up the town it was near ("Garden City, KS") from Apple Maps. It shows in the list row and on the pin's screen. Lookups happen only while you're looking at your pins and online, a few seconds apart, so capture never waits on them. Miles-back pins use the estimated spot.
 - **Look Around:** tap **Show Look Around** on a pin's screen for Apple's street-level imagery of the spot, then tap the preview to look around. It loads only when you ask, needs the network, and rural roads often have no imagery.
 - **Groups:** file pins in named groups, like "Road trip" or "Houses to check". A pin is in at most one group, and deleting a group keeps its pins.
-  - **Manage groups:** folder button on the Pins list → **Manage Groups…** to make, rename (tap) or delete (swipe left) groups.
+  - **Make one anywhere:** **New Group…** is in the folder button's menu, a pin's touch-and-hold menu, the Group menu in Select mode, the pin's screen, and Manage Groups. Made from a pin (or a selection), the new group gets that pin. A name that's already taken just uses that group.
+  - **Manage groups:** folder button → **Manage Groups…** to make, rename (tap) or delete (swipe left) groups.
   - **Show one group:** pick it from the same folder button.
-  - **File a pin:** touch and hold it in the list → **Group**, or use the **Group** picker on its screen (with **New Group…** right there).
+  - **File a pin:** touch and hold it in the list → **Group**, or use the **Group** picker on its screen.
 - **Map:** the map button on the Pins list shows the same pins on a map. Tap one for a card, then tap the card to open it.
 - **KML export for Google My Maps:** Export → **KML (Google My Maps)**. Each pin becomes a placemark with its label, time, side, town and group. Pins without a location are left out, and the file says how many.
 - **Exports follow what's shown.** With a group picked, JSON, CSV and KML contain just that group, and the file name says which. CSV and JSON now have a group column too.
@@ -61,7 +62,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 
 **Listen after tap (Milestone 7, optional, off by default)**
 - Settings → **Labels by voice** → **Listen after tap**. After a tap on the capture screen, Passing asks **"What are you passing?"** and listens for a few seconds. Say what you saw ("red barn") and it becomes the label. Say nothing, "cancel" or "stop", and the pin stays unlabeled. Turn off **Ask "What are you passing?"** to get a short chime instead of the question.
-- It stops listening about 1.5 seconds after you stop talking, after 4 seconds if you say nothing, and after 10 seconds at most. "Stop" or "cancel" ends it after about half a second.
+- It stops listening about 1.5 seconds after you stop talking, after 6 seconds if you say nothing, and after 15 seconds at most. "Stop" or "cancel" ends it after about half a second. If the speech recognizer gives up on the silence early, Passing quietly starts it again, so the microphone stays on for the full 6 seconds.
 - **Stop listening:** while Passing asks or listens, a red **Stop listening** button sits in the title bar of the capture screen. It turns the microphone off right away and keeps anything you'd already said. The Passing widgets turn into a big **Stop listening** button at the same time, so you can stop it from CarPlay. It never has to be pressed, and it doesn't move or cover the capture buttons.
 - The pin is saved before Passing listens, so a missed or garbled answer never loses it. You can fix the label later in Pins.
 - With **Spoken confirmation** on, Passing reads the label back ("red barn") instead of saying your phrase.
@@ -190,7 +191,7 @@ The Simulator uses your Mac's microphone. It usually has no on-device speech mod
 1. Pull, then ⌘U and ⌘R.
 2. Settings → **Labels by voice** → turn on **Listen after tap**. iOS asks for the microphone and for speech recognition: allow both. The switch stays on.
 3. On the capture screen, tap. Passing asks "What are you passing?". Say "red barn". About a second and a half after you stop, you feel a haptic. In **Pins**, the new pin is labeled "red barn".
-4. Tap and say nothing. After about 4 seconds it stops listening, with no sound or haptic. The pin is there, "Unlabeled".
+4. Tap and say nothing. The orange microphone dot stays for about 6 seconds after the question, then listening stops with no sound or haptic. The pin is there, "Unlabeled". Try again, wait about 5 seconds, then say "barn": the pin gets "barn".
 5. Tap and say "stop". Listening ends within about a second and the pin stays unlabeled.
 6. **Stop button:** tap, and while Passing asks or listens, tap the red **Stop listening** at the top of the screen. The question stops (if it was still talking), the microphone turns off (the orange dot goes away), and the button disappears. Try it again after saying "silo": the pin keeps "silo".
 7. **Stop from CarPlay:** open the CarPlay window (I/O → External Displays → CarPlay) with a Passing widget on its Widgets screen. Tap on the phone's capture screen: within a second or two the CarPlay widget turns into **Stop listening**. Tap it: Passing stops listening, and the widget goes back to normal. **Tell me how quickly the widget changes**, because widget refresh timing isn't something Apple promises.
@@ -201,7 +202,8 @@ The Simulator uses your Mac's microphone. It usually has no on-device speech mod
 12. Tap one zone, say "barn", then quickly tap another zone and say "silo". The first pin is "barn" and the second "silo".
 13. iOS Settings → Privacy & Security → Microphone → turn Passing off. Open Passing's Settings: an orange note says listening needs access. Taps still save pins with the normal tone. Turn the microphone back on.
 14. Tap the Pin widget when Passing isn't listening: it saves silently and doesn't listen.
-15. **Select several pins:** Pins → **Select**. Tick three pins: the title says "3 Selected". Tap the star (**Keep**): all three get a star. Tap the folder (**Group**) → a group: all three move into it. Tap the trash (**Delete**): they move to Recently Deleted. **Select All** / **Deselect All** and **Done** work as expected, and opening a pin is back to normal after **Done**.
+15. **New Group everywhere:** folder button → **New Group…**; touch and hold a pin → **New Group…** (the pin goes into it); Select a few pins → Group → **New Group…** (they all go into it); Manage Groups → **New Group…**. Typing a name that already exists files into that group instead of making a duplicate.
+16. **Select several pins:** Pins → **Select**. Tick three pins: the title says "3 Selected". Tap the star (**Keep**): all three get a star. Tap the folder (**Group**) → a group: all three move into it. Tap the trash (**Delete**): they move to Recently Deleted. **Select All** / **Deselect All** and **Done** work as expected, and opening a pin is back to normal after **Done**.
 
 ## Set up the App Group (needed for your own iPhone)
 

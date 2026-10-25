@@ -18,6 +18,18 @@ enum PinGroups {
         return group
     }
 
+    /// The group with this name (ignoring case and surrounding spaces), if there is one.
+    static func named(_ name: String, in context: ModelContext) -> PinGroup? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return all(in: context).first { $0.name.compare(trimmed, options: .caseInsensitive) == .orderedSame }
+    }
+
+    /// "New Group…" from a menu: makes the group, or returns the existing one if the name is
+    /// already used. Nil only for a blank name.
+    static func createOrFind(named name: String, in context: ModelContext) -> PinGroup? {
+        create(named: name, in: context) ?? named(name, in: context)
+    }
+
     /// Returns false (and changes nothing) if the new name is blank or already used.
     @discardableResult
     static func rename(_ group: PinGroup, to name: String, in context: ModelContext) -> Bool {

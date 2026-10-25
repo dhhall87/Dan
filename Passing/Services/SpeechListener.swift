@@ -36,6 +36,11 @@ final class SpeechListener {
     private var transcript: String?
     private var finished = false
     private var stopRequested = false
+    /// Which recognition request is current, so a replaced one's late callbacks are ignored.
+    private var generation = 0
+    /// The recognizer can give up on its own after a stretch of silence. Before anyone has spoken,
+    /// listening carries on with a fresh request, at most this many times.
+    private static let maxRestarts = 3
 
     /// Listens until the driver stops talking, gives up if they say nothing, and returns the label
     /// to use (nil for nothing). The audio session must already be set up for recording.
@@ -47,17 +52,13 @@ final class SpeechListener {
         stopRequested = false
 
         guard let recognizer = SFSpeechRecognizer(), Self.canRecognize(with: recognizer) else { return nil }
-        let request = SFSpeechAudioBufferRecognitionRequest()
-        request.shouldReportPartialResults = true
-        request.addsPunctuation = false
-        request.requiresOnDeviceRecognition = Self.mustStayOnDevice(recognizer)
-
         let engine = AVAudioEngine()
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
         // No usable microphone (say, the audio session isn't recording): give up quietly.
         guard format.sampleRate > 0, format.channelCount > 0 else { return nil }
-        Self.feed(request, from: input, format: format)
+        let feed = RequestFeed()
+        Self.install(feed, on: input, format: format)
         engine.prepare()
         do {
             try engine.start()
@@ -66,12 +67,25 @@ final class SpeechListener {
             print("Passing: couldn't start listening: \(error)")
             return nil
         }
-        let task = Self.recognize(request, with: recognizer) { [weak self] text, isDone in
-            Task { @MainActor in self?.heard(text, isDone: isDone) }
-        }
 
-        while !stopRequested, !finished,
+        var request = makeRequest(for: recognizer)
+        feed.use(request)
+        var task = startRecognizing(request, with: recognizer)
+        var restarts = 0
+
+        while !stopRequested,
               !policy.shouldStop(startedAt: startedAt, lastHeardAt: lastHeardAt, heard: transcript, now: .now) {
+            if finished {
+                // Done once something was heard. If the recognizer gave up on silence before the
+                // driver spoke, keep the microphone on with a fresh request until our own time is up.
+                guard transcript == nil, restarts < Self.maxRestarts else { break }
+                restarts += 1
+                finished = false
+                task.cancel()
+                request = makeRequest(for: recognizer)
+                feed.use(request)
+                task = startRecognizing(request, with: recognizer)
+            }
             try? await Task.sleep(for: .milliseconds(200))
         }
 
@@ -85,6 +99,22 @@ final class SpeechListener {
         }
         task.cancel()
         return ListenPolicy.label(from: transcript)
+    }
+
+    private func makeRequest(for recognizer: SFSpeechRecognizer) -> SFSpeechAudioBufferRecognitionRequest {
+        let request = SFSpeechAudioBufferRecognitionRequest()
+        request.shouldReportPartialResults = true
+        request.addsPunctuation = false
+        request.requiresOnDeviceRecognition = Self.mustStayOnDevice(recognizer)
+        return request
+    }
+
+    private func startRecognizing(_ request: SFSpeechAudioBufferRecognitionRequest, with recognizer: SFSpeechRecognizer) -> SFSpeechRecognitionTask {
+        generation += 1
+        let current = generation
+        return Self.recognize(request, with: recognizer) { [weak self] text, isDone in
+            Task { @MainActor in self?.heard(text, isDone: isDone, generation: current) }
+        }
     }
 
     /// Ends listening early, keeping whatever was heard so far.
@@ -102,7 +132,8 @@ final class SpeechListener {
 
     // MARK: Private
 
-    private func heard(_ text: String?, isDone: Bool) {
+    private func heard(_ text: String?, isDone: Bool, generation: Int) {
+        guard generation == self.generation else { return }
         if let text, !text.isEmpty, text != transcript {
             transcript = text
             lastHeardAt = .now
@@ -131,9 +162,9 @@ final class SpeechListener {
     // The callbacks below run on audio and Speech framework threads, so they're built outside the
     // main actor and only hop back to it with plain values.
 
-    nonisolated private static func feed(_ request: SFSpeechAudioBufferRecognitionRequest, from input: AVAudioInputNode, format: AVAudioFormat) {
+    nonisolated private static func install(_ feed: RequestFeed, on input: AVAudioInputNode, format: AVAudioFormat) {
         input.installTap(onBus: 0, bufferSize: 1024, format: format) { buffer, _ in
-            request.append(buffer)
+            feed.append(buffer)
         }
     }
 
@@ -161,5 +192,21 @@ final class SpeechListener {
                 continuation.resume(returning: status)
             }
         }
+    }
+}
+
+/// Hands microphone audio (arriving on an audio thread) to whichever recognition request is
+/// current, so a fresh request can take over without restarting the microphone.
+private final class RequestFeed: @unchecked Sendable {
+    // @unchecked: `request` is only read and written while holding `lock`.
+    private let lock = NSLock()
+    private var request: SFSpeechAudioBufferRecognitionRequest?
+
+    func use(_ request: SFSpeechAudioBufferRecognitionRequest) {
+        lock.withLock { self.request = request }
+    }
+
+    func append(_ buffer: AVAudioPCMBuffer) {
+        lock.withLock { request }?.append(buffer)
     }
 }

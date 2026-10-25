@@ -33,6 +33,14 @@ struct PinGroupsTests {
         #expect(PinGroups.all(in: context).map(\.name) == ["Houses to check", "Road trip"])
     }
 
+    @Test func newGroupFromAMenuReusesAnExistingName() throws {
+        let trip = try #require(PinGroups.create(named: "Road trip", in: context))
+        #expect(PinGroups.createOrFind(named: " road TRIP ", in: context)?.id == trip.id)
+        #expect(PinGroups.createOrFind(named: "Houses", in: context)?.name == "Houses")
+        #expect(PinGroups.createOrFind(named: "  ", in: context) == nil)
+        #expect(PinGroups.all(in: context).count == 2)
+    }
+
     @Test func aPinIsInAtMostOneGroup() throws {
         let trip = try #require(PinGroups.create(named: "Road trip", in: context))
         let houses = try #require(PinGroups.create(named: "Houses", in: context))

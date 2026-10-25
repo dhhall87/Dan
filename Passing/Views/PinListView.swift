@@ -17,6 +17,14 @@ struct PinListView: View {
     @State private var managingGroups = false
     @State private var isSelecting = false
     @State private var selection = Set<UUID>()
+    /// What a group made with "New Group…" is for: nothing yet, one pin, or the selected pins.
+    @State private var newGroupFor: NewGroupFor?
+
+    private enum NewGroupFor {
+        case justMake
+        case pin(Pin)
+        case selection
+    }
     @State private var exportFile: ExportFile?
     @State private var exportError: String?
 
@@ -77,6 +85,7 @@ struct PinListView: View {
         .sheet(isPresented: $managingGroups) {
             GroupsView()
         }
+        .newGroupAlert(isPresented: newGroupShown, message: newGroupMessage, onCreate: fileNewGroup(for: newGroupFor))
         .alert("Couldn't export pins", isPresented: exportErrorShown) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -210,6 +219,11 @@ struct PinListView: View {
                 Label("Group", systemImage: "folder")
             }
             .pickerStyle(.menu)
+            Button {
+                newGroupFor = .pin(pin)
+            } label: {
+                Label("New Group…", systemImage: "folder.badge.plus")
+            }
         }
     }
 
@@ -248,8 +262,10 @@ struct PinListView: View {
                 }
             }
             Divider()
-            Button("Manage Groups…") {
-                managingGroups = true
+            Button {
+                newGroupFor = .selection
+            } label: {
+                Label("New Group…", systemImage: "folder.badge.plus")
             }
         } label: {
             Label("Group", systemImage: "folder")
@@ -263,6 +279,30 @@ struct PinListView: View {
             Label("Delete", systemImage: "trash")
         }
         .disabled(selected.isEmpty)
+    }
+
+    private var newGroupShown: Binding<Bool> {
+        Binding(get: { newGroupFor != nil }, set: { if !$0 { newGroupFor = nil } })
+    }
+
+    /// What to do with the group once it's made. The target is captured now, because the prompt
+    /// may clear `newGroupFor` as it closes.
+    private func fileNewGroup(for target: NewGroupFor?) -> (PinGroup) -> Void {
+        { group in
+            switch target {
+            case .pin(let pin): PinGroups.move(pin, to: group, in: context)
+            case .selection: PinGroups.move(selectedPins, to: group, in: context)
+            case .justMake, nil: break
+            }
+        }
+    }
+
+    private var newGroupMessage: String? {
+        switch newGroupFor {
+        case .pin: return "This pin goes into the new group."
+        case .selection: return "The selected pins go into the new group."
+        case .justMake, nil: return nil
+        }
     }
 
     private var selectedPins: [Pin] {
@@ -291,6 +331,11 @@ struct PinListView: View {
             }
             .pickerStyle(.inline)
             Divider()
+            Button {
+                newGroupFor = .justMake
+            } label: {
+                Label("New Group…", systemImage: "folder.badge.plus")
+            }
             Button {
                 managingGroups = true
             } label: {

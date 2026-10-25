@@ -10,7 +10,6 @@ struct PinDetailView: View {
     @Query(sort: \PinGroup.name) private var groups: [PinGroup]
     @State private var lookAround: LookAroundState = .notRequested
     @State private var addingGroup = false
-    @State private var newGroupName = ""
 
     private enum LookAroundState {
         /// Nothing is fetched until asked: it sends the spot to Apple and downloads imagery.
@@ -67,7 +66,6 @@ struct PinDetailView: View {
                     }
                 }
                 Button("New Group…") {
-                    newGroupName = ""
                     addingGroup = true
                 }
                 Toggle("Reviewed", isOn: $pin.isReviewed)
@@ -153,17 +151,8 @@ struct PinDetailView: View {
         }
         .navigationTitle(pin.displayLabel)
         .navigationBarTitleDisplayMode(.inline)
-        .alert("New Group", isPresented: $addingGroup) {
-            TextField("Name, e.g. Road trip", text: $newGroupName)
-            Button("Add") {
-                // A name that's blank or already taken just doesn't make a group.
-                if let group = PinGroups.create(named: newGroupName, in: context) {
-                    PinGroups.move(pin, to: group, in: context)
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This pin goes into the new group.")
+        .newGroupAlert(isPresented: $addingGroup, message: "This pin goes into the new group.") { group in
+            PinGroups.move(pin, to: group, in: context)
         }
         .task {
             await PlaceNameService.shared.fillMissing(in: [pin])

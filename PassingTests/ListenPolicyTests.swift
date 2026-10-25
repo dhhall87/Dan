@@ -9,8 +9,8 @@ struct ListenPolicyTests {
     private func at(_ seconds: TimeInterval) -> Date { chime.addingTimeInterval(seconds) }
 
     @Test func givesUpWhenNothingIsSaid() {
-        #expect(!policy.shouldStop(startedAt: chime, lastHeardAt: nil, now: at(3.9)))
-        #expect(policy.shouldStop(startedAt: chime, lastHeardAt: nil, now: at(4)))
+        #expect(!policy.shouldStop(startedAt: chime, lastHeardAt: nil, now: at(5.9)), "about 5 seconds of silence is fine")
+        #expect(policy.shouldStop(startedAt: chime, lastHeardAt: nil, now: at(6)))
     }
 
     @Test func stopsShortlyAfterTheDriverStopsTalking() {
@@ -19,11 +19,11 @@ struct ListenPolicyTests {
     }
 
     @Test func talkingPastTheFirstWaitKeepsListening() {
-        #expect(!policy.shouldStop(startedAt: chime, lastHeardAt: at(5), now: at(6)), "still talking at 5 s")
+        #expect(!policy.shouldStop(startedAt: chime, lastHeardAt: at(7), now: at(8)), "still talking at 7 s")
     }
 
     @Test func neverListensLongerThanTheMaximum() {
-        #expect(policy.shouldStop(startedAt: chime, lastHeardAt: at(9.9), now: at(10)))
+        #expect(policy.shouldStop(startedAt: chime, lastHeardAt: at(14.9), now: at(15)))
     }
 
     @Test func tidiesWhatWasSaidIntoALabel() {

@@ -6,15 +6,15 @@ struct ListenPolicy {
     /// Asked out loud before listening (unless the driver chose the chime instead).
     static let question = "What are you passing?"
 
-    /// Give up if nothing is said within this long after the chime.
-    var waitForSpeech: TimeInterval = 4
+    /// Give up if nothing is said within this long after the question (or chime).
+    var waitForSpeech: TimeInterval = 6
     /// Once the driver is talking, stop after this long with no new words.
     var pauseAfterSpeech: TimeInterval = 1.5
     /// After "stop" or "cancel", stop sooner than the normal pause. Not instantly, because the
     /// recognizer hears "stop" first when the driver is saying "stop sign".
     var pauseAfterStopCommand: TimeInterval = 0.6
     /// Never listen longer than this.
-    var maxDuration: TimeInterval = 10
+    var maxDuration: TimeInterval = 15
 
     /// `heard` is everything recognized so far.
     func shouldStop(startedAt: Date, lastHeardAt: Date?, heard: String? = nil, now: Date) -> Bool {
