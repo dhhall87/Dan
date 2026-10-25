@@ -8,8 +8,11 @@ enum FixPolicy {
     /// Fixes less accurate than this (meters) are never used.
     static let maxAccuracy: Double = 200
 
-    /// A fix taken more than this many seconds away from the tap is flagged approximate
-    /// (at highway speed, 3 s is ~90 m).
+    /// A pin is flagged approximate if the car could have moved more than this (meters) between
+    /// the fix and the tap: speed × time apart. At 65 mph that's under 2 s; when parked, never.
+    static let exactDrift: Double = 50
+    /// When the fix has no speed, a fix more than this many seconds from the tap is flagged
+    /// approximate instead (at highway speed, 3 s is ~90 m).
     static let exactAge: TimeInterval = 3
     /// Fixes less accurate than this (meters) are flagged approximate.
     static let exactAccuracy: Double = 50
@@ -35,9 +38,14 @@ enum FixPolicy {
         return offset >= -maxAge && offset <= lateFixWindow
     }
 
-    /// Whether the pin's position should be shown as approximate.
-    static func isApproximate(capturedAt: Date, fixTimestamp: Date, horizontalAccuracy: Double) -> Bool {
-        abs(fixTimestamp.timeIntervalSince(capturedAt)) > exactAge || horizontalAccuracy > exactAccuracy
+    /// Whether the pin's position should be shown as approximate: the fix was imprecise, or the car
+    /// could have moved more than `exactDrift` between the fix and the tap.
+    /// `speed` is in m/s; nil or negative means unknown.
+    static func isApproximate(capturedAt: Date, fixTimestamp: Date, horizontalAccuracy: Double, speed: Double?) -> Bool {
+        if horizontalAccuracy > exactAccuracy { return true }
+        let secondsApart = abs(fixTimestamp.timeIntervalSince(capturedAt))
+        guard let speed, speed >= 0 else { return secondsApart > exactAge }
+        return speed * secondsApart > exactDrift
     }
 
     /// Whether the direction of travel means anything. `course`, `courseAccuracy` and `speed`

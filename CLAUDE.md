@@ -59,7 +59,7 @@ Keep capture coordinates and target coordinates separate. The app records where 
 ## Capture behavior
 
 - **Save first.** A tap writes the pin immediately. Labels are always optional and added after.
-- While the capture screen is open, location updates run (When In Use), so the latest fix is already fresh at tap time. For captures from Siri or the widget, request a one-shot fix and record `fixTimestamp`. At highway speed a 3-second-old fix is ~90 m off, so flag pins whose fix is older than a few seconds as approximate.
+- While the capture screen is open, location updates run (When In Use), so the latest fix is already fresh at tap time. For captures from Siri or the widget, request a one-shot fix and record `fixTimestamp`. At highway speed a 3-second-old fix is ~90 m off, so flag a pin as approximate when the car could have moved more than ~50 m between the fix and the tap (speed × time apart). A parked car's older fix stays exact. If the fix has no speed, fall back to flagging fixes more than 3 s from the tap.
 - If no usable fix arrives, still save the pin with the timestamp and a clear "no location" state. Never substitute an old coordinate.
 - **Confirmation is non-visual:** haptic plus a short tone. Optional spoken confirmation ("Left, far, saved") as a setting. No alerts, sheets, or navigation changes on the capture screen.
 - Debounce repeat taps on the same zone within ~0.75 s.

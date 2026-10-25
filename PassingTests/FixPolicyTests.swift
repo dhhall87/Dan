@@ -21,16 +21,31 @@ struct FixPolicyTests {
         #expect(FixPolicy.isUsable(fixTimestamp: tap, horizontalAccuracy: FixPolicy.maxAccuracy, now: tap))
     }
 
-    @Test func fixesMoreThanAFewSecondsFromTheTapAreApproximate() {
-        #expect(!FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(-1), horizontalAccuracy: 10))
-        #expect(!FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(-FixPolicy.exactAge), horizontalAccuracy: 10))
-        #expect(FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(-3.5), horizontalAccuracy: 10))
-        #expect(FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(4), horizontalAccuracy: 10))
+    @Test func parkedFixIsExactEvenIfItIsAFewSecondsOld() {
+        #expect(!FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(-8), horizontalAccuracy: 5, speed: 0))
+        #expect(!FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(12), horizontalAccuracy: 5, speed: 0))
+    }
+
+    @Test func movingFixIsApproximateOnceTheCarCouldHaveMovedTooFar() {
+        // 65 mph is about 29 m/s.
+        #expect(!FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(-1), horizontalAccuracy: 5, speed: 29), "29 m")
+        #expect(FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(-2), horizontalAccuracy: 5, speed: 29), "58 m")
+        #expect(FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(3), horizontalAccuracy: 5, speed: 29), "87 m, fix after the tap")
+        // 30 mph is about 13 m/s: 3 s is 39 m, 4 s is 52 m.
+        #expect(!FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(-3), horizontalAccuracy: 5, speed: 13))
+        #expect(FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(-4), horizontalAccuracy: 5, speed: 13))
+    }
+
+    @Test func unknownSpeedFallsBackToFixAge() {
+        for speed in [nil, -1.0] {
+            #expect(!FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(-FixPolicy.exactAge), horizontalAccuracy: 5, speed: speed))
+            #expect(FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(-3.5), horizontalAccuracy: 5, speed: speed))
+        }
     }
 
     @Test func impreciseFixesAreApproximate() {
-        #expect(!FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap, horizontalAccuracy: FixPolicy.exactAccuracy))
-        #expect(FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap, horizontalAccuracy: FixPolicy.exactAccuracy + 1))
+        #expect(!FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap, horizontalAccuracy: FixPolicy.exactAccuracy, speed: 0))
+        #expect(FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap, horizontalAccuracy: FixPolicy.exactAccuracy + 1, speed: 0))
     }
 
     @Test func lateFixMustArriveWithinTheWindow() {

@@ -88,10 +88,10 @@ extension Pin {
         targetCoordinate ?? captureCoordinate
     }
 
-    /// True when the fix was taken a few seconds away from the tap or was imprecise.
+    /// True when the fix was imprecise, or the car could have moved a fair way between fix and tap.
     var isApproximate: Bool {
         guard let fixTimestamp, let horizontalAccuracy else { return false }
-        return FixPolicy.isApproximate(capturedAt: capturedAt, fixTimestamp: fixTimestamp, horizontalAccuracy: horizontalAccuracy)
+        return FixPolicy.isApproximate(capturedAt: capturedAt, fixTimestamp: fixTimestamp, horizontalAccuracy: horizontalAccuracy, speed: speed)
     }
 
     var displayLabel: String {
