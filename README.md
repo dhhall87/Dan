@@ -37,7 +37,11 @@ You need **Xcode 26 or newer** (the app targets **iOS 26**).
 
 1. Open `Passing.xcodeproj`.
 2. Pick an iPhone simulator and press Run (⌘R). Press ⌘U to run the tests.
-3. Give the Simulator a location: **Features → Location → Apple** (parked) or **Freeway Drive** (moving). To set it for every run, choose **Product → Scheme → Edit Scheme… → Run → Options → Default Location**.
+3. Give the Simulator a location. While the app runs, click the **location arrow** in Xcode's debug bar (the strip above the console) and pick **KansasDrive** for a moving car, or a city to stay parked. To use it on every run, choose **Product → Scheme → Edit Scheme… → Run → Options → Default Location**.
+
+### The test drive
+
+`TestRoutes/KansasDrive.gpx` is a recorded 16-mile drive at 65 mph: 8 miles east, then 8 miles north, about 15 minutes. Xcode replays it so the Simulator moves like a car, which makes "+1 mi back" testable at a desk. It's only for testing and isn't part of the app.
 
 ### Build and test from Terminal
 
@@ -66,9 +70,9 @@ Debug builds (what ⌘R makes) have a **Testing** section at the bottom of Setti
 
 ## Milestone 3 manual test checklist
 
-1. In the Simulator choose **Features → Location → Freeway Drive**, open the capture screen, and leave it open for about 4 minutes. In debug builds, Settings → Testing shows **Trail recorded** growing.
+1. Run the app, then click the **location arrow** in Xcode's debug bar and choose **KansasDrive**. Keep the capture screen open for about 4 minutes. In debug builds, Settings → Testing shows **Trail recorded** growing. After about 7.5 minutes the route turns north, so 1–2 miles back from there lands around the corner on the first road.
 2. Tap **+1 mi back** once. In **Pins**, the new pin says "1 mi back". Open it: the map shows the blue car, the orange "About here" about a mile back along the road, and a blue line between them. **Open in Google Maps** goes to the orange spot.
-3. Back on the capture screen, tap **+1 mi back** three times, less than 4 seconds apart. You get one new pin, "3 mi back", with a haptic and tone on each tap.
+3. Back on the capture screen, tap **+1 mi back** three times, less than 4 seconds apart. (Leaving the capture screen pauses the trail, so give it a few seconds to pick back up.) You get one new pin, "3 mi back", with a haptic and tone on each tap.
 4. Wait 5 seconds and tap **+1 mi back** again. That makes a separate new pin, "1 mi back".
 5. Force-quit and reopen, then immediately tap **+1 mi back**. That pin has no orange spot and says "About 1 mile back the way you came…" instead, because the trail starts empty.
 6. Settings → turn on **Spoken confirmation** → **Voice**. Tap ▶︎ on a few voices, then tap one to choose it. The Simulator has fewer voices than a real iPhone.
@@ -97,7 +101,7 @@ If the App Group doesn't match, the app still works, but Settings shows an orang
 - **Expired pins are stamped with when they moved, not when they hit 7 days.** Every pin gets its full 30 days in Recently Deleted, even after weeks away from the app, or after turning off "Keep records indefinitely" with old pins.
 - **Recovering a pin that's more than 7 days old also keeps (stars) it.** Otherwise it would expire again on the next clean-up.
 - **Exports include active pins only**, not Recently Deleted.
-- **The trail only records while the capture screen is open** (no background location). Opening the Pins list mid-drive pauses it, and a gap of more than 2 minutes starts a fresh trail. Passing can't know which road joined the two ends.
+- **The trail only records while the capture screen is open** (no background location). Opening the Pins list mid-drive pauses it. A gap of more than 2 minutes, or an impossible jump (faster than ~155 mph, like a GPS glitch), starts a fresh trail. Passing can't know which road joined the two ends.
 - **"+1" taps aren't debounced**, because quick taps are how you say "3 miles". Each extra tap measures back from where you first tapped, not from where the car is by then.
 - **Miles-back confirmations say the distance, not your phrase**, so you always know how far back it went.
 

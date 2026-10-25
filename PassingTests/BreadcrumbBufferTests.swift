@@ -7,11 +7,11 @@ enum TestDrive {
     static let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
     static let metersPerDegreeLatitude = 111_195.0
 
-    static func north(miles: Double, stepMeters: Double = 20, from latitude: Double = 40, longitude: Double = -75, into buffer: inout BreadcrumbBuffer, startingAt time: Date = start) -> Date {
+    static func north(miles: Double, stepMeters: Double = 20, secondsPerStep: Double = 1, from latitude: Double = 40, longitude: Double = -75, into buffer: inout BreadcrumbBuffer, startingAt time: Date = start) -> Date {
         let steps = Int(miles * Geo.metersPerMile / stepMeters)
         var now = time
         for i in 0...steps {
-            now = time.addingTimeInterval(Double(i))
+            now = time.addingTimeInterval(Double(i) * secondsPerStep)
             buffer.add(TrailPoint(latitude: latitude + Double(i) * stepMeters / metersPerDegreeLatitude, longitude: longitude), at: now)
         }
         return now
@@ -55,6 +55,22 @@ struct BreadcrumbBufferTests {
         buffer.add(TrailPoint(latitude: 41, longitude: -75), at: later)
         #expect(buffer.points == [TrailPoint(latitude: 41, longitude: -75)])
         #expect(buffer.length == 0)
+    }
+
+    @Test func anImpossibleJumpStartsANewTrail() {
+        // E.g. a GPS glitch, or the Simulator looping a test route back to its start.
+        var buffer = BreadcrumbBuffer()
+        let end = TestDrive.north(miles: 2, into: &buffer)
+        buffer.add(TrailPoint(latitude: 40, longitude: -75), at: end.addingTimeInterval(5))
+        #expect(buffer.points == [TrailPoint(latitude: 40, longitude: -75)])
+        #expect(buffer.length == 0)
+    }
+
+    @Test func highwaySpeedIsNotAJump() {
+        var buffer = BreadcrumbBuffer()
+        // 145 m every 5 s is 65 mph, the test route's spacing.
+        _ = TestDrive.north(miles: 2, stepMeters: 145, secondsPerStep: 5, into: &buffer)
+        #expect(buffer.length > 1.9 * Geo.metersPerMile)
     }
 
     @Test func walksOneMileBackOnAStraightRoad() throws {

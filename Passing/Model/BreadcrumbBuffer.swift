@@ -10,6 +10,9 @@ struct BreadcrumbBuffer {
     /// A break in GPS updates longer than this (screen closed, app in the background) starts a new
     /// trail, because there's no way to know which road joined the two ends.
     static let maxGap: TimeInterval = 120
+    /// Faster than this (m/s, about 155 mph) between two fixes means a GPS glitch or a jump, not
+    /// driving, so the trail starts again rather than drawing a straight line across the map.
+    static let maxPlausibleSpeed: Double = 70
     /// The tap position must be within this many meters of the newest trail point to walk back from it.
     static let maxStartGap: Double = 150
     /// If the trail runs out this close to the requested distance, that still counts.
@@ -19,14 +22,16 @@ struct BreadcrumbBuffer {
     private(set) var points: [TrailPoint] = []
     /// Total road length covered by `points`, in meters.
     private(set) var length: Double = 0
-    private var lastFixAt: Date?
+    private var lastFix: (point: TrailPoint, time: Date)?
 
     mutating func add(_ point: TrailPoint, at timestamp: Date) {
-        if let lastFixAt {
-            if timestamp < lastFixAt { return }
-            if timestamp.timeIntervalSince(lastFixAt) > Self.maxGap { reset() }
+        if let lastFix {
+            if timestamp < lastFix.time { return }
+            let elapsed = timestamp.timeIntervalSince(lastFix.time)
+            let jumped = Geo.distance(lastFix.point, point) > Self.maxPlausibleSpeed * max(elapsed, 1)
+            if elapsed > Self.maxGap || jumped { reset() }
         }
-        lastFixAt = timestamp
+        lastFix = (point, timestamp)
         guard let last = points.last else {
             points = [point]
             return
@@ -41,7 +46,7 @@ struct BreadcrumbBuffer {
     mutating func reset() {
         points = []
         length = 0
-        lastFixAt = nil
+        lastFix = nil
     }
 
     struct WalkBack: Equatable {
