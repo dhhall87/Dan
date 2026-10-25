@@ -10,7 +10,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Simple (default):** the whole screen is one capture button, with the app icon's yellow pin.
 - **Four zones:** `| Far left | Near left | road | Near right | Far right |` as full-height columns. Near zones are green, far zones blue. The narrow road in the middle, with your car on it, saves a pin with the side unknown.
 - **Switching layouts:** Settings → Capture screen picks the one Passing opens with. To switch during a drive, tap the **Passing** title at the top (the line under it says **Simple** or **Four zones**). After more than 30 minutes away, Passing comes back on the Settings layout.
-- **GPS pill** at the top: **GPS ready** (green), **Finding GPS…** (yellow), **Location asked on first pin** (gray), **Location off** (red) or **Precise Location off** (orange). Pins save in every state; the pill just says whether they'll have a position.
+- **GPS pill** in the title bar, above the **Passing** title: **GPS ready** (green), **Finding GPS…** (yellow), **Location asked on first pin** (gray), **Location off** (red) or **Precise Location off** (orange). Pins save in every state; the pill just says whether they'll have a position.
 - **Save first:** a tap writes the pin immediately with no label. If GPS has no usable fix yet, the pin is still saved, marked "No location", and picks up the first good fix within 15 seconds. An old position is never used.
 - **Approximate flag:** a pin is marked approximate when its total uncertainty is more than about 50 m: how far the car could have moved between the GPS reading and the tap (speed × time apart), combined with how precise the reading itself was. A parked car's older reading counts as exact.
 - **Non-visual confirmation:** a haptic and a short tone. Spoken "Left, far, saved" is optional. Repeat taps within 0.75 s are ignored, and the screen stays awake.
@@ -236,12 +236,12 @@ The Simulator uses your Mac's microphone. It usually has no on-device speech mod
 ## Design refresh checklist
 
 1. Pull, then ⌘U. Pick the **iPhone 16 Pro** simulator (iOS 27) and ⌘R.
-2. **Simple:** a navy button with the yellow pin, **Pin** and **Tap anywhere**. Tap it: the tone plays and nothing else changes.
+2. **Simple:** a navy button with the yellow pin, **Pin it** and **Tap anywhere**. Tap it: the tone plays and nothing else changes.
 3. **GPS pill:** in the Simulator choose **Features → Location → None**: the pill says **Finding GPS…** (yellow) within about 10 seconds. Pick **KansasDrive** in Xcode's location menu: **GPS ready** (green) within a second or two. In the iOS Settings app → Passing → Location → **Never**: **Location off** (red), and a tap still saves a "No location" pin. Set it back to **While Using the App**. On a fresh install, before the first pin, it says **Location asked on first pin** (gray).
-4. **Title button:** the title says **Passing** with **⇄ Simple** under it in yellow. Tap it: the screen switches to Four zones and the line says **Four zones** (on your iPhone you also feel a light click). Tap again: back to Simple.
+4. **Title button:** under the GPS pill, the title says **Passing** (large and bold) with **⇄ Simple** under it in yellow. Tap it: the screen switches to Four zones and the line says **Four zones** (on your iPhone you also feel a light click). Tap again: back to Simple.
 5. **Four zones:** the middle is a gray road with white edge lines, a dashed yellow center line and the car near the bottom. Tap each column and the road, then check side and distance in Pins: far left, near left, unknown, near right, far right.
 6. **Default:** Settings → Capture screen → **Four zones**: the capture screen shows Four zones straight away. Set it back to **Simple**. Switch to Four zones with the title, then quit Passing (swipe it away in the app switcher) and reopen: it's back on Simple. Switch again, go to the Home Screen for a minute and come back: still Four zones.
-7. **Listen after tap** on: tap a zone. The title turns into the red **Stop listening** button, then goes back to the title when listening ends.
+7. **Listen after tap** on: tap a zone. The GPS pill turns into the red **Stop listening** button, then comes back when listening ends.
 8. **+1 mi back:** a wide rounded button with a yellow arrow. A tap, then quick extra taps, still give 1, 2, 3 miles back.
 9. **Landscape:** rotate the Simulator (⌘→). Everything fits, and the Simple pin shrinks to make room. Rotate back.
 10. **Widgets:** the **Pin** widget shows the yellow pin. If it still shows the old symbol, remove it and add it again. Check both widgets in the CarPlay window too.

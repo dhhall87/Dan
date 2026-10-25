@@ -10,6 +10,8 @@ import UIKit
 struct CaptureView: View {
     /// Simple or Four zones. RootView decides: the Settings choice, or the title-button switch.
     let mode: CaptureMode
+    /// The title button: flip between Simple and Four zones for the drive.
+    var switchMode: () -> Void = {}
     @Environment(\.scenePhase) private var scenePhase
     @State private var isShowing = false
 
@@ -17,8 +19,7 @@ struct CaptureView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            GPSPill()
-                .padding(.top, 4)
+            ModeTitleButton(mode: mode, action: switchMode)
             switch mode {
             case .quick: QuickCapture()
             case .fourZone: FourZoneCapture()
@@ -51,11 +52,43 @@ struct CaptureView: View {
     }
 }
 
-// MARK: GPS pill
+// MARK: Title and GPS pill
 
-/// Whether a tap right now gets a position. A standing notice, never a reaction to a tap, and never
-/// needed to capture: pins save in every state.
-private struct GPSPill: View {
+/// The capture screen's title, which is also the layout switch: "Passing" over "Simple" or
+/// "Four zones". A tap flips the layout with a light click; nothing else changes on screen.
+struct ModeTitleButton: View {
+    let mode: CaptureMode
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 1) {
+                // About 15% larger and bolder than a standard title; the layout line stays small.
+                Text("Passing")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(.white)
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.caption2.weight(.bold))
+                    Text(mode.title)
+                        .font(.caption.weight(.semibold))
+                }
+                .foregroundStyle(Color.pinYellow)
+            }
+            .lineLimit(1)
+            .padding(.horizontal, 12)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Capture screen, \(mode.title)")
+        .accessibilityHint("Switches between Simple and Four zones")
+    }
+}
+
+/// Whether a tap right now gets a position. Sits in the title bar, above the Passing title.
+/// A standing notice, never a reaction to a tap, and never needed to capture: pins save in every state.
+struct GPSPill: View {
     private let location = LocationProvider.shared
 
     var body: some View {
@@ -108,7 +141,7 @@ private struct QuickCapture: View {
                 // Shrinks first when the window is short (landscape, or a resized window on iOS 27).
                 PinGlyph()
                     .frame(minWidth: 44, maxWidth: 132, minHeight: 44, maxHeight: 132)
-                Text("Pin")
+                Text("Pin it")
                     .font(.system(size: 56, weight: .heavy, design: .rounded))
                     .padding(.top, 8)
                 Text("Tap anywhere")

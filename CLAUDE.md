@@ -67,9 +67,9 @@ Keep capture coordinates and target coordinates separate. The app records where 
 
 ## Main screen
 
-Dark, high contrast, no map, no clutter. Settings picks the layout Passing opens with. At Dan's request the two-line title ("Passing" over "Simple" or "Four zones") is also a button that switches layout for the drive; coming back after more than 30 minutes away starts on the Settings layout again (`CaptureModeChoice`). A GPS pill at the top says whether a tap now gets a position (GPS ready / Finding GPS… / Location off / Precise Location off). It's a standing notice, never a reaction to a tap. The rest of the app follows Settings → Appearance (System by default, or Light/Dark); the capture screen stays dark in every appearance.
+Dark, high contrast, no map, no clutter. Settings picks the layout Passing opens with. At Dan's request the two-line title ("Passing" over "Simple" or "Four zones") is also a button that switches layout for the drive; coming back after more than 30 minutes away starts on the Settings layout again (`CaptureModeChoice`). A GPS pill in the title bar, above the title, says whether a tap now gets a position (GPS ready / Finding GPS… / Location off / Precise Location off). It's a standing notice, never a reaction to a tap. The rest of the app follows Settings → Appearance (System by default, or Light/Dark); the capture screen stays dark in every appearance.
 
-**Simple mode (default; stored as `quick`):** the entire screen is one capture button.
+**Simple mode (default; stored as `quick`):** the entire screen is one capture button, labeled "Pin it".
 
 **Look (option A, chosen October 2026):** colors from the app icon (`Shared/Views/PassingColors.swift`), the icon's pin on the Simple button and the Pin widget (`PinGlyph`), rounded type. Capture buttons are solid colors, not Liquid Glass, so iOS 27's glass slider can't fade them. Glass is only on the system title-bar buttons and the GPS pill.
 
@@ -179,7 +179,7 @@ Later / maybe: native CarPlay app (only if publishing).
 
 - Capture never requires reading, typing, or answering.
 - Nothing pops up or changes screens on the capture screen after a tap.
-  - One exception, at Dan's request: with listen-after-tap on, a "Stop listening" button shows in the title bar while Passing asks or listens. It never moves or covers the capture buttons, and listening ends by itself, so it never has to be pressed.
+  - One exception, at Dan's request: with listen-after-tap on, a "Stop listening" button replaces the GPS pill in the title bar while Passing asks or listens. It never moves or covers the capture buttons, and listening ends by itself, so it never has to be pressed.
 - Every voice prompt is optional and can be turned off.
 
 ## Current status
