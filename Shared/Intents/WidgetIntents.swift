@@ -33,6 +33,20 @@ struct WidgetPinIntent: AppIntent {
     }
 }
 
+/// The widgets' Stop button, shown while the app is listening for a label after a tap: turns the
+/// microphone off now instead of waiting for listening to time out. Works from CarPlay too.
+struct StopListeningIntent: AppIntent {
+    static let title: LocalizedStringResource = "Stop Listening"
+    static let description = IntentDescription("Stops Passing listening for a label. Used by the Passing widgets.")
+    static let isDiscoverable = false
+
+    func perform() async throws -> some IntentResult {
+        ListeningSignal.postStop()
+        ListeningSignal.setListening(false)
+        return .result()
+    }
+}
+
 /// The Control Center button (also usable on the Lock Screen and the Action Button).
 /// Saves a pin and asks nothing.
 struct ControlPinIntent: AppIntent {

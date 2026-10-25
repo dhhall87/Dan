@@ -21,6 +21,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.sayClueFirst) private var sayClueFirst = true
     @AppStorage(SettingsKey.pauseAudioWhileSpeaking) private var pauseAudioWhileSpeaking = true
     @AppStorage(SettingsKey.listenAfterTap) private var listenAfterTap = false
+    @AppStorage(SettingsKey.askBeforeListening) private var askBeforeListening = true
     @State private var listenProblem: SpeechListener.Availability?
     #if DEBUG
     @AppStorage(SettingsKey.debugDayOffset) private var debugDayOffset = 0
@@ -82,6 +83,9 @@ struct SettingsView: View {
 
                 Section {
                     Toggle("Listen after tap", isOn: listenBinding)
+                    if listenAfterTap {
+                        Toggle("Ask “\(ListenPolicy.question)”", isOn: $askBeforeListening)
+                    }
                     if let listenProblem {
                         Text(listenProblemText(listenProblem))
                             .foregroundStyle(.orange)
@@ -96,7 +100,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Labels by voice")
                 } footer: {
-                    Text("After a tap on the capture screen, Passing chimes and listens for a few seconds. Say what you saw, like “red barn”, and it becomes the label. Say nothing (or “cancel”) and the pin just stays unlabeled. The chime plays even with the tone turned off, because it's your cue. Speech is recognized on your iPhone and never leaves it. With spoken confirmation on, Passing reads the label back.")
+                    Text("After a tap on the capture screen, Passing asks “\(ListenPolicy.question)” (or just chimes, if you turn the question off) and listens for a few seconds. Say what you saw, like “red barn”, and it becomes the label. Say nothing, “cancel” or “stop”, and the pin stays unlabeled. **Stop listening** at the top of the capture screen (or on a Passing widget in CarPlay) turns the microphone off right away, keeping anything you'd already said. Speech is recognized on your iPhone and never leaves it. With spoken confirmation on, Passing reads the label back.")
                 }
 
                 Section {

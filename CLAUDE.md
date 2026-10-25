@@ -177,6 +177,7 @@ Later / maybe: native CarPlay app (only if publishing).
 
 - Capture never requires reading, typing, or answering.
 - Nothing pops up or changes screens on the capture screen after a tap.
+  - One exception, at Dan's request: with listen-after-tap on, a "Stop listening" button shows in the title bar while Passing asks or listens. It never moves or covers the capture buttons, and listening ends by itself, so it never has to be pressed.
 - Every voice prompt is optional and can be turned off.
 
 ## Current status
@@ -186,6 +187,7 @@ Later / maybe: native CarPlay app (only if publishing).
   - Listen-after-tap uses `SFSpeechRecognizer` with `requiresOnDeviceRecognition` (not deprecated in iOS 26; simpler than `SpeechAnalyzer`). On iPhone it's on-device only, and the setting stays off if the language isn't supported on device. In the Simulator only, it may fall back to server recognition so the feature can be tried.
   - `CaptureFeedback` owns the whole flow: a `.playAndRecord` session (pausing or ducking other audio per the existing setting), the chime, `SpeechListener.listen()`, then `CaptureService.setLabel`. Only `.app` taps listen. Permission is requested only from Settings.
   - The audio-thread and Speech callbacks are built in `nonisolated` helpers, so they never run as main-actor closures on other threads.
+  - Follow-ups Dan asked for: Passing asks "What are you passing?" (spoken, can be switched to a chime) before listening; "stop"/"cancel" end listening after a 0.6 s grace; a Stop listening button in the capture screen's title bar; while listening, the widgets show a Stop button (`StopListeningIntent` posts a Darwin notification the app observes via `ListeningSignal`, and the app reloads widget timelines when listening starts and ends); multi-select (Keep, Reviewed, Group, Delete) on the Pins list.
 - Notes from Milestone 6:
   - Town names use iOS 26's `MKReverseGeocodingRequest` (`try await request.mapItems`, `addressRepresentations.cityWithContext`), and Look Around uses `MKLookAroundSceneRequest(...).scene`. Both async forms come from Apple's own examples rather than the reference pages, which only list the completion-handler methods. If either doesn't compile, switch to `getMapItems(completionHandler:)` / `getSceneWithCompletionHandler(_:)`.
   - Groups added `PinGroup` and `Pin.group` (lightweight migration). `SharedStore` now tries the App Group store three times, 0.5 s apart, before falling back, in case the app and widget open it mid-migration.

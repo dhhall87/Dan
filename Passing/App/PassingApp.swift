@@ -30,6 +30,7 @@ struct RootView: View {
     /// Bumped to rebuild the pin list after the widget or Control Center saved pins.
     @State private var listRefresh = 0
     @State private var seenWidgetCapture = WidgetActivity.lastCaptureAt
+    private let feedback = CaptureFeedback.shared
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -49,6 +50,25 @@ struct RootView: View {
                             showingSettings = true
                         } label: {
                             Label("Settings", systemImage: "gearshape")
+                        }
+                    }
+                    if feedback.isListening {
+                        // Listen after tap: turn the microphone off now. It sits in the title bar so
+                        // it never moves or covers the capture buttons, and it never has to be used:
+                        // listening stops by itself after a few seconds.
+                        ToolbarItem(placement: .principal) {
+                            Button {
+                                feedback.stopListening()
+                            } label: {
+                                Label("Stop listening", systemImage: "mic.slash.fill")
+                                    .labelStyle(.titleAndIcon)
+                                    .font(.headline)
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color.red, in: Capsule())
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                 }

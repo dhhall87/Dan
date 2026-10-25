@@ -2,7 +2,8 @@ import SwiftData
 import SwiftUI
 
 /// Review list: everything you've pinned, newest first, grouped by day. It can show one group at
-/// a time, and switch to a map of the same pins. Exports follow what's shown.
+/// a time, and switch to a map of the same pins. Exports follow what's shown. Select lets you keep,
+/// review, group or delete several pins at once.
 struct PinListView: View {
     @Query(filter: #Predicate<Pin> { $0.deletedAt == nil }, sort: \Pin.capturedAt, order: .reverse)
     private var pins: [Pin]
@@ -14,6 +15,8 @@ struct PinListView: View {
     @State private var filter: GroupFilter = .all
     @State private var showsMap = false
     @State private var managingGroups = false
+    @State private var isSelecting = false
+    @State private var selection = Set<UUID>()
     @State private var exportFile: ExportFile?
     @State private var exportError: String?
 
@@ -27,16 +30,41 @@ struct PinListView: View {
                 list
             }
         }
-        .navigationTitle(title)
+        .navigationTitle(isSelecting ? selectionTitle : title)
+        .navigationBarBackButtonHidden(isSelecting)
         .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                Button {
-                    showsMap.toggle()
-                } label: {
-                    Label(showsMap ? "List" : "Map", systemImage: showsMap ? "list.bullet" : "map")
+            if isSelecting {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(allShownSelected ? "Deselect All" : "Select All") {
+                        selection = allShownSelected ? [] : Set(shownPins.map(\.id))
+                    }
                 }
-                groupMenu
-                exportMenu
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        isSelecting = false
+                        selection = []
+                    }
+                    .fontWeight(.semibold)
+                }
+                ToolbarItemGroup(placement: .bottomBar) {
+                    bulkActions
+                }
+            } else {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button("Select") {
+                        showsMap = false
+                        selection = []
+                        isSelecting = true
+                    }
+                    .disabled(shownPins.isEmpty)
+                    Button {
+                        showsMap.toggle()
+                    } label: {
+                        Label(showsMap ? "List" : "Map", systemImage: showsMap ? "list.bullet" : "map")
+                    }
+                    groupMenu
+                    exportMenu
+                }
             }
         }
         .sheet(item: $exportFile) { file in
@@ -59,6 +87,9 @@ struct PinListView: View {
         }
         .onChange(of: pins.count) {
             refreshRecentlyDeletedCount()
+        }
+        .onChange(of: filter) {
+            selection = []
         }
         .onChange(of: groups.map(\.id)) {
             // The group being shown was deleted: go back to everything.
@@ -116,7 +147,38 @@ struct PinListView: View {
         }
     }
 
+    @ViewBuilder
     private func row(for pin: Pin) -> some View {
+        if isSelecting {
+            selectableRow(for: pin)
+        } else {
+            navigableRow(for: pin)
+        }
+    }
+
+    /// In Select mode a tap ticks the pin instead of opening it.
+    private func selectableRow(for pin: Pin) -> some View {
+        let isSelected = selection.contains(pin.id)
+        return Button {
+            if isSelected {
+                selection.remove(pin.id)
+            } else {
+                selection.insert(pin.id)
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.title2)
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                PinRow(pin: pin, keepIndefinitely: keepIndefinitely, showsGroup: filter == .all)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func navigableRow(for pin: Pin) -> some View {
         NavigationLink(value: pin) {
             PinRow(pin: pin, keepIndefinitely: keepIndefinitely, showsGroup: filter == .all)
         }
@@ -147,6 +209,71 @@ struct PinListView: View {
             }
             .pickerStyle(.menu)
         }
+    }
+
+    // MARK: Select mode
+
+    /// Keep, Reviewed, Group and Delete for every ticked pin. Delete moves them to Recently
+    /// Deleted, where they can be recovered for 30 days.
+    @ViewBuilder
+    private var bulkActions: some View {
+        let selected = selectedPins
+        let allKept = !selected.isEmpty && selected.allSatisfy(\.isKept)
+        let allReviewed = !selected.isEmpty && selected.allSatisfy(\.isReviewed)
+        Button {
+            for pin in selected { pin.isKept = !allKept }
+            try? context.save()
+        } label: {
+            Label(allKept ? "Unkeep" : "Keep", systemImage: allKept ? "star.slash" : "star")
+        }
+        .disabled(selected.isEmpty)
+        Spacer()
+        Button {
+            for pin in selected { pin.isReviewed = !allReviewed }
+            try? context.save()
+        } label: {
+            Label(allReviewed ? "Not Reviewed" : "Reviewed", systemImage: allReviewed ? "xmark.circle" : "checkmark.circle")
+        }
+        .disabled(selected.isEmpty)
+        Spacer()
+        Menu {
+            Button("No Group") {
+                PinGroups.move(selected, to: nil, in: context)
+            }
+            ForEach(groups) { group in
+                Button(group.name) {
+                    PinGroups.move(selected, to: group, in: context)
+                }
+            }
+            Divider()
+            Button("Manage Groups…") {
+                managingGroups = true
+            }
+        } label: {
+            Label("Group", systemImage: "folder")
+        }
+        .disabled(selected.isEmpty)
+        Spacer()
+        Button(role: .destructive) {
+            RetentionService.shared.moveToRecentlyDeleted(selected)
+            selection = []
+        } label: {
+            Label("Delete", systemImage: "trash")
+        }
+        .disabled(selected.isEmpty)
+    }
+
+    private var selectedPins: [Pin] {
+        shownPins.filter { selection.contains($0.id) }
+    }
+
+    private var allShownSelected: Bool {
+        !shownPins.isEmpty && shownPins.allSatisfy { selection.contains($0.id) }
+    }
+
+    private var selectionTitle: String {
+        let count = selectedPins.count
+        return count == 0 ? "Select Pins" : "\(count) Selected"
     }
 
     // MARK: Toolbar menus

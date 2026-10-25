@@ -1,28 +1,43 @@
 import AVFoundation
+import Observation
 import UIKit
+import WidgetKit
 
 /// Non-visual confirmation that a pin was saved: a haptic, a short tone, and (if turned on)
 /// a spoken phrase like "Left, far. Got it boss." The driver never has to look at the screen.
-/// With listen-after-tap on, the tone becomes a "go ahead" chime and Passing listens for a label.
+/// With listen-after-tap on, Passing asks "What are you passing?" (or chimes) and listens for a label.
 @MainActor
+@Observable
 final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
     static let shared = CaptureFeedback()
 
     private let haptics = UINotificationFeedbackGenerator()
     private let synthesizer = AVSpeechSynthesizer()
     private let audio = AudioWorker()
-    private var speechInProgress = false
-    /// The utterance being spoken now, so a cancelled older one isn't mistaken for the end of speech.
-    private var currentUtterance: AVSpeechUtterance?
     private let listener = SpeechListener()
-    /// The pin listen-after-tap is listening for, if any. The audio session stays on meanwhile.
+    /// The pin listen-after-tap is asking about or listening for, if any. The audio session stays on
+    /// meanwhile, and the capture screen shows its Stop button.
     private var listeningPin: Pin?
-    private var listenTask: Task<Void, Never>?
-    private var deactivateTask: Task<Void, Never>?
+    @ObservationIgnored private var speechInProgress = false
+    /// The utterance being spoken now, so a cancelled older one isn't mistaken for the end of speech.
+    @ObservationIgnored private var currentUtterance: AVSpeechUtterance?
+    /// Set by the Stop button, so a session still asking its question doesn't go on to listen.
+    @ObservationIgnored private var sessionStopped = false
+    @ObservationIgnored private var listenTask: Task<Void, Never>?
+    @ObservationIgnored private var deactivateTask: Task<Void, Never>?
+    @ObservationIgnored private var stopObserver: (any NSObjectProtocol)?
+
+    /// True from the tap until listening ends, including while the question is asked.
+    var isListening: Bool { listeningPin != nil }
 
     override init() {
         super.init()
         synthesizer.delegate = self
+        // A widget's Stop button (on the phone or in CarPlay) runs in another process and signals here.
+        ListeningSignal.startObserving()
+        stopObserver = NotificationCenter.default.addObserver(forName: ListeningSignal.stopRequested, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.stopListening() }
+        }
     }
 
     /// Warms up the haptic engine and audio so the first tap responds instantly.
@@ -96,12 +111,32 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
-    private func speak(_ text: String, voiceIdentifier: String) {
+    @discardableResult
+    private func speak(_ text: String, voiceIdentifier: String) -> AVSpeechUtterance {
         synthesizer.stopSpeaking(at: .immediate)
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = Self.voice(identifier: voiceIdentifier)
         currentUtterance = utterance
         synthesizer.speak(utterance)
+        return utterance
+    }
+
+    /// Speaks `text` and returns once it has finished or been cut off.
+    private func say(_ text: String) async {
+        speechInProgress = true
+        let utterance = speak(text, voiceIdentifier: AppSettings.voiceIdentifier)
+        let giveUpAt = Date.now.addingTimeInterval(10)
+        while currentUtterance === utterance, Date.now < giveUpAt {
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+    }
+
+    /// Stops whatever is being said. The cancelled utterance's own callback is then ignored, so
+    /// whoever interrupts decides what happens to the audio session next.
+    private func interruptSpeech() {
+        currentUtterance = nil
+        speechInProgress = false
+        synthesizer.stopSpeaking(at: .immediate)
     }
 
     private func scheduleDeactivation(after delay: TimeInterval) {
@@ -115,9 +150,19 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
 
     // MARK: Listen after tap
 
-    /// The chime says "go ahead", then Passing listens for a few seconds. Whatever the driver says
-    /// becomes the pin's label; saying nothing leaves it unlabeled, silently. The pin is already
-    /// saved, so none of this can lose it.
+    /// The Stop button (on the capture screen, or a widget in CarPlay): turns the microphone off now
+    /// instead of waiting for listening to time out. Anything already heard is kept as the label.
+    func stopListening() {
+        guard listeningPin != nil else { return }
+        sessionStopped = true
+        listener.stop()
+        // If the question is still being asked, cut it short.
+        interruptSpeech()
+    }
+
+    /// Passing asks "What are you passing?" (or chimes, if the driver turned the question off), then
+    /// listens for a few seconds. Whatever the driver says becomes the pin's label; saying nothing
+    /// leaves it unlabeled, silently. The pin is already saved, so none of this can lose it.
     private func listenForLabel(on pin: Pin) {
         if let listeningPin, listeningPin === pin {
             // Another "+1 mi back" tap on the same pin: chime again and start the waiting time over.
@@ -130,22 +175,31 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         listener.stop()
         let previous = listenTask
         deactivateTask?.cancel()
-        currentUtterance = nil
-        synthesizer.stopSpeaking(at: .immediate)
-        speechInProgress = false
+        interruptSpeech()
+        sessionStopped = false
         listeningPin = pin
+        ListeningSignal.setListening(true)
+        WidgetCenter.shared.reloadAllTimelines()
 
         let mode = AudioWorker.Mode.listening(pausingOthers: AppSettings.pauseAudioWhileSpeaking)
+        let ask = AppSettings.askBeforeListening
         listenTask = Task { @MainActor in
             await previous?.value
             guard self.listeningPin === pin else { return }
             await withCheckedContinuation { continuation in
-                self.audio.activateAndPlay(tone: true, mode: mode) {
+                self.audio.activateAndPlay(tone: !ask, mode: mode) {
                     continuation.resume()
                 }
             }
-            // Let the chime finish, so the microphone doesn't hear it.
-            try? await Task.sleep(for: .seconds(self.audio.toneDuration + 0.1))
+            if ask {
+                await self.say(ListenPolicy.question)
+            }
+            // A short gap, so the microphone doesn't catch the end of the question or chime.
+            try? await Task.sleep(for: .seconds(ask ? 0.15 : self.audio.toneDuration + 0.1))
+            guard self.listeningPin === pin, !self.sessionStopped else {
+                self.finishListening(for: pin, heard: nil)
+                return
+            }
             let label = await self.listener.listen()
             self.finishListening(for: pin, heard: label)
         }
@@ -155,6 +209,8 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         let stillCurrent = listeningPin === pin
         if stillCurrent {
             listeningPin = nil
+            ListeningSignal.setListening(false)
+            WidgetCenter.shared.reloadAllTimelines()
         }
         if let label {
             CaptureService.shared.setLabel(label, on: pin)

@@ -71,7 +71,7 @@ final class SpeechListener {
         }
 
         while !stopRequested, !finished,
-              !policy.shouldStop(startedAt: startedAt, lastHeardAt: lastHeardAt, now: .now) {
+              !policy.shouldStop(startedAt: startedAt, lastHeardAt: lastHeardAt, heard: transcript, now: .now) {
             try? await Task.sleep(for: .milliseconds(200))
         }
 

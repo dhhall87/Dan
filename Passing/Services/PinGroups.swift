@@ -39,7 +39,14 @@ enum PinGroups {
 
     /// Files the pin in `group`, or takes it out of its group when `group` is nil.
     static func move(_ pin: Pin, to group: PinGroup?, in context: ModelContext) {
-        pin.group = group
+        move([pin], to: group, in: context)
+    }
+
+    /// Several at once (Select in the Pins list), saved together.
+    static func move(_ pins: [Pin], to group: PinGroup?, in context: ModelContext) {
+        for pin in pins {
+            pin.group = group
+        }
         save(context)
     }
 

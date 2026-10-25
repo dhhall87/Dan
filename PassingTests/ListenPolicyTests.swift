@@ -39,4 +39,17 @@ struct ListenPolicyTests {
         #expect(ListenPolicy.label(from: "never mind") == nil)
         #expect(ListenPolicy.label(from: "no barn") == "no barn", "only the whole phrase cancels")
     }
+
+    @Test func stopAndCancelEndListeningSooner() {
+        #expect(policy.shouldStop(startedAt: chime, lastHeardAt: at(2), heard: "Stop", now: at(2.7)))
+        #expect(!policy.shouldStop(startedAt: chime, lastHeardAt: at(2), heard: "Stop", now: at(2.5)),
+                "a short grace in case it's the start of \"stop sign\"")
+        #expect(!policy.shouldStop(startedAt: chime, lastHeardAt: at(2), heard: "stop sign", now: at(2.6)))
+        #expect(ListenPolicy.isStopCommand("Stop"))
+        #expect(ListenPolicy.isStopCommand("stop listening."))
+        #expect(ListenPolicy.isStopCommand("Cancel"))
+        #expect(!ListenPolicy.isStopCommand("stop sign"), "a label that starts with stop is still a label")
+        #expect(!ListenPolicy.isStopCommand(nil))
+        #expect(ListenPolicy.label(from: "stop") == nil)
+    }
 }

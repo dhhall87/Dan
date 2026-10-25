@@ -45,6 +45,15 @@ struct PinGroupsTests {
         #expect(barn.group == nil)
     }
 
+    @Test func severalPinsMoveTogether() throws {
+        let trip = try #require(PinGroups.create(named: "Road trip", in: context))
+        let pins = [pin("red barn"), pin("diner"), pin("silo")]
+        PinGroups.move(Array(pins.prefix(2)), to: trip, in: context)
+        #expect(pins.map { $0.group?.id } == [trip.id, trip.id, nil])
+        PinGroups.move(pins, to: nil, in: context)
+        #expect(pins.allSatisfy { $0.group == nil })
+    }
+
     @Test func deletingAGroupKeepsItsPins() throws {
         let trip = try #require(PinGroups.create(named: "Road trip", in: context))
         let barn = pin("red barn")

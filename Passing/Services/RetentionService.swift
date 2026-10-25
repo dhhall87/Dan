@@ -61,7 +61,14 @@ final class RetentionService {
     }
 
     func moveToRecentlyDeleted(_ pin: Pin, now: Date = AppClock.now) {
-        pin.deletedAt = now
+        moveToRecentlyDeleted([pin], now: now)
+    }
+
+    /// Several at once (Select in the Pins list), saved together.
+    func moveToRecentlyDeleted(_ pins: [Pin], now: Date = AppClock.now) {
+        for pin in pins {
+            pin.deletedAt = now
+        }
         save()
     }
 

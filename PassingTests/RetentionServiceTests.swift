@@ -138,6 +138,17 @@ struct RetentionServiceTests {
         #expect(overdue.deletedAt == start, "the clean-up ran as soon as the export finished")
     }
 
+    @Test func severalPinsMoveToRecentlyDeletedTogether() throws {
+        let first = pin(capturedDaysAgo: 1, from: start)
+        let second = pin(capturedDaysAgo: 2, from: start)
+        let untouched = pin(capturedDaysAgo: 3, from: start)
+
+        retention.moveToRecentlyDeleted([first, second], now: start)
+
+        #expect(first.deletedAt == start && second.deletedAt == start)
+        #expect(untouched.deletedAt == nil)
+    }
+
     @Test func exportWritesOnlyActivePins() throws {
         let active = pin(capturedDaysAgo: 1, from: start)
         active.label = "red barn"

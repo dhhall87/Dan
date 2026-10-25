@@ -10,6 +10,8 @@ struct PinEntry: TimelineEntry {
     var note: WidgetSavedNote?
     /// False when the widget can't reach the shared pin store, so its pins wouldn't show in the app.
     var isSetUp = true
+    /// True while the app is listening for a label after a tap: the buttons become one Stop button.
+    var isListening = false
 
     /// The tick for the button that saves `side` and `distance`, if that's the one just tapped.
     func savedNote(side: Side, distance: Distance) -> WidgetSavedNote? {
@@ -18,8 +20,9 @@ struct PinEntry: TimelineEntry {
     }
 }
 
-/// The buttons never change, apart from the tick after a tap, so there are no scheduled refreshes.
-/// WidgetKit reloads the widget by itself after every button tap.
+/// The buttons only change for the tick after a tap and while the app is listening, so there are
+/// no scheduled refreshes. WidgetKit reloads the widget after every button tap, and the app reloads
+/// it when listening starts and stops.
 struct PinTimelineProvider: TimelineProvider {
     func placeholder(in context: Context) -> PinEntry {
         PinEntry(date: .now)
@@ -32,13 +35,17 @@ struct PinTimelineProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<PinEntry>) -> Void) {
         let now = Date.now
         let isSetUp = AppGroup.isAvailable
-        var entries = [PinEntry(date: now, isSetUp: isSetUp)]
-        if let note = WidgetActivity.lastNote, note.isShowing(at: now) {
-            // Show the tick now, and go back to the plain buttons when it expires.
-            entries = [
-                PinEntry(date: now, note: note, isSetUp: isSetUp),
-                PinEntry(date: note.hidesAt, isSetUp: isSetUp),
-            ]
+        let note = WidgetActivity.lastNote.flatMap { $0.isShowing(at: now) ? $0 : nil }
+        let listeningUntil = ListeningSignal.listeningUntil(now: now)
+        // An entry for now, and one for each moment the tick or the Stop button runs out.
+        let changes = Set([now, note?.hidesAt, listeningUntil].compactMap { $0 }).sorted()
+        let entries = changes.map { date in
+            PinEntry(
+                date: date,
+                note: note.flatMap { $0.isShowing(at: date) ? $0 : nil },
+                isSetUp: isSetUp,
+                isListening: listeningUntil.map { date < $0 } ?? false
+            )
         }
         completion(Timeline(entries: entries, policy: .never))
     }
@@ -64,7 +71,9 @@ struct PinWidgetView: View {
 
     var body: some View {
         Group {
-            if entry.isSetUp {
+            if entry.isListening {
+                StopListeningButton()
+            } else if entry.isSetUp {
                 Button(intent: WidgetPinIntent(side: .unknown, distance: .unknown)) {
                     let note = entry.savedNote(side: .unknown, distance: .unknown)
                     VStack(spacing: 8) {
@@ -108,7 +117,9 @@ struct PinGridWidgetView: View {
 
     var body: some View {
         Group {
-            if entry.isSetUp {
+            if entry.isListening {
+                StopListeningButton()
+            } else if entry.isSetUp {
                 VStack(spacing: 4) {
                     HStack(spacing: 4) {
                         GridButton(side: .left, distance: .far, note: entry.savedNote(side: .left, distance: .far))
@@ -159,6 +170,28 @@ private struct GridButton: View {
     }
 }
 
+// MARK: Stop listening
+
+/// While the app is listening for a label after a tap, the widget's buttons become one big Stop
+/// button, so the microphone can be turned off from CarPlay without waiting for it to time out.
+private struct StopListeningButton: View {
+    var body: some View {
+        Button(intent: StopListeningIntent()) {
+            VStack(spacing: 8) {
+                Image(systemName: "mic.slash.fill")
+                    .font(.system(size: 40, weight: .bold))
+                Text("Stop listening")
+                    .font(.headline.weight(.heavy))
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.red.opacity(0.85), in: ContainerRelativeShape())
+        }
+        .buttonStyle(.plain)
+        .padding(4)
+    }
+}
+
 // MARK: Not set up
 
 /// Shown instead of the buttons when the widget can't reach the shared store, because pins saved
@@ -193,4 +226,5 @@ private struct NotSetUpView: View {
 } timeline: {
     PinEntry(date: .now)
     PinEntry(date: .now, note: WidgetSavedNote(savedAt: .now, side: .left, distance: .far, hasLocation: false))
+    PinEntry(date: .now, isListening: true)
 }

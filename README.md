@@ -57,10 +57,12 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Map:** the map button on the Pins list shows the same pins on a map. Tap one for a card, then tap the card to open it.
 - **KML export for Google My Maps:** Export → **KML (Google My Maps)**. Each pin becomes a placemark with its label, time, side, town and group. Pins without a location are left out, and the file says how many.
 - **Exports follow what's shown.** With a group picked, JSON, CSV and KML contain just that group, and the file name says which. CSV and JSON now have a group column too.
+- **Select several pins:** **Select** on the Pins list, tick pins (or **Select All**), then use the bar at the bottom: **Keep**, **Reviewed**, **Group**, or **Delete** (to Recently Deleted).
 
 **Listen after tap (Milestone 7, optional, off by default)**
-- Settings → **Labels by voice** → **Listen after tap**. After a tap on the capture screen, Passing chimes and listens for a few seconds. Say what you saw ("red barn") and it becomes the label. Say nothing, or "cancel", and the pin stays unlabeled, silently.
-- It stops listening about 1.5 seconds after you stop talking, after 4 seconds if you say nothing, and after 10 seconds at most.
+- Settings → **Labels by voice** → **Listen after tap**. After a tap on the capture screen, Passing asks **"What are you passing?"** and listens for a few seconds. Say what you saw ("red barn") and it becomes the label. Say nothing, "cancel" or "stop", and the pin stays unlabeled. Turn off **Ask "What are you passing?"** to get a short chime instead of the question.
+- It stops listening about 1.5 seconds after you stop talking, after 4 seconds if you say nothing, and after 10 seconds at most. "Stop" or "cancel" ends it after about half a second.
+- **Stop listening:** while Passing asks or listens, a red **Stop listening** button sits in the title bar of the capture screen. It turns the microphone off right away and keeps anything you'd already said. The Passing widgets turn into a big **Stop listening** button at the same time, so you can stop it from CarPlay. It never has to be pressed, and it doesn't move or cover the capture buttons.
 - The pin is saved before Passing listens, so a missed or garbled answer never loses it. You can fix the label later in Pins.
 - With **Spoken confirmation** on, Passing reads the label back ("red barn") instead of saying your phrase.
 - Music pauses while it listens (or is lowered, with "Pause music while speaking or listening" off), so the microphone hears you rather than the radio.
@@ -164,15 +166,19 @@ The Simulator uses your Mac's microphone. It usually has no on-device speech mod
 
 1. Pull, then ⌘U and ⌘R.
 2. Settings → **Labels by voice** → turn on **Listen after tap**. iOS asks for the microphone and for speech recognition: allow both. The switch stays on.
-3. On the capture screen, tap. You hear the chime. Say "red barn". About a second and a half after you stop, you feel a haptic. In **Pins**, the new pin is labeled "red barn".
+3. On the capture screen, tap. Passing asks "What are you passing?". Say "red barn". About a second and a half after you stop, you feel a haptic. In **Pins**, the new pin is labeled "red barn".
 4. Tap and say nothing. After about 4 seconds it stops listening, with no sound or haptic. The pin is there, "Unlabeled".
-5. Tap and say "cancel". The pin stays unlabeled.
-6. Turn on **Spoken confirmation**, tap, and say "water tower". Passing says "water tower" back.
-7. **+1 mi back:** tap it twice within 4 seconds, then say "diner". You get one pin, "2 mi back", labeled "diner".
-8. **Music:** play something in Music. Tap a zone: the music pauses while Passing listens and comes back after. Turn off **Pause music while speaking or listening** and try again: the music just gets quieter.
-9. Tap one zone, say "barn", then quickly tap another zone and say "silo". The first pin is "barn" and the second "silo".
-10. iOS Settings → Privacy & Security → Microphone → turn Passing off. Open Passing's Settings: an orange note says listening needs access. Taps still save pins with the normal tone. Turn the microphone back on.
-11. Tap the Pin widget: it saves silently and doesn't listen.
+5. Tap and say "stop". Listening ends within about a second and the pin stays unlabeled.
+6. **Stop button:** tap, and while Passing asks or listens, tap the red **Stop listening** at the top of the screen. The question stops (if it was still talking), the microphone turns off (the orange dot goes away), and the button disappears. Try it again after saying "silo": the pin keeps "silo".
+7. **Stop from CarPlay:** open the CarPlay window (I/O → External Displays → CarPlay) with a Passing widget on its Widgets screen. Tap on the phone's capture screen: within a second or two the CarPlay widget turns into **Stop listening**. Tap it: Passing stops listening, and the widget goes back to normal. **Tell me how quickly the widget changes**, because widget refresh timing isn't something Apple promises.
+8. Settings → turn off **Ask "What are you passing?"**. A tap now gives a short chime instead, then listens.
+9. Turn on **Spoken confirmation**, tap, and say "water tower". Passing says "water tower" back.
+10. **+1 mi back:** tap it twice within 4 seconds, then say "diner". You get one pin, "2 mi back", labeled "diner".
+11. **Music:** play something in Music. Tap a zone: the music pauses while Passing asks and listens, and comes back after. Turn off **Pause music while speaking or listening** and try again: the music just gets quieter.
+12. Tap one zone, say "barn", then quickly tap another zone and say "silo". The first pin is "barn" and the second "silo".
+13. iOS Settings → Privacy & Security → Microphone → turn Passing off. Open Passing's Settings: an orange note says listening needs access. Taps still save pins with the normal tone. Turn the microphone back on.
+14. Tap the Pin widget when Passing isn't listening: it saves silently and doesn't listen.
+15. **Select several pins:** Pins → **Select**. Tick three pins: the title says "3 Selected". Tap the star (**Keep**): all three get a star. Tap the folder (**Group**) → a group: all three move into it. Tap the trash (**Delete**): they move to Recently Deleted. **Select All** / **Deselect All** and **Done** work as expected, and opening a pin is back to normal after **Done**.
 
 ## Set up the App Group (needed for your own iPhone)
 
@@ -214,7 +220,8 @@ If the App Group doesn't match, the app still works, but Settings shows an orang
 - **Listen-after-tap is now its own optional Milestone 7.** It's the only remaining piece that changes how capture works, and it needs microphone and speech-recognition permission.
 
 - **Listening only follows taps on the capture screen.** Widgets and Control Center stay silent per the spec, and Siri asks its own question.
-- **The chime always plays when listening**, even with the tone turned off, because it's the cue to start talking.
+- **The question (or chime) always plays when listening**, even with the tone turned off, because it's the cue to start talking.
+- **The Stop listening button is the one thing that appears on the capture screen after a tap**, at your request. It's in the title bar, so it never moves or covers a capture button, and it never has to be pressed.
 - **Microphone and speech permission are asked for in Settings**, when you turn listening on, so no permission prompt can appear on the capture screen.
 - **`SFSpeechRecognizer` rather than iOS 26's new `SpeechAnalyzer`.** It's simpler, still supported, and on-device on iPhone. If the iPhone can't recognize its language on the device, the setting stays off rather than sending audio to a server.
 
