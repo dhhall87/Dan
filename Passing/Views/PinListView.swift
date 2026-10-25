@@ -143,7 +143,7 @@ struct PinListView: View {
                         row(for: pin)
                     }
                 } header: {
-                    Text(title(for: section.day))
+                    DayHeader(title: title(for: section.day), day: section.day, count: section.pins.count)
                 }
             }
             Section {
@@ -437,10 +437,41 @@ struct PinListView: View {
         }
     }
 
+    /// Measured from the same clock as the expiry countdowns, so Settings → Testing's "+ days"
+    /// moves earlier pins under Yesterday and older dates.
     private func title(for day: Date) -> String {
-        if Calendar.current.isDateInToday(day) { return "Today" }
-        if Calendar.current.isDateInYesterday(day) { return "Yesterday" }
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: AppClock.now)
+        if day == today { return "Today" }
+        if let yesterday = calendar.date(byAdding: .day, value: -1, to: today), day == yesterday { return "Yesterday" }
         return day.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
+    }
+}
+
+/// A bold day heading over each day's card, so today's and yesterday's pins are told apart at a glance.
+private struct DayHeader: View {
+    let title: String
+    let day: Date
+    let count: Int
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(title)
+                .font(.title3.weight(.bold))
+                .foregroundStyle(.primary)
+            if title == "Today" || title == "Yesterday" {
+                Text(day.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text(count == 1 ? "1 pin" : "\(count) pins")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .textCase(nil)
+        .padding(.top, 6)
+        .accessibilityElement(children: .combine)
     }
 }
 
