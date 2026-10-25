@@ -22,6 +22,8 @@ final class CaptureService {
     private let confirm: @MainActor (Pin) -> Void
     /// The "Precise location" setting. Off rounds each pin's position as it's saved.
     private let isPrecise: @MainActor () -> Bool
+    /// Called after a pin that goes into Needs Review is saved, with how many are now waiting.
+    private let reviewWaiting: @MainActor (Int) -> Void
     private var debouncer = TapDebouncer<String>(interval: 0.75)
     /// The miles-back pin that further "+1" taps will bump, with the trail and the car's exact
     /// position as they were at the first tap (in memory only, even with precise location off).
@@ -36,7 +38,8 @@ final class CaptureService {
         lateFix: @escaping @MainActor () async -> CLLocation?,
         trail: @escaping @MainActor () -> BreadcrumbBuffer,
         confirm: @escaping @MainActor (Pin) -> Void,
-        isPrecise: @escaping @MainActor () -> Bool = { true }
+        isPrecise: @escaping @MainActor () -> Bool = { true },
+        reviewWaiting: @escaping @MainActor (Int) -> Void = { _ in }
     ) {
         self.context = context
         self.currentFix = currentFix
@@ -44,6 +47,7 @@ final class CaptureService {
         self.trail = trail
         self.confirm = confirm
         self.isPrecise = isPrecise
+        self.reviewWaiting = reviewWaiting
     }
 
     /// Saves a pin now. Taps in the app get the haptic and tone; Siri and shortcuts confirm out loud
@@ -100,6 +104,16 @@ final class CaptureService {
             bump = (pin, snapshot, now, start)
         }
         return pin
+    }
+
+    /// How many pins are in Needs Review: active widget and Control Center pins not marked Reviewed.
+    func needsReviewCount() -> Int {
+        let widget = CaptureSource.widget.rawValue
+        let control = CaptureSource.control.rawValue
+        let descriptor = FetchDescriptor<Pin>(predicate: #Predicate {
+            $0.deletedAt == nil && !$0.isReviewed && ($0.sourceRaw == widget || $0.sourceRaw == control)
+        })
+        return (try? context.fetchCount(descriptor)) ?? 0
     }
 
     /// Saves a note: text only, no location and no GPS. It shows in Pins by day like a pin, and
@@ -163,6 +177,9 @@ final class CaptureService {
         persist()
         if pin.source == .app {
             confirm(pin)
+        }
+        if pin.needsReview {
+            reviewWaiting(needsReviewCount())
         }
 
         if !pin.hasLocation {

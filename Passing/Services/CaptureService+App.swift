@@ -13,6 +13,7 @@ extension CaptureService {
         },
         trail: { LocationProvider.shared.breadcrumbs },
         confirm: { CaptureFeedback.shared.confirmCapture(of: $0) },
-        isPrecise: { LocationPrivacy.isPrecise }
+        isPrecise: { LocationPrivacy.isPrecise },
+        reviewWaiting: { ReviewReminders.arm(waiting: $0) }
     )
 }

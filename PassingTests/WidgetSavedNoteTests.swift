@@ -43,4 +43,12 @@ struct CaptureSourceTests {
         #expect(!CaptureSource.siri.isTap)
         #expect(!CaptureSource.actionButton.isTap)
     }
+
+    @Test func onlyWidgetAndControlCenterPinsNeedReview() {
+        #expect(CaptureSource.widget.needsReviewUntilReviewed)
+        #expect(CaptureSource.control.needsReviewUntilReviewed)
+        #expect(!CaptureSource.app.needsReviewUntilReviewed)
+        #expect(!CaptureSource.siri.needsReviewUntilReviewed)
+        #expect(!CaptureSource.actionButton.needsReviewUntilReviewed)
+    }
 }

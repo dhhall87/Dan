@@ -1,12 +1,15 @@
 import SwiftData
 import SwiftUI
 import UIKit
+import UserNotifications
 
 @main
 struct PassingApp: App {
     init() {
         // An export left behind if the app was closed while sharing it.
         ExportService.removeExportedFiles()
+        // Set before launch finishes, so tapping a review reminder that launched Passing is handled.
+        UNUserNotificationCenter.current().delegate = ReviewReminderDelegate.shared
     }
 
     var body: some Scene {
@@ -42,6 +45,7 @@ struct RootView: View {
     @State private var listRefresh = 0
     @State private var seenWidgetCapture = WidgetActivity.lastCaptureAt
     private let feedback = CaptureFeedback.shared
+    private let reviewRoute = ReviewRoute.shared
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -100,6 +104,14 @@ struct RootView: View {
         .onChange(of: defaultMode) {
             modeChoice.defaultChanged()
         }
+        .onChange(of: reviewRoute.openNeedsReview, initial: true) {
+            // A review reminder was tapped: go straight to Needs Review.
+            guard reviewRoute.openNeedsReview else { return }
+            reviewRoute.openNeedsReview = false
+            showingSettings = false
+            path = NavigationPath()
+            path.append(Route.needsReview)
+        }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
             case .active:
@@ -108,12 +120,26 @@ struct RootView: View {
                 modeChoice.cameBack(at: .now)
                 RetentionService.shared.run()
                 refreshIfWidgetSaved()
+                updateReviewReminders()
             case .background:
                 modeChoice.wentToBackground(at: .now)
                 RetentionScheduler.schedule()
+                updateReviewReminders()
             default:
                 break
             }
+        }
+    }
+
+    /// Cancels review reminders once Needs Review is empty, and arms them here if iOS refused them
+    /// when the widget tried.
+    private func updateReviewReminders() {
+        let waiting = CaptureService.shared.needsReviewCount()
+        if waiting == 0 {
+            ReviewReminders.cancel()
+        } else if AppGroup.defaults?.bool(forKey: ReviewReminders.retryKey) == true {
+            AppGroup.defaults?.set(false, forKey: ReviewReminders.retryKey)
+            ReviewReminders.arm(waiting: waiting)
         }
     }
 

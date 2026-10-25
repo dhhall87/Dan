@@ -26,7 +26,7 @@ enum ExportService {
                 sortBy: [SortDescriptor(\.capturedAt)]
             )
             let records = try context.fetch(descriptor)
-                .filter { filter.includes(groupID: $0.group?.id, isReviewed: $0.isReviewed) }
+                .filter { filter.includes(groupID: $0.group?.id, needsReview: $0.needsReview) }
                 .map(PinRecord.init(pin:))
             let data: Data
             switch format {

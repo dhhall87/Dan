@@ -7,6 +7,7 @@ import UIKit
 enum SettingsRoute: Hashable {
     case voice
     case phrases
+    case reviewReminders
 }
 
 struct SettingsView: View {
@@ -150,6 +151,16 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    NavigationLink(value: SettingsRoute.reviewReminders) {
+                        Label("Review Reminders", systemImage: "bell")
+                    }
+                } header: {
+                    Text("Needs Review")
+                } footer: {
+                    Text("Pins from the widget, CarPlay and Control Center wait in **Needs Review** (in Pins) until you mark them Reviewed. Passing can remind you about them the next morning, or when you get to work or home.")
+                }
+
+                Section {
                     Toggle("Precise location", isOn: $preciseLocation)
                     Toggle("Look up town names", isOn: $lookUpPlaceNames)
                     Button("Delete All Pins…", role: .destructive) {
@@ -210,6 +221,7 @@ struct SettingsView: View {
                 switch route {
                 case .voice: VoicePickerView()
                 case .phrases: PhrasesView()
+                case .reviewReminders: ReviewRemindersView()
                 }
             }
             .toolbar {

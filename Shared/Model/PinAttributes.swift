@@ -70,6 +70,15 @@ enum CaptureSource: String, Codable {
         case .siri, .actionButton: return false
         }
     }
+
+    /// Pins from the widgets (including CarPlay) and Control Center are saved silently with no label,
+    /// so they go into Needs Review until marked Reviewed. Pins from the capture screen and Siri don't.
+    var needsReviewUntilReviewed: Bool {
+        switch self {
+        case .widget, .control: return true
+        case .app, .siri, .actionButton: return false
+        }
+    }
 }
 
 /// The tap targets on the four-zone screen, left to right exactly as the road looks.

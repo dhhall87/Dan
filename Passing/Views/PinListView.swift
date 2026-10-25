@@ -129,6 +129,12 @@ struct PinListView: View {
         .onChange(of: filter) {
             selection = []
         }
+        .onChange(of: needsReviewCount) {
+            // Everything reviewed: no reminder should nag about it.
+            if needsReviewCount == 0 {
+                ReviewReminders.cancel()
+            }
+        }
         .onChange(of: groups.map(\.id)) {
             // The group being shown was deleted: go back to everything.
             if case .group(let id) = filter, !groups.contains(where: { $0.id == id }) {
@@ -157,7 +163,7 @@ struct PinListView: View {
                         }
                     }
                 } footer: {
-                    Text("Pins and notes you haven't marked Reviewed yet, such as ones from the widget or CarPlay.")
+                    Text("Pins from the widget, CarPlay or Control Center that you haven't marked Reviewed yet.")
                 }
             }
             if shownPins.isEmpty {
@@ -165,7 +171,7 @@ struct PinListView: View {
                     ContentUnavailableView(
                         "All caught up",
                         systemImage: "checkmark.circle",
-                        description: Text("Pins you haven't marked Reviewed show here. Swipe right on a pin, or open it and turn on Reviewed.")
+                        description: Text("Pins you save from the widget, CarPlay or Control Center wait here until you mark them Reviewed: swipe right on one, or open it and turn on Reviewed.")
                     )
                 } else if filter == .all {
                     ContentUnavailableView(
@@ -432,11 +438,11 @@ struct PinListView: View {
     // MARK: Helpers
 
     private var shownPins: [Pin] {
-        pins.filter { filter.includes(groupID: $0.group?.id, isReviewed: $0.isReviewed) }
+        pins.filter { filter.includes(groupID: $0.group?.id, needsReview: $0.needsReview) }
     }
 
     private var needsReviewCount: Int {
-        pins.reduce(0) { $0 + ($1.isReviewed ? 0 : 1) }
+        pins.reduce(0) { $0 + ($1.needsReview ? 1 : 0) }
     }
 
     /// Group names on rows, except when the list is already one group.

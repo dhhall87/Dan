@@ -17,6 +17,10 @@ struct CaptureServiceTests {
         var count = 0
     }
 
+    private final class ReviewCounts {
+        var values: [Int] = []
+    }
+
     private func fix(at timestamp: Date, accuracy: Double = 8, course: Double = 225, speed: Double = 27) -> CLLocation {
         CLLocation(
             coordinate: CLLocationCoordinate2D(latitude: 40.7128, longitude: -74.006),
@@ -46,6 +50,30 @@ struct CaptureServiceTests {
 
     private func savedPins() throws -> [Pin] {
         try container.mainContext.fetch(FetchDescriptor<Pin>())
+    }
+
+    @Test func onlyWidgetAndControlCenterPinsArmReviewReminders() throws {
+        let waiting = ReviewCounts()
+        let capture = CaptureService(
+            context: container.mainContext,
+            currentFix: { nil },
+            lateFix: { nil },
+            trail: { BreadcrumbBuffer() },
+            confirm: { _ in },
+            reviewWaiting: { waiting.values.append($0) }
+        )
+        _ = capture.capture(side: .unknown, distance: .unknown, source: .app, now: tap)
+        _ = capture.capture(side: .unknown, distance: .unknown, source: .siri, now: tap.addingTimeInterval(1))
+        #expect(waiting.values.isEmpty, "phone and Siri pins don't go into Needs Review")
+
+        let first = try #require(capture.capture(side: .left, distance: .far, source: .widget, now: tap.addingTimeInterval(2)))
+        _ = capture.capture(side: .unknown, distance: .unknown, source: .control, now: tap.addingTimeInterval(3))
+        #expect(waiting.values == [1, 2])
+        #expect(first.needsReview)
+
+        first.isReviewed = true
+        #expect(!first.needsReview)
+        #expect(capture.needsReviewCount() == 1)
     }
 
     @Test func movingAPinKeepsWhereTheCarWas() throws {

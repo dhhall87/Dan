@@ -130,7 +130,8 @@ Dark, high contrast, no map, no clutter. Settings picks the layout Passing opens
   - Google: `https://www.google.com/maps/search/?api=1&query=LAT,LON`
 - Reverse geocode lazily when online to fill `placeName` (answers "what town was that" automatically).
 - Export JSON and CSV through the share sheet.
-- **Needs Review:** a smart list (`GroupFilter.needsReview`) of active pins and notes with `isReviewed == false`, from every source. It's not a group, so it doesn't conflict with "a pin belongs to at most one group". A row at the top of Pins shows the count; in that list a full swipe right marks Reviewed. `Route.needsReview` opens Pins on it.
+- **Needs Review:** a smart list (`GroupFilter.needsReview`, `Pin.needsReview`) of active widget and Control Center pins (`CaptureSource.needsReviewUntilReviewed`) not marked Reviewed. Dan asked that phone and Siri pins stay out. It's not a group, so it doesn't conflict with "a pin belongs to at most one group". A row at the top of Pins shows the count; in that list a full swipe right marks Reviewed. `Route.needsReview` opens Pins on it.
+- **Review reminders** (`ReviewReminders`, `ReviewReminderSettings` in App Group defaults; off by default): Passing's own local notifications, not Apple Reminders (Dan wants it light and private; EventKit is a possible later option). Armed by `CaptureService` after each widget/Control Center pin (`reviewWaiting`), so they fire only while something waits: the next `hour:minute` (8:00 AM default, `UNCalendarNotificationTrigger`) and/or arrival at saved Work/Home (`UNLocationNotificationTrigger`, 150 m; per Apple's docs it needs only When In Use because iOS monitors the region). Cancelled when Needs Review empties. Notification permission is asked only in Settings. Tapping one opens Needs Review (`ReviewReminderDelegate`, `ReviewRoute`); while Passing is open they go to Notification Center with no banner (`.list`). Unverified: whether iOS lets the widget extension arm the location trigger; if `add` fails, a retry flag makes the app arm it on next open.
 - **Groups (folders):** Dan can put pins into named groups in the review list (e.g. "Road trip", "Houses to check") and filter by group. A pin belongs to at most one group. Deleting a group never deletes its pins.
 - **"Passing pins" collection in a maps app:** Apple Maps has no public API for creating Guides or adding places to them (checked October 2026), so the app can't fill an Apple Maps Guide automatically. Instead, export a KML file that Google My Maps imports as a "Passing pins" map, and keep "Open in Apple Maps" on each pin so it can be added to a Guide by hand. Revisit if Apple adds an API.
 - Optional (later): in-app "listen after tap" setting - chime, listen a few seconds with on-device speech recognition, save silently if nothing is said.
@@ -148,7 +149,7 @@ Dark, high contrast, no map, no clutter. Settings picks the layout Passing opens
 ## Privacy
 
 - When In Use location only, requested when the user first captures, with a clear purpose string.
-- No analytics. No location data leaves the device except map, geocoding, and Look Around requests to Apple.
+- No analytics. No location data leaves the device except map, geocoding, and Look Around requests to Apple. Review-reminder places (work/home) stay on the device; an address search sends the typed text to Apple Maps.
 
 ## Milestones
 

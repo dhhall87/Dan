@@ -3,8 +3,8 @@ import Foundation
 /// Which pins the review list (and its exports) show.
 enum GroupFilter: Hashable {
     case all
-    /// Pins and notes not yet marked Reviewed, from any source and in any group. A smart list
-    /// rather than a group, so a pin can be in "Road trip" and still need review.
+    /// Widget and Control Center pins not yet marked Reviewed (`Pin.needsReview`), in any group.
+    /// A smart list rather than a group, so a pin can be in "Road trip" and still need review.
     case needsReview
     /// Pins that aren't in any group.
     case ungrouped
@@ -12,10 +12,10 @@ enum GroupFilter: Hashable {
     case group(UUID)
 
     /// Whether a pin in the group with this ID (nil for no group) is shown.
-    func includes(groupID: UUID?, isReviewed: Bool) -> Bool {
+    func includes(groupID: UUID?, needsReview: Bool) -> Bool {
         switch self {
         case .all: return true
-        case .needsReview: return !isReviewed
+        case .needsReview: return needsReview
         case .ungrouped: return groupID == nil
         case .group(let id): return groupID == id
         }

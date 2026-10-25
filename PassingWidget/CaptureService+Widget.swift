@@ -12,6 +12,7 @@ extension CaptureService {
         lateFix: { await LocationProvider.shared.nextUsableFix(timeout: FixPolicy.lateFixWindow) },
         trail: { BreadcrumbBuffer() },
         confirm: { _ in },
-        isPrecise: { LocationPrivacy.isPrecise }
+        isPrecise: { LocationPrivacy.isPrecise },
+        reviewWaiting: { ReviewReminders.arm(waiting: $0) }
     )
 }

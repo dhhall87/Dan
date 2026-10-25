@@ -103,6 +103,9 @@ extension Pin {
         targetCoordinate ?? captureCoordinate
     }
 
+    /// In Needs Review: a widget or Control Center pin not yet marked Reviewed.
+    var needsReview: Bool { source.needsReviewUntilReviewed && !isReviewed }
+
     /// Moves the pin to where the thing actually is, picked on a map while reviewing. Where the car
     /// was stays as recorded; map links, Look Around, the town and exports follow the new spot.
     func moveTarget(to coordinate: CLLocationCoordinate2D) {
