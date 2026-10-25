@@ -8,11 +8,13 @@ struct PinDetailView: View {
     @Environment(\.modelContext) private var context
     @AppStorage(SettingsKey.keepIndefinitely) private var keepIndefinitely = false
     @Query(sort: \PinGroup.name) private var groups: [PinGroup]
-    @State private var lookAround: LookAroundState = .loading
+    @State private var lookAround: LookAroundState = .notRequested
     @State private var addingGroup = false
     @State private var newGroupName = ""
 
     private enum LookAroundState {
+        /// Nothing is fetched until asked: it sends the spot to Apple and downloads imagery.
+        case notRequested
         case loading
         case ready(MKLookAroundScene)
         case unavailable
@@ -74,6 +76,13 @@ struct PinDetailView: View {
             if pin.lookUpCoordinate != nil {
                 Section {
                     switch lookAround {
+                    case .notRequested:
+                        Button {
+                            lookAround = .loading
+                            Task { await loadLookAround() }
+                        } label: {
+                            Label("Show Look Around", systemImage: "binoculars")
+                        }
                     case .loading:
                         ProgressView()
                             .frame(maxWidth: .infinity, minHeight: 60)
@@ -88,7 +97,7 @@ struct PinDetailView: View {
                 } header: {
                     Text("Look Around")
                 } footer: {
-                    Text(pin.targetCoordinate != nil ? "At the estimated spot. Tap to look around." : "Where your car was. Tap to look around.")
+                    Text(pin.targetCoordinate != nil ? "At the estimated spot. Loads from Apple Maps when you ask." : "Where your car was. Loads from Apple Maps when you ask.")
                 }
             }
 
@@ -155,9 +164,6 @@ struct PinDetailView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This pin goes into the new group.")
-        }
-        .task {
-            await loadLookAround()
         }
         .task {
             await PlaceNameService.shared.fillMissing(in: [pin])

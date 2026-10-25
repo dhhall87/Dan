@@ -35,6 +35,8 @@ enum SettingsKey {
     static let listenAfterTap = "listenAfterTap"
     /// Ask "What are you passing?" before listening (otherwise just chime).
     static let askBeforeListening = "askBeforeListening"
+    /// Ask Apple Maps for each pin's town. Off keeps pin locations entirely on the iPhone.
+    static let lookUpPlaceNames = "lookUpPlaceNames"
     /// Debug builds only: pushes the retention clock forward this many days for testing.
     static let debugDayOffset = "debugDayOffset"
 }
@@ -51,6 +53,7 @@ enum AppSettings {
         SettingsKey.pauseAudioWhileSpeaking: true,
         SettingsKey.listenAfterTap: false,
         SettingsKey.askBeforeListening: true,
+        SettingsKey.lookUpPlaceNames: true,
     ]
 
     private static let defaults: UserDefaults = {
@@ -82,4 +85,6 @@ enum AppSettings {
     static var listenAfterTap: Bool { defaults.bool(forKey: SettingsKey.listenAfterTap) }
 
     static var askBeforeListening: Bool { defaults.bool(forKey: SettingsKey.askBeforeListening) }
+
+    static var lookUpPlaceNames: Bool { defaults.bool(forKey: SettingsKey.lookUpPlaceNames) }
 }

@@ -30,6 +30,10 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
         authorization == .denied || authorization == .restricted
     }
 
+    /// True when Precise Location is off for Passing. Those fixes are only good to a few kilometers,
+    /// which `FixPolicy` never stamps on a pin, so pins save without a position.
+    private(set) var isPreciseLocationOff = false
+
     override init() {
         super.init()
         manager.delegate = self
@@ -38,6 +42,7 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
         manager.activityType = .automotiveNavigation
         manager.pausesLocationUpdatesAutomatically = false
         authorization = manager.authorizationStatus
+        isPreciseLocationOff = manager.accuracyAuthorization == .reducedAccuracy
     }
 
     /// The latest fix if it passes `FixPolicy`, otherwise nil. Never a stale coordinate.
@@ -155,7 +160,11 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
 
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         let status = manager.authorizationStatus
-        Task { @MainActor in self.authorizationChanged(to: status) }
+        let reduced = manager.accuracyAuthorization == .reducedAccuracy
+        Task { @MainActor in
+            self.isPreciseLocationOff = reduced
+            self.authorizationChanged(to: status)
+        }
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {

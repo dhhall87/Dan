@@ -113,9 +113,11 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
 
     @discardableResult
     private func speak(_ text: String, voiceIdentifier: String) -> AVSpeechUtterance {
-        synthesizer.stopSpeaking(at: .immediate)
+        // Made before the old one is stopped, so the two are alive together and can't be mistaken
+        // for each other when the old one's "cancelled" callback arrives.
         let utterance = AVSpeechUtterance(string: text)
         utterance.voice = Self.voice(identifier: voiceIdentifier)
+        synthesizer.stopSpeaking(at: .immediate)
         currentUtterance = utterance
         synthesizer.speak(utterance)
         return utterance
@@ -230,8 +232,8 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
     /// Called when an utterance finishes or is cut off. A newer confirmation cancels the one before
     /// it, and that newer one's own end lets the music back. If nothing replaced it (a phone call cut
     /// it off, say), speech is over and the music can come back now rather than staying paused.
-    private func utteranceStopped(_ utterance: AVSpeechUtterance) {
-        guard utterance === currentUtterance else { return }
+    private func utteranceStopped(_ id: ObjectIdentifier) {
+        guard let current = currentUtterance, ObjectIdentifier(current) == id else { return }
         currentUtterance = nil
         speechInProgress = false
         scheduleDeactivation(after: 0.1)
@@ -239,12 +241,16 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
 
     // MARK: AVSpeechSynthesizerDelegate
 
+    // The utterance itself can't cross to the main actor (it isn't Sendable), so pass its identity.
+
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        Task { @MainActor in self.utteranceStopped(utterance) }
+        let id = ObjectIdentifier(utterance)
+        Task { @MainActor in self.utteranceStopped(id) }
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        Task { @MainActor in self.utteranceStopped(utterance) }
+        let id = ObjectIdentifier(utterance)
+        Task { @MainActor in self.utteranceStopped(id) }
     }
 }
 

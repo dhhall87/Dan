@@ -22,6 +22,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.pauseAudioWhileSpeaking) private var pauseAudioWhileSpeaking = true
     @AppStorage(SettingsKey.listenAfterTap) private var listenAfterTap = false
     @AppStorage(SettingsKey.askBeforeListening) private var askBeforeListening = true
+    @AppStorage(SettingsKey.lookUpPlaceNames) private var lookUpPlaceNames = true
     @State private var listenProblem: SpeechListener.Availability?
     #if DEBUG
     @AppStorage(SettingsKey.debugDayOffset) private var debugDayOffset = 0
@@ -120,6 +121,14 @@ struct SettingsView: View {
                     Text(keepIndefinitely
                          ? "Pins stay until you delete them. Recently Deleted still empties itself after 30 days."
                          : "Pins move to Recently Deleted 7 days after you pin them, unless you keep (star) them. Recently Deleted empties itself after 30 days.")
+                }
+
+                Section {
+                    Toggle("Look up town names", isOn: $lookUpPlaceNames)
+                } header: {
+                    Text("Privacy")
+                } footer: {
+                    Text("Pins, labels and groups stay on this iPhone. Passing has no account, no analytics and no server. Town names are looked up by sending a pin's location to Apple Maps; turn this off and pin locations never leave the iPhone, except for map pictures and Look Around when you open them. Exports leave only when you share them, and Passing deletes its copy afterwards.")
                 }
 
                 Section {
@@ -225,7 +234,8 @@ struct SettingsView: View {
 
     private var locationStatus: String {
         switch location.authorization {
-        case .authorizedAlways, .authorizedWhenInUse: return "While using Passing"
+        case .authorizedAlways, .authorizedWhenInUse:
+            return location.isPreciseLocationOff ? "While using Passing (not precise)" : "While using Passing"
         case .denied, .restricted: return "Off"
         case .notDetermined: return "Not asked yet"
         @unknown default: return "Unknown"

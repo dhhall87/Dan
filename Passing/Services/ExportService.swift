@@ -42,6 +42,19 @@ enum ExportService {
     }
 }
 
+extension ExportService {
+    /// Deletes exported files Passing has left in its temporary folder. Exports are a copy of your
+    /// pins, so none is kept once it's been shared, or if the app closed mid-share.
+    nonisolated static func removeExportedFiles() {
+        let folder = FileManager.default.temporaryDirectory
+        let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+        let extensions = Set(ExportFormat.allCases.map(\.fileExtension))
+        for file in files where file.lastPathComponent.hasPrefix("Passing pins") && extensions.contains(file.pathExtension) {
+            try? FileManager.default.removeItem(at: file)
+        }
+    }
+}
+
 extension PinRecord {
     init(pin: Pin) {
         self.init(

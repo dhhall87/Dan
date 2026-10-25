@@ -27,6 +27,8 @@ final class PlaceNameService {
     }
 
     func fillMissing(in pins: [Pin]) async {
+        // Turned off in Settings → Privacy: pin locations never leave the iPhone for this.
+        guard AppSettings.lookUpPlaceNames else { return }
         let todo = pins.filter { $0.needsPlaceName && !noName.contains($0.id) && !inFlight.contains($0.id) }
             .prefix(Self.maxPerPass)
         for (index, pin) in todo.enumerated() {

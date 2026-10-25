@@ -3,6 +3,11 @@ import SwiftUI
 
 @main
 struct PassingApp: App {
+    init() {
+        // An export left behind if the app was closed while sharing it.
+        ExportService.removeExportedFiles()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

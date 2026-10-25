@@ -49,7 +49,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 
 **Review polish (Milestone 6)**
 - **Town names:** each pin picks up the town it was near ("Garden City, KS") from Apple Maps. It shows in the list row and on the pin's screen. Lookups happen only while you're looking at your pins and online, a few seconds apart, so capture never waits on them. Miles-back pins use the estimated spot.
-- **Look Around:** a pin's screen shows Apple's street-level imagery of the spot. Tap it to look around. It needs the network, and rural roads often have no imagery.
+- **Look Around:** tap **Show Look Around** on a pin's screen for Apple's street-level imagery of the spot, then tap the preview to look around. It loads only when you ask, needs the network, and rural roads often have no imagery.
 - **Groups:** file pins in named groups, like "Road trip" or "Houses to check". A pin is in at most one group, and deleting a group keeps its pins.
   - **Manage groups:** folder button on the Pins list → **Manage Groups…** to make, rename (tap) or delete (swipe left) groups.
   - **Show one group:** pick it from the same folder button.
@@ -68,6 +68,29 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - Music pauses while it listens (or is lowered, with "Pause music while speaking or listening" off), so the microphone hears you rather than the radio.
 - Speech is recognized on the iPhone and the audio never leaves it. iOS shows its orange microphone dot while Passing listens.
 - Only taps on the capture screen listen. The widgets, Control Center and Siri work as before.
+
+## Privacy and footprint
+
+**What stays on the iPhone:** everything Passing saves. That means pins (where the car was, when, speed and direction, side and distance, label, town, group), the short stretch of road on miles-back pins, and settings. There's no account, analytics, ads or server. The App Store privacy label would be **Data Not Collected**. The App Store's required privacy declarations are in `Passing/Resources/PrivacyInfo.xcprivacy` and `PassingWidget/PrivacyInfo.xcprivacy`.
+
+**What leaves it, and when:**
+- **Town names:** each pin's location goes to Apple Maps to find its town. Settings → Privacy → **Look up town names** turns this off.
+- **Maps and Look Around:** opening a map, or tapping Show Look Around, asks Apple Maps for imagery of that area.
+- **Siri:** what you say to Siri goes through Siri, under your iPhone's Siri settings. Listen after tap stays on the iPhone.
+- **Exports and map links:** only when you share an export or tap Open in Apple Maps / Google Maps (Google then gets that spot). Passing deletes its own copy of an export once it's shared. A KML file reaches Google only when you upload it yourself.
+
+**How long it's kept:** pins move to Recently Deleted after 7 days unless kept, and Recently Deleted empties after 30. The miles-back trail lives in memory only. Clean-up also runs in the background now and then.
+
+**With the iPhone locked:** the pin database uses iOS's standard protection (encrypted until you first unlock after a restart). That's what lets the widgets and CarPlay save pins while the phone is locked.
+
+**Footprint:**
+- **App size:** no bundled voices, maps or third-party code. The icon and tone are about 100 KB. A pin takes about 1 KB.
+- **Battery:**
+  - The capture screen is the main cost. It keeps the screen on and GPS running, and only while it's open.
+  - Otherwise, GPS runs for a few seconds per Siri, widget or Control Center pin.
+  - Nothing else runs in the background apart from the occasional clean-up.
+- **Listen after tap** (off by default) uses the microphone and speech recognition for a few seconds per tap.
+- **Maps and Look Around** are the heaviest screens for memory and data. Look Around loads only when you tap it.
 
 ## Run it
 

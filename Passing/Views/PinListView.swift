@@ -68,9 +68,11 @@ struct PinListView: View {
             }
         }
         .sheet(item: $exportFile) { file in
-            ShareSheet(items: [file.url])
-                .presentationDetents([.medium, .large])
-                .ignoresSafeArea()
+            ShareSheet(items: [file.url]) {
+                ExportService.removeExportedFiles()
+            }
+            .presentationDetents([.medium, .large])
+            .ignoresSafeArea()
         }
         .sheet(isPresented: $managingGroups) {
             GroupsView()
@@ -122,13 +124,13 @@ struct PinListView: View {
                     )
                 }
             }
-            ForEach(days, id: \.self) { day in
+            ForEach(daySections) { section in
                 Section {
-                    ForEach(pinsByDay[day] ?? []) { pin in
+                    ForEach(section.pins) { pin in
                         row(for: pin)
                     }
                 } header: {
-                    Text(title(for: day))
+                    Text(title(for: section.day))
                 }
             }
             Section {
@@ -345,12 +347,16 @@ struct PinListView: View {
         recentlyDeletedCount = (try? context.fetchCount(descriptor)) ?? 0
     }
 
-    private var pinsByDay: [Date: [Pin]] {
-        Dictionary(grouping: shownPins) { Calendar.current.startOfDay(for: $0.capturedAt) }
+    private struct DaySection: Identifiable {
+        let day: Date
+        let pins: [Pin]
+        var id: Date { day }
     }
 
-    private var days: [Date] {
-        pinsByDay.keys.sorted(by: >)
+    /// The shown pins by day, newest day first, grouped in one pass.
+    private var daySections: [DaySection] {
+        let byDay = Dictionary(grouping: shownPins) { Calendar.current.startOfDay(for: $0.capturedAt) }
+        return byDay.keys.sorted(by: >).map { DaySection(day: $0, pins: byDay[$0] ?? []) }
     }
 
     private var exportErrorShown: Binding<Bool> {

@@ -12,14 +12,11 @@ struct CaptureView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Standing notices, not reactions to a tap.
             if location.isDenied {
-                // A standing notice, not a reaction to a tap.
-                Label("Location is off. Pins save without a position.", systemImage: "location.slash")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-                    .background(Color.orange)
+                notice("Location is off. Pins save without a position.")
+            } else if location.isPreciseLocationOff {
+                notice("Precise Location is off. Pins save without a position.")
             }
             switch mode {
             case .quick: QuickCapture()
@@ -43,6 +40,15 @@ struct CaptureView: View {
         .onChange(of: scenePhase) {
             updateLocation()
         }
+    }
+
+    private func notice(_ text: String) -> some View {
+        Label(text, systemImage: "location.slash")
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.black)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+            .background(Color.orange)
     }
 
     /// GPS runs while this screen is showing and Passing is open, and stops the moment Passing goes
