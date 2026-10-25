@@ -3,8 +3,6 @@ import SwiftUI
 
 @main
 struct PassingApp: App {
-    @AppStorage(SettingsKey.appearance) private var appearance: Appearance = .system
-
     init() {
         // An export left behind if the app was closed while sharing it.
         ExportService.removeExportedFiles()
@@ -13,7 +11,6 @@ struct PassingApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
-                .preferredColorScheme(appearance.colorScheme)
         }
         .modelContainer(SharedStore.container)
         .backgroundTask(.appRefresh(RetentionScheduler.taskIdentifier)) {
@@ -34,6 +31,7 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var path = NavigationPath()
     @State private var showingSettings = false
+    @AppStorage(SettingsKey.appearance) private var appearance: Appearance = .system
     /// Bumped to rebuild the pin list after the widget or Control Center saved pins.
     @State private var listRefresh = 0
     @State private var seenWidgetCapture = WidgetActivity.lastCaptureAt
@@ -97,9 +95,14 @@ struct RootView: View {
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
+        .onChange(of: appearance, initial: true) {
+            appearance.apply()
+        }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
             case .active:
+                // Again here, in case the window didn't exist yet when the setting was first applied.
+                appearance.apply()
                 RetentionService.shared.run()
                 refreshIfWidgetSaved()
             case .background:

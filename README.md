@@ -227,7 +227,7 @@ The Simulator uses your Mac's microphone. It usually has no on-device speech mod
 ## Appearance and Recently Deleted checklist
 
 1. Pull, then ⌘U and ⌘R.
-2. Settings → **Appearance** shows **System** selected. Switch the Simulator to Light (Settings app → Developer → Dark Appearance off, or ⇧⌘A in the Simulator): Pins, a pin's screen and Settings turn light; the capture screen and its title bar stay dark. Pick **Dark** in Passing's Settings: everything is dark whatever the iPhone is set to. Pick **Light**: the same, light. Set it back to **System**.
+2. Settings → **Appearance** shows **System** selected. Switch the Simulator to Light (Settings app → Developer → Dark Appearance off, or ⇧⌘A in the Simulator): Pins, a pin's screen and Settings turn light; the capture screen and its title bar stay dark. Pick **Dark** in Passing's Settings: the Settings sheet itself turns dark straight away, and so do Pins and a pin's screen, even with the iPhone in Light. Pick **Light** with the iPhone in Dark: everything but the capture screen turns light. Set it back to **System**: it follows the iPhone again.
 3. In light mode, check the yellow-ish highlights (Recover buttons, ticks, links) are readable. They switch to a deeper amber in light mode.
 4. Delete three pins, then open **Recently Deleted** → **Select**. Tick two → **Recover**: both are back in Pins. Select the last one → **Delete Now** → confirm: it's gone. **Select All** / **Deselect All** work, and **Done** brings back the per-pin Recover buttons.
 
