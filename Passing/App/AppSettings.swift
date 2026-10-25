@@ -22,6 +22,9 @@ enum SettingsKey {
     static let captureMode = "captureMode"
     static let confirmationTone = "confirmationTone"
     static let spokenConfirmation = "spokenConfirmation"
+    static let keepIndefinitely = "keepRecordsIndefinitely"
+    /// Debug builds only: pushes the retention clock forward this many days for testing.
+    static let debugDayOffset = "debugDayOffset"
 }
 
 enum AppSettings {
@@ -29,6 +32,7 @@ enum AppSettings {
         SettingsKey.captureMode: CaptureMode.quick.rawValue,
         SettingsKey.confirmationTone: true,
         SettingsKey.spokenConfirmation: false,
+        SettingsKey.keepIndefinitely: false,
     ]
 
     private static let defaults: UserDefaults = {
@@ -44,4 +48,6 @@ enum AppSettings {
     static var confirmationTone: Bool { defaults.bool(forKey: SettingsKey.confirmationTone) }
 
     static var spokenConfirmation: Bool { defaults.bool(forKey: SettingsKey.spokenConfirmation) }
+
+    static var keepIndefinitely: Bool { defaults.bool(forKey: SettingsKey.keepIndefinitely) }
 }

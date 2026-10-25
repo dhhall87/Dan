@@ -2,9 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER).retention</string>
+	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Passing saves where your car is when you tap, so you can look up what you passed later. Location is only used while the capture screen is open.</string>
 	<key>PassingAppGroup</key>
 	<string>group.com.example.passing</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
 </dict>
 </plist>

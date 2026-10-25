@@ -9,10 +9,14 @@ struct PassingApp: App {
                 .preferredColorScheme(.dark)
         }
         .modelContainer(SharedStore.container)
+        .backgroundTask(.appRefresh(RetentionScheduler.taskIdentifier)) {
+            await RetentionScheduler.handleAppRefresh()
+        }
     }
 }
 
 struct RootView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showingSettings = false
 
     var body: some View {
@@ -39,6 +43,16 @@ struct RootView: View {
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
+        }
+        .onChange(of: scenePhase, initial: true) { _, phase in
+            switch phase {
+            case .active:
+                RetentionService.shared.run()
+            case .background:
+                RetentionScheduler.schedule()
+            default:
+                break
+            }
         }
     }
 }

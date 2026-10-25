@@ -8,6 +8,10 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.captureMode) private var mode: CaptureMode = .quick
     @AppStorage(SettingsKey.confirmationTone) private var confirmationTone = true
     @AppStorage(SettingsKey.spokenConfirmation) private var spokenConfirmation = false
+    @AppStorage(SettingsKey.keepIndefinitely) private var keepIndefinitely = false
+    #if DEBUG
+    @AppStorage(SettingsKey.debugDayOffset) private var debugDayOffset = 0
+    #endif
 
     private let location = LocationProvider.shared
 
@@ -39,6 +43,16 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Toggle("Keep records indefinitely", isOn: $keepIndefinitely)
+                } header: {
+                    Text("Keeping pins")
+                } footer: {
+                    Text(keepIndefinitely
+                         ? "Pins stay until you delete them. Recently Deleted still empties itself after 30 days."
+                         : "Pins move to Recently Deleted 7 days after you pin them, unless you keep (star) them. Recently Deleted empties itself after 30 days.")
+                }
+
+                Section {
                     LabeledContent("Location access", value: locationStatus)
                     if location.authorization != .notDetermined {
                         Button("Open iOS Settings") {
@@ -52,6 +66,20 @@ struct SettingsView: View {
                 } footer: {
                     Text("Passing uses your location only while the capture screen is open. It asks the first time you pin something. Pins stay on this iPhone.")
                 }
+
+                #if DEBUG
+                Section {
+                    Stepper("Clock: +\(debugDayOffset) \(debugDayOffset == 1 ? "day" : "days")", value: $debugDayOffset, in: 0...60)
+                    LabeledContent("Pretend it's", value: AppClock.now.formatted(date: .abbreviated, time: .shortened))
+                    Button("Run clean-up now") {
+                        RetentionService.shared.run()
+                    }
+                } header: {
+                    Text("Testing (debug builds only)")
+                } footer: {
+                    Text("Moves the clock that expiry and Recently Deleted use, so you can test the 7- and 30-day rules without waiting. Set it back to 0 when you're done. This section isn't in App Store builds.")
+                }
+                #endif
 
                 if !SharedStore.isUsingAppGroup {
                     Section {

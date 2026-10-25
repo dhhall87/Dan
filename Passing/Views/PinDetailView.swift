@@ -5,8 +5,7 @@ import SwiftUI
 struct PinDetailView: View {
     @Bindable var pin: Pin
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var context
-    @State private var confirmingDelete = false
+    @AppStorage(SettingsKey.keepIndefinitely) private var keepIndefinitely = false
 
     var body: some View {
         Form {
@@ -43,6 +42,14 @@ struct PinDetailView: View {
                 Toggle("Reviewed", isOn: $pin.isReviewed)
             }
 
+            Section {
+                Toggle(isOn: $pin.isKept) {
+                    Label("Keep", systemImage: pin.isKept ? "star.fill" : "star")
+                }
+            } footer: {
+                Text(keepFooter)
+            }
+
             if let apple = pin.appleMapsURL, let google = pin.googleMapsURL {
                 Section("Look it up") {
                     Link(destination: apple) {
@@ -75,26 +82,22 @@ struct PinDetailView: View {
 
             Section {
                 Button("Delete Pin", role: .destructive) {
-                    confirmingDelete = true
+                    RetentionService.shared.moveToRecentlyDeleted(pin)
+                    dismiss()
                 }
             } footer: {
-                Text("Deleting is permanent for now. Recently Deleted arrives with the retention milestone.")
+                Text("Moves the pin to Recently Deleted, where you can recover it for 30 days.")
             }
         }
         .navigationTitle(pin.displayLabel)
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog("Delete this pin?", isPresented: $confirmingDelete, titleVisibility: .visible) {
-            Button("Delete Pin", role: .destructive) {
-                // Leave the screen first so nothing redraws a deleted pin.
-                dismiss()
-                let doomed = pin
-                Task {
-                    try? await Task.sleep(for: .milliseconds(500))
-                    context.delete(doomed)
-                    try? context.save()
-                }
-            }
-        }
+    }
+
+    private var keepFooter: String {
+        if pin.isKept { return "Kept pins never expire." }
+        if keepIndefinitely { return "“Keep records indefinitely” is on, so this pin won't expire." }
+        return RetentionPolicy.expiryText(capturedAt: pin.capturedAt, isKept: false, keepIndefinitely: false, now: AppClock.now)
+            .map { "\($0). Keep it to stop that." } ?? ""
     }
 
     /// Typing an empty label clears it back to "Unlabeled".

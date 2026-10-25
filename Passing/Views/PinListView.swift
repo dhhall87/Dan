@@ -5,32 +5,15 @@ import SwiftUI
 struct PinListView: View {
     @Query(filter: #Predicate<Pin> { $0.deletedAt == nil }, sort: \Pin.capturedAt, order: .reverse)
     private var pins: [Pin]
+    @Query(filter: #Predicate<Pin> { $0.deletedAt != nil })
+    private var recentlyDeleted: [Pin]
     @Environment(\.modelContext) private var context
+    @AppStorage(SettingsKey.keepIndefinitely) private var keepIndefinitely = false
+    @State private var exportFile: ExportFile?
+    @State private var exportError: String?
 
     var body: some View {
         List {
-            ForEach(days, id: \.self) { day in
-                Section {
-                    ForEach(pinsByDay[day] ?? []) { pin in
-                        NavigationLink {
-                            PinDetailView(pin: pin)
-                        } label: {
-                            PinRow(pin: pin)
-                        }
-                    }
-                    .onDelete { offsets in
-                        let dayPins = pinsByDay[day] ?? []
-                        for index in offsets {
-                            context.delete(dayPins[index])
-                        }
-                        try? context.save()
-                    }
-                } header: {
-                    Text(title(for: day))
-                }
-            }
-        }
-        .overlay {
             if pins.isEmpty {
                 ContentUnavailableView(
                     "No pins yet",
@@ -38,8 +21,78 @@ struct PinListView: View {
                     description: Text("Tap the capture screen when you pass something you want to look up later.")
                 )
             }
+            ForEach(days, id: \.self) { day in
+                Section {
+                    ForEach(pinsByDay[day] ?? []) { pin in
+                        NavigationLink {
+                            PinDetailView(pin: pin)
+                        } label: {
+                            PinRow(pin: pin, keepIndefinitely: keepIndefinitely)
+                        }
+                        .swipeActions(edge: .leading) {
+                            Button {
+                                pin.isKept.toggle()
+                                try? context.save()
+                            } label: {
+                                Label(pin.isKept ? "Unkeep" : "Keep", systemImage: pin.isKept ? "star.slash" : "star")
+                            }
+                            .tint(.yellow)
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                RetentionService.shared.moveToRecentlyDeleted(pin)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
+                } header: {
+                    Text(title(for: day))
+                }
+            }
+            Section {
+                NavigationLink {
+                    RecentlyDeletedView()
+                } label: {
+                    LabeledContent {
+                        Text("\(recentlyDeleted.count)")
+                    } label: {
+                        Label("Recently Deleted", systemImage: "trash")
+                    }
+                }
+            } footer: {
+                Text(keepIndefinitely
+                     ? "Pins are kept until you delete them."
+                     : "Pins move to Recently Deleted 7 days after you pin them. Swipe right to keep one.")
+            }
         }
         .navigationTitle("Pins")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    ForEach(ExportFormat.allCases) { format in
+                        Button("Export \(format.title)") { export(format) }
+                    }
+                } label: {
+                    Label("Export", systemImage: "square.and.arrow.up")
+                }
+                .disabled(pins.isEmpty)
+            }
+        }
+        .sheet(item: $exportFile) { file in
+            ShareSheet(items: [file.url])
+                .presentationDetents([.medium, .large])
+                .ignoresSafeArea()
+        }
+        .alert("Couldn't export pins", isPresented: exportErrorShown) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(exportError ?? "")
+        }
+        .onAppear {
+            // Catch up on anything that expired while this screen was closed.
+            RetentionService.shared.run()
+        }
     }
 
     private var pinsByDay: [Date: [Pin]] {
@@ -48,6 +101,18 @@ struct PinListView: View {
 
     private var days: [Date] {
         pinsByDay.keys.sorted(by: >)
+    }
+
+    private var exportErrorShown: Binding<Bool> {
+        Binding(get: { exportError != nil }, set: { if !$0 { exportError = nil } })
+    }
+
+    private func export(_ format: ExportFormat) {
+        do {
+            exportFile = ExportFile(url: try ExportService.exportActivePins(as: format))
+        } catch {
+            exportError = error.localizedDescription
+        }
     }
 
     private func title(for day: Date) -> String {
@@ -59,6 +124,7 @@ struct PinListView: View {
 
 struct PinRow: View {
     let pin: Pin
+    var keepIndefinitely = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -76,12 +142,24 @@ struct PinRow: View {
                 Text(PinFormat.accuracy(of: pin))
                     .font(.caption)
                     .foregroundStyle(pin.hasLocation ? Color.secondary : Color.orange)
+                if let expiry = RetentionPolicy.expiryText(capturedAt: pin.capturedAt, isKept: pin.isKept, keepIndefinitely: keepIndefinitely, now: AppClock.now) {
+                    Text(expiry)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             Spacer(minLength: 0)
-            if pin.isReviewed {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                    .accessibilityLabel("Reviewed")
+            VStack(spacing: 6) {
+                if pin.isKept {
+                    Image(systemName: "star.fill")
+                        .foregroundStyle(.yellow)
+                        .accessibilityLabel("Kept")
+                }
+                if pin.isReviewed {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .accessibilityLabel("Reviewed")
+                }
             }
         }
         .padding(.vertical, 2)
@@ -109,4 +187,9 @@ enum PinFormat {
         let meters = "±\(Int(accuracy.rounded())) m"
         return pin.isApproximate ? "\(meters) · approximate" : meters
     }
+}
+
+struct ExportFile: Identifiable {
+    let id = UUID()
+    let url: URL
 }
