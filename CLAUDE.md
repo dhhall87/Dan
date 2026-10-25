@@ -72,7 +72,7 @@ Dark, high contrast, no map, no clutter. Settings picks the layout Passing opens
 
 **Simple mode (default; stored as `quick`):** the entire screen is one capture button, labeled "Pin it".
 
-**Look (option A, chosen October 2026):** colors from the app icon (`Shared/Views/PassingColors.swift`), the icon's pin on the Simple button and the Pin widget (`PinGlyph`), rounded type. Capture buttons are solid colors, not Liquid Glass, so iOS 27's glass slider can't fade them. Glass is only on the system title-bar buttons and the GPS pill.
+**Look (option A, chosen October 2026):** colors from the app icon (`Shared/Views/PassingColors.swift`), the icon's pin on the Simple button and the Pin widget (`PinGlyph`), rounded type. Capture buttons are solid colors with a soft top-to-bottom shading (`Color.softGradient`, full color through the middle where the labels are), not Liquid Glass, so iOS 27's glass slider can't fade them. Glass is only on the system title-bar buttons and the GPS pill.
 
 **Four-zone mode:** four full-height vertical columns, laid out left to right exactly as the road looks:
 

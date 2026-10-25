@@ -186,7 +186,7 @@ private struct QuickCapture: View {
             .minimumScaleFactor(0.6)
             .padding(16)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.quickSurface, in: RoundedRectangle(cornerRadius: 36))
+            .background(Color.quickSurface.softGradient, in: RoundedRectangle(cornerRadius: 36))
             .overlay(RoundedRectangle(cornerRadius: 36).strokeBorder(.white.opacity(0.08)))
             .contentShape(RoundedRectangle(cornerRadius: 36))
         }
@@ -240,7 +240,9 @@ private struct ZoneColumn: View {
             .minimumScaleFactor(0.6)
             .padding(.horizontal, 2)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(isFar ? Color.farZone : Color.nearZone, in: RoundedRectangle(cornerRadius: 26))
+            .background((isFar ? Color.farZone : Color.nearZone).softGradient, in: RoundedRectangle(cornerRadius: 26))
+            // A faint edge, so neighbouring columns read as separate shapes rather than one block.
+            .overlay(RoundedRectangle(cornerRadius: 26).strokeBorder(.white.opacity(0.07)))
             .contentShape(RoundedRectangle(cornerRadius: 26))
         }
         .buttonStyle(PressHighlightStyle(cornerRadius: 26))

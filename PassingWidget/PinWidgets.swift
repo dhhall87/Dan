@@ -98,7 +98,7 @@ struct PinWidgetView: View {
             }
         }
         // CarPlay and StandBy remove this background; the yellow pin and white text still read on black.
-        .containerBackground(Color.quickSurface, for: .widget)
+        .containerBackground(Color.quickSurface.softGradient, for: .widget)
     }
 }
 
@@ -165,7 +165,7 @@ private struct GridButton: View {
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(distance == .far ? Color.farZone : Color.nearZone, in: ContainerRelativeShape())
+            .background((distance == .far ? Color.farZone : Color.nearZone).softGradient, in: ContainerRelativeShape())
         }
         .buttonStyle(.plain)
     }
