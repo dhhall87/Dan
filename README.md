@@ -64,7 +64,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Look Around:** tap **Show Look Around** on a pin's screen for Apple's street-level imagery of the spot, then tap the preview to look around. It loads only when you ask, needs the network, and rural roads often have no imagery.
 - **Groups:** file pins in named groups, like "Road trip" or "Houses to check". A pin is in at most one group, and deleting a group keeps its pins.
   - **Make one anywhere:** **New Group…** is in the folder button's menu, a pin's touch-and-hold menu, the Group menu in Select mode, the pin's screen, and Manage Groups. Made from a pin (or a selection), the new group gets that pin. A name that's already taken just uses that group.
-  - **Manage groups:** folder button → **Manage Groups…** to make, rename (tap) or delete (swipe left) groups.
+  - **Manage groups:** folder button → **Manage Groups…** to make, rename (tap) or delete (swipe left) groups. Tap **Edit** and drag the handles to put them in your order; the folder menu and a pin's group picker follow it. New groups go at the bottom.
   - **Show one group:** pick it from the same folder button.
   - **File a pin:** touch and hold it in the list → **Group**, or use the **Group** picker on its screen.
 - **Map:** the map button on the Pins list shows the same pins on a map. Tap one for a card, then tap the card to open it.

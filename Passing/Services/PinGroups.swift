@@ -5,14 +5,17 @@ import SwiftData
 @MainActor
 enum PinGroups {
     static func all(in context: ModelContext) -> [PinGroup] {
-        (try? context.fetch(FetchDescriptor<PinGroup>(sortBy: [SortDescriptor(\.name)]))) ?? []
+        (try? context.fetch(FetchDescriptor<PinGroup>(sortBy: PinGroup.displayOrder))) ?? []
     }
 
     /// Makes a new group. Returns nil if the name is blank or already used.
     @discardableResult
     static func create(named name: String, in context: ModelContext, now: Date = .now) -> PinGroup? {
-        guard let name = GroupNaming.clean(name, existing: all(in: context).map(\.name)) else { return nil }
+        let existing = all(in: context)
+        guard let name = GroupNaming.clean(name, existing: existing.map(\.name)) else { return nil }
         let group = PinGroup(name: name, createdAt: now)
+        // At the bottom of the list.
+        group.sortOrder = (existing.map(\.sortOrder).max() ?? -1) + 1
         context.insert(group)
         save(context)
         return group
@@ -28,6 +31,15 @@ enum PinGroups {
     /// already used. Nil only for a blank name.
     static func createOrFind(named name: String, in context: ModelContext) -> PinGroup? {
         create(named: name, in: context) ?? named(name, in: context)
+    }
+
+    /// A drag in Manage Groups: numbers every group in its new place.
+    static func reorder(_ groups: [PinGroup], fromOffsets source: IndexSet, toOffset destination: Int, in context: ModelContext) {
+        for (index, group) in GroupOrder.moved(groups, fromOffsets: source, toOffset: destination).enumerated()
+        where group.sortOrder != index {
+            group.sortOrder = index
+        }
+        save(context)
     }
 
     /// Returns false (and changes nothing) if the new name is blank or already used.

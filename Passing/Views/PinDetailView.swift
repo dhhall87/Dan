@@ -7,7 +7,7 @@ struct PinDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @AppStorage(SettingsKey.keepIndefinitely) private var keepIndefinitely = false
-    @Query(sort: \PinGroup.name) private var groups: [PinGroup]
+    @Query(sort: PinGroup.displayOrder) private var groups: [PinGroup]
     @State private var lookAround: LookAroundState = .notRequested
     @State private var addingGroup = false
     @State private var movingPin = false

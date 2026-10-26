@@ -22,6 +22,18 @@ enum GroupFilter: Hashable {
     }
 }
 
+enum GroupOrder {
+    /// `items` with the ones at `source` moved to before `destination`, as a List's drag reports
+    /// it (`destination` counts positions in the list before the move).
+    static func moved<Item>(_ items: [Item], fromOffsets source: IndexSet, toOffset destination: Int) -> [Item] {
+        let moving = source.sorted().filter { $0 < items.count }.map { items[$0] }
+        var rest = items.enumerated().filter { !source.contains($0.offset) }.map(\.element)
+        let insertAt = min(max(destination - source.filter { $0 < destination }.count, 0), rest.count)
+        rest.insert(contentsOf: moving, at: insertAt)
+        return rest
+    }
+}
+
 enum GroupNaming {
     static let maxLength = 40
 

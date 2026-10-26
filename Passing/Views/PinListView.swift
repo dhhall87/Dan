@@ -7,7 +7,7 @@ import SwiftUI
 struct PinListView: View {
     @Query(filter: #Predicate<Pin> { $0.deletedAt == nil }, sort: \Pin.capturedAt, order: .reverse)
     private var pins: [Pin]
-    @Query(sort: \PinGroup.name) private var groups: [PinGroup]
+    @Query(sort: PinGroup.displayOrder) private var groups: [PinGroup]
     @Environment(\.modelContext) private var context
     @AppStorage(SettingsKey.keepIndefinitely) private var keepIndefinitely = false
     @AppStorage(SettingsKey.deleteAfterExport) private var deleteAfterExport = false

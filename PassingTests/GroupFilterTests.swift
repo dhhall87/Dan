@@ -30,6 +30,17 @@ struct GroupFilterTests {
     }
 }
 
+struct GroupOrderTests {
+    @Test func movesLikeAListDrag() {
+        let names = ["A", "B", "C", "D"]
+        #expect(GroupOrder.moved(names, fromOffsets: [3], toOffset: 0) == ["D", "A", "B", "C"], "to the top")
+        #expect(GroupOrder.moved(names, fromOffsets: [0], toOffset: 4) == ["B", "C", "D", "A"], "to the bottom")
+        #expect(GroupOrder.moved(names, fromOffsets: [0], toOffset: 2) == ["B", "A", "C", "D"], "down one")
+        #expect(GroupOrder.moved(names, fromOffsets: [1], toOffset: 1) == names, "dropped where it was")
+        #expect(GroupOrder.moved(names, fromOffsets: [0, 2], toOffset: 4) == ["B", "D", "A", "C"], "two at once")
+    }
+}
+
 struct GroupNamingTests {
     @Test func trimsAndKeepsAGoodName() {
         #expect(GroupNaming.clean("  Road trip ", existing: []) == "Road trip")

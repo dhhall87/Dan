@@ -30,7 +30,27 @@ struct PinGroupsTests {
         let houses = try #require(PinGroups.create(named: "Houses", in: context))
         #expect(!PinGroups.rename(houses, to: "Road Trip", in: context))
         #expect(PinGroups.rename(houses, to: "Houses to check", in: context))
-        #expect(PinGroups.all(in: context).map(\.name) == ["Houses to check", "Road trip"])
+        #expect(PinGroups.all(in: context).map(\.name) == ["Road trip", "Houses to check"], "new groups go at the bottom")
+    }
+
+    @Test func dragsPutGroupsInDansOrder() throws {
+        for name in ["Road trip", "Houses", "Diners"] {
+            _ = try #require(PinGroups.create(named: name, in: context))
+        }
+        // Drag Diners to the top.
+        PinGroups.reorder(PinGroups.all(in: context), fromOffsets: [2], toOffset: 0, in: context)
+        #expect(PinGroups.all(in: context).map(\.name) == ["Diners", "Road trip", "Houses"])
+        // A group made later still goes at the bottom.
+        _ = try #require(PinGroups.create(named: "Barns", in: context))
+        #expect(PinGroups.all(in: context).map(\.name).last == "Barns")
+    }
+
+    @Test func groupsFromBeforeReorderingListByName() throws {
+        // Groups saved before sortOrder existed all read as 0.
+        for name in ["Road trip", "Diners"] {
+            context.insert(PinGroup(name: name))
+        }
+        #expect(PinGroups.all(in: context).map(\.name) == ["Diners", "Road trip"])
     }
 
     @Test func newGroupFromAMenuReusesAnExistingName() throws {

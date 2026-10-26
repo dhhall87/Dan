@@ -1,11 +1,11 @@
 import SwiftData
 import SwiftUI
 
-/// Make, rename and delete groups. Deleting a group keeps its pins.
+/// Make, rename, reorder and delete groups. Deleting a group keeps its pins.
 struct GroupsView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @Query(sort: \PinGroup.name) private var groups: [PinGroup]
+    @Query(sort: PinGroup.displayOrder) private var groups: [PinGroup]
     @State private var addingGroup = false
     @State private var renaming: PinGroup?
     @State private var renameText = ""
@@ -51,15 +51,18 @@ struct GroupsView: View {
                             PinGroups.delete(group, in: context)
                         }
                     }
+                    .onMove { source, destination in
+                        PinGroups.reorder(groups, fromOffsets: source, toOffset: destination, in: context)
+                    }
                 } footer: {
-                    Text("Tap a group to rename or delete it, or swipe left (or tap Edit) to delete. Deleting a group keeps its pins.")
+                    Text("Tap Edit, then drag the handles to put groups in your order. Pins and menus list them the same way. Tap a group to rename or delete it, or swipe left to delete. Deleting a group keeps its pins.")
                 }
             }
             .navigationTitle("Groups")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    // Shows a delete button on every group, for anyone who doesn't know to swipe.
+                    // Shows the drag handles for reordering, and a delete button on every group.
                     EditButton()
                         .disabled(groups.isEmpty)
                 }
