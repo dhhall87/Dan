@@ -53,7 +53,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Pin by Side widget:** four buttons. The left column is the left side of the road and the right column the right side, as on the phone. The top row is far and the bottom row near, like looking up the road. Near is green and far is blue, as on the capture screen.
 - **CarPlay:** both widgets are small, so they can go on CarPlay's Widgets screen. On a touchscreen car, tapping a button saves a pin. Passing doesn't need its own CarPlay app for this.
 - **Control Center:** a **Pin That** control. It can also go on the Lock Screen, or on the Action Button on recent iPhones.
-- Widget and Control Center pins are **silent**: no tone, no voice. The moment you tap a widget button, the widget turns green with a tick and **Saving…** while Passing gets a GPS reading (usually a second or two, at most 15). Then the button you tapped stays green with "Saved" for 5 seconds, or turns amber with "No location" if no GPS reading arrived. Labels get added later in Pins.
+- Widget and Control Center pins are **silent**: no tone, no voice. The moment you tap a widget button, the widget turns green with a tick and **Saving…** while Passing gets a GPS reading (usually a second or two, at most 15). Then the button you tapped stays green with "Saved" for 5 seconds, or turns amber with "No location" if no GPS reading arrived. If the pin couldn't be written at all, the button turns red with **Not saved**: tap again. Labels get added later in Pins.
 - **Pin Left or Right widget** (medium, for the Home Screen and medium Smart Stacks): a big left button and a big right button with arrows, and a **Passing** oval between them. The side buttons save the side (set the distance later in Pins if you like); the oval saves a pin with the side unknown. CarPlay only shows small widgets, so use the small ones there.
 - **Location:** when you add a widget, iOS asks whether Passing's widgets may use your location. Allow it, and Passing's location setting becomes "While Using the App or Widgets". Each widget tap saves the pin first, then waits up to 15 seconds for a GPS reading, as Siri does.
 - Repeat taps on the same widget button within 0.75 s count as one, as on the capture screen.
@@ -91,7 +91,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 **Your controls** (Settings):
 - **Precise location** (on by default). Off keeps only roughly where each pin was (within about half a mile) and its general direction: no speed and no miles-back route. Enough to find the town. It applies to the widgets and Control Center too.
 - **Look up town names** (on by default). Off means pin locations never go to Apple Maps for town names.
-- **Delete pins after exporting** (off by default). After an export is actually shared, the pins in it move to Recently Deleted, except kept ones. Pins still move there after 7 days either way.
+- **Delete pins after exporting** (off by default). After an export is actually shared, the pins in it move to Recently Deleted, except kept ones. Only pins that are in the file move: a KML file leaves out notes and pins without a location, so those stay. Pins still move there after 7 days either way.
 - **Delete All Pins.** Erases every pin for good, including kept ones and Recently Deleted. Groups stay; delete them in Manage Groups (swipe left, Edit, or tap a group → Delete Group).
 - **Exports never include speed.**
 
@@ -279,6 +279,8 @@ The project is set up for Dan's account: bundle IDs `com.danhall.passing` (+ `.w
 7. Open `Support/PassingWidget-Info.plist` and set **PassingAppGroup** to the same value.
 
 If the App Group doesn't match, the app still works, but Settings shows an orange **Storage** warning, and the widgets show **Not set up** instead of their buttons, because their pins would never reach the app.
+
+If the App Group is set up but its database won't open (rare; it could happen mid-update), Passing doesn't quietly save somewhere else, where pins would be stranded. Instead it saves nothing until it's reopened, and says so: the capture screen's pill says **Can't save pins** (red), taps give an error buzz instead of the tone (and "Pin not saved" if spoken confirmation is on), Siri says it couldn't save, widget buttons turn red with **Not saved**, and Settings has a red **Storage** notice. Swipe Passing away in the app switcher and open it again.
 
 ## Decisions so far
 

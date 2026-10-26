@@ -13,9 +13,14 @@ enum GPSStatus: Equatable {
     case off
     /// Precise Location is off in iOS Settings, so fixes are too rough to stamp on a pin.
     case notPrecise
+    /// The pin database wouldn't open, so taps can't save at all until Passing is reopened.
+    /// Shown ahead of any GPS state, because it's the one thing that loses pins.
+    case cantSave
 
-    init(isAuthorized: Bool, isDenied: Bool, isPreciseLocationOff: Bool, hasFreshFix: Bool) {
-        if isDenied {
+    init(isAuthorized: Bool, isDenied: Bool, isPreciseLocationOff: Bool, hasFreshFix: Bool, canSave: Bool = true) {
+        if !canSave {
+            self = .cantSave
+        } else if isDenied {
             self = .off
         } else if !isAuthorized {
             self = .notAsked
@@ -33,10 +38,11 @@ enum GPSStatus: Equatable {
         case .notAsked: return "Location asked on first pin"
         case .off: return "Location off"
         case .notPrecise: return "Precise Location off"
+        case .cantSave: return "Can't save pins"
         }
     }
 
-    /// Pins still save in every state; this only says whether they'll have a position.
+    /// Pins still save in every GPS state; this only says whether they'll have a position.
     var pinsGetAPosition: Bool {
         self == .ready || self == .searching || self == .notAsked
     }

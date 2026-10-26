@@ -133,4 +133,9 @@ struct IntentCaptureTests {
         #expect(pin?.targetSource == .textOnly, "no trail in this test")
         #expect(IntentCapture.dialog(for: pin) == "Saved, 2 miles back.")
     }
+
+    @Test func neverSaysSavedWhenItWasNot() {
+        let pin = Pin(capturedAt: now, side: .left, distance: .far, source: .siri)
+        #expect(IntentCapture.dialog(for: pin, saved: false) == "Sorry, I couldn't save that pin. Please try again.")
+    }
 }

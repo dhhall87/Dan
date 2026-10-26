@@ -42,11 +42,16 @@ enum IntentCapture {
         }
 
         await service.waitForLocation(of: pin)
+        // One more try before reporting back, in case the first write failed.
+        if !service.isSaved(pin) {
+            service.retrySave()
+        }
         return pin
     }
 
     /// Siri's spoken reply. Short, because it's heard while driving.
-    static func dialog(for pin: Pin?) -> String {
+    static func dialog(for pin: Pin?, saved: Bool = true) -> String {
+        guard saved else { return "Sorry, I couldn't save that pin. Please try again." }
         guard let pin else { return "Saved." }
         var text: String
         if pin.milesBack > 0 {

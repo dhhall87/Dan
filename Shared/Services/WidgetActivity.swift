@@ -16,11 +16,11 @@ enum WidgetActivity {
 
     /// Called once a widget or Control Center capture has finished (location attached or given up).
     @MainActor
-    static func record(_ pin: Pin, now: Date = .now) {
+    static func record(_ pin: Pin, saved: Bool = true, now: Date = .now) {
         guard let defaults = AppGroup.defaults else { return }
         defaults.set(now, forKey: lastCaptureKey)
         if pin.source == .widget {
-            let note = WidgetSavedNote(savedAt: now, side: pin.side, distance: pin.distance, hasLocation: pin.hasLocation)
+            let note = WidgetSavedNote(savedAt: now, side: pin.side, distance: pin.distance, hasLocation: pin.hasLocation, saved: saved)
             if let data = try? JSONEncoder().encode(note) {
                 defaults.set(data, forKey: noteKey)
             }

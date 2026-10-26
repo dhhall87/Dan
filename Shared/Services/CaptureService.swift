@@ -24,6 +24,12 @@ final class CaptureService {
     private let isPrecise: @MainActor () -> Bool
     /// Called after a pin that goes into Needs Review is saved, with how many are now waiting.
     private let reviewWaiting: @MainActor (Int) -> Void
+    /// A tap in the app whose save failed: a different haptic, never the success tone.
+    private let failed: @MainActor (Pin) -> Void
+    /// Writes the context to disk. Injectable so tests can make it fail.
+    private let persistStore: @MainActor (ModelContext) throws -> Void
+    /// Pins whose save hasn't succeeded yet. Any later successful save writes them too.
+    private var unsavedPinIDs: Set<UUID> = []
     private var debouncer = TapDebouncer<String>(interval: 0.75)
     /// The miles-back pin that further "+1" taps will bump, with the trail and the car's exact
     /// position as they were at the first tap (in memory only, even with precise location off).
@@ -39,7 +45,9 @@ final class CaptureService {
         trail: @escaping @MainActor () -> BreadcrumbBuffer,
         confirm: @escaping @MainActor (Pin) -> Void,
         isPrecise: @escaping @MainActor () -> Bool = { true },
-        reviewWaiting: @escaping @MainActor (Int) -> Void = { _ in }
+        reviewWaiting: @escaping @MainActor (Int) -> Void = { _ in },
+        failed: @escaping @MainActor (Pin) -> Void = { _ in },
+        persist: @escaping @MainActor (ModelContext) throws -> Void = { try $0.save() }
     ) {
         self.context = context
         self.currentFix = currentFix
@@ -48,6 +56,20 @@ final class CaptureService {
         self.confirm = confirm
         self.isPrecise = isPrecise
         self.reviewWaiting = reviewWaiting
+        self.failed = failed
+        self.persistStore = persist
+    }
+
+    /// Whether this pin has been written to disk. Success feedback (the tone, Siri's "Saved", the
+    /// widget's green tick) depends on this, never just on the pin existing in memory.
+    func isSaved(_ pin: Pin) -> Bool {
+        !unsavedPinIDs.contains(pin.id)
+    }
+
+    /// Tries the write again, for an intent that's about to report back. True if everything is saved.
+    @discardableResult
+    func retrySave() -> Bool {
+        unsavedPinIDs.isEmpty || persist()
     }
 
     /// Saves a pin now. Taps in the app get the haptic and tone; Siri and shortcuts confirm out loud
@@ -86,8 +108,12 @@ final class CaptureService {
                 pin.coarsenLocation()
             }
             bump?.lastTap = now
-            persist()
-            confirm(pin)
+            if persist() {
+                confirm(pin)
+            } else {
+                unsavedPinIDs.insert(pin.id)
+                failed(pin)
+            }
             return pin
         }
 
@@ -124,7 +150,9 @@ final class CaptureService {
         note.isNote = true
         note.label = text
         context.insert(note)
-        persist()
+        if !persist() {
+            unsavedPinIDs.insert(note.id)
+        }
         return note
     }
 
@@ -174,9 +202,17 @@ final class CaptureService {
             pin.coarsenLocation()
         }
         context.insert(pin)
-        persist()
+        let saved = persist()
+        if !saved {
+            // Kept in memory so a later save (autosave, the late GPS fix, a retry) can still write it.
+            unsavedPinIDs.insert(pin.id)
+        }
         if pin.source == .app {
-            confirm(pin)
+            if saved {
+                confirm(pin)
+            } else {
+                failed(pin)
+            }
         }
         if pin.needsReview {
             reviewWaiting(needsReviewCount())
@@ -208,12 +244,16 @@ final class CaptureService {
         }
     }
 
-    private func persist() {
+    /// Saves everything pending. A success also covers any pin whose own save failed earlier.
+    @discardableResult
+    private func persist() -> Bool {
         do {
-            try context.save()
+            try persistStore(context)
+            unsavedPinIDs.removeAll()
+            return true
         } catch {
-            // The pin is still in the context, and autosave will retry.
             print("Passing: save failed: \(error)")
+            return false
         }
     }
 }

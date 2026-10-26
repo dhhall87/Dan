@@ -367,4 +367,77 @@ struct CaptureServiceTests {
         #expect(!pin.hasLocation)
         #expect(pin.targetSource == .textOnly)
     }
+
+    // MARK: Failed saves
+
+    private struct DiskFull: Error {}
+
+    private final class FlakyStore {
+        var failing = true
+        var failures: [UUID] = []
+    }
+
+    private func failingService(_ store: FlakyStore, confirmations: Confirmations) -> CaptureService {
+        CaptureService(
+            context: container.mainContext,
+            currentFix: { nil },
+            lateFix: { nil },
+            trail: { BreadcrumbBuffer() },
+            confirm: { _ in confirmations.count += 1 },
+            failed: { store.failures.append($0.id) },
+            persist: { context in
+                if store.failing { throw DiskFull() }
+                try context.save()
+            }
+        )
+    }
+
+    @Test func aFailedSaveIsNeverConfirmed() throws {
+        let store = FlakyStore()
+        let confirmations = Confirmations()
+        let capture = failingService(store, confirmations: confirmations)
+        let pin = try #require(capture.capture(side: .left, distance: .far, source: .app, now: tap))
+        #expect(confirmations.count == 0, "no success tone or haptic for a pin that isn't on disk")
+        #expect(store.failures == [pin.id])
+        #expect(!capture.isSaved(pin))
+
+        store.failing = false
+        #expect(capture.retrySave())
+        #expect(capture.isSaved(pin))
+    }
+
+    @Test func aLaterSaveAlsoWritesTheEarlierPin() throws {
+        let store = FlakyStore()
+        let capture = failingService(store, confirmations: Confirmations())
+        let first = try #require(capture.capture(side: .left, distance: .far, source: .widget, now: tap))
+        #expect(!capture.isSaved(first))
+        #expect(store.failures.isEmpty, "only phone taps get the failure haptic")
+
+        store.failing = false
+        let second = try #require(capture.capture(side: .right, distance: .near, source: .widget, now: tap.addingTimeInterval(2)))
+        #expect(capture.isSaved(first) && capture.isSaved(second))
+    }
+
+    @Test func aFailedBumpIsNotConfirmed() {
+        let store = FlakyStore()
+        store.failing = false
+        let confirmations = Confirmations()
+        let capture = failingService(store, confirmations: confirmations)
+        let pin = capture.captureMilesBack(source: .app, now: tap)
+        #expect(confirmations.count == 1)
+
+        store.failing = true
+        _ = capture.captureMilesBack(source: .app, now: tap.addingTimeInterval(1))
+        #expect(pin.milesBack == 2)
+        #expect(confirmations.count == 1, "the bump that didn't save gets no tone")
+        #expect(store.failures == [pin.id])
+        #expect(!capture.isSaved(pin))
+    }
+
+    @Test func aNoteThatDidNotSaveIsReported() {
+        let store = FlakyStore()
+        let capture = failingService(store, confirmations: Confirmations())
+        let note = capture.addNote("call the farm", now: tap)
+        #expect(!capture.isSaved(note))
+    }
 }

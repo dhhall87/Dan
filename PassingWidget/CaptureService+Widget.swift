@@ -13,6 +13,8 @@ extension CaptureService {
         trail: { BreadcrumbBuffer() },
         confirm: { _ in },
         isPrecise: { LocationPrivacy.isPrecise },
-        reviewWaiting: { ReviewReminders.arm(waiting: $0) }
+        reviewWaiting: { ReviewReminders.arm(waiting: $0) },
+        // Only the App Group store: a pin saved anywhere else would never show up in the app.
+        persist: { try SharedStore.save($0, sharedOnly: true) }
     )
 }

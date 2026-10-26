@@ -14,6 +14,8 @@ extension CaptureService {
         trail: { LocationProvider.shared.breadcrumbs },
         confirm: { CaptureFeedback.shared.confirmCapture(of: $0) },
         isPrecise: { LocationPrivacy.isPrecise },
-        reviewWaiting: { ReviewReminders.arm(waiting: $0) }
+        reviewWaiting: { ReviewReminders.arm(waiting: $0) },
+        failed: { _ in CaptureFeedback.shared.captureFailed() },
+        persist: { try SharedStore.save($0) }
     )
 }

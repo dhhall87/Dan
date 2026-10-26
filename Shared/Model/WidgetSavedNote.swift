@@ -9,6 +9,8 @@ struct WidgetSavedNote: Codable, Equatable {
     var side: Side
     var distance: Distance
     var hasLocation: Bool
+    /// False when the pin couldn't be written to disk: the button shows "Not saved" instead of a tick.
+    var saved: Bool = true
 
     var hidesAt: Date { savedAt.addingTimeInterval(Self.duration) }
 
@@ -23,6 +25,7 @@ struct WidgetSavedNote: Codable, Equatable {
 
     /// Fits under the tick on a small button.
     var shortMessage: String {
-        hasLocation ? "Saved" : "No location"
+        if !saved { return "Not saved" }
+        return hasLocation ? "Saved" : "No location"
     }
 }

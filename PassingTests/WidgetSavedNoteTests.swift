@@ -29,6 +29,12 @@ struct WidgetSavedNoteTests {
         #expect(note(hasLocation: false).shortMessage == "No location")
     }
 
+    @Test func saysWhenItWasNotSaved() {
+        var failed = note()
+        failed.saved = false
+        #expect(failed.shortMessage == "Not saved")
+    }
+
     @Test func survivesTheTripThroughSharedSettings() throws {
         let data = try JSONEncoder().encode(note())
         #expect(try JSONDecoder().decode(WidgetSavedNote.self, from: data) == note())

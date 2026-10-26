@@ -40,6 +40,15 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                if SharedStore.state == .unavailable {
+                    Section {
+                        Label("Passing couldn't open its pin database, so new pins can't be saved, and pins saved earlier don't show until it opens. Close Passing (swipe it away in the app switcher) and open it again. If this keeps happening, restart the iPhone.", systemImage: "exclamationmark.octagon.fill")
+                            .foregroundStyle(.red)
+                    } header: {
+                        Text("Storage")
+                    }
+                }
+
                 Section {
                     Picker("Capture screen", selection: $mode) {
                         ForEach(CaptureMode.allCases) { mode in
@@ -206,7 +215,7 @@ struct SettingsView: View {
                 }
                 #endif
 
-                if !SharedStore.isUsingAppGroup {
+                if SharedStore.state == .appOnly {
                     Section {
                         Label("The App Group isn't set up, so pins are stored in the app's own space. The widgets and Control Center can't save pins here. See “Set up the App Group” in the README.", systemImage: "exclamationmark.triangle")
                             .foregroundStyle(.orange)

@@ -241,11 +241,11 @@ private struct CenterOvalButton: View {
         Button(intent: WidgetPinIntent(side: .unknown, distance: .unknown)) {
             Group {
                 if let note {
-                    Image(systemName: note.hasLocation ? "checkmark" : "location.slash")
+                    Image(systemName: note.symbol)
                         .font(.title2.weight(.heavy))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(note.hasLocation ? Color.savedGreen : Color.noLocationAmber, in: Capsule())
+                        .background(note.color, in: Capsule())
                 } else {
                     Text("Passing")
                         .font(.system(.subheadline, design: .rounded, weight: .heavy))
@@ -274,6 +274,20 @@ private extension Color {
     static let savedGreen = Color(red: 0.12, green: 0.50, blue: 0.26)
     /// Saved, but no GPS reading arrived in time.
     static let noLocationAmber = Color(red: 0.62, green: 0.38, blue: 0.02)
+    /// Not saved: the pin couldn't be written, so tap again.
+    static let notSavedRed = Color(red: 0.70, green: 0.12, blue: 0.12)
+}
+
+private extension WidgetSavedNote {
+    var symbol: String {
+        if !saved { return "xmark" }
+        return hasLocation ? "checkmark" : "location.slash"
+    }
+
+    var color: Color {
+        if !saved { return .notSavedRed }
+        return hasLocation ? .savedGreen : .noLocationAmber
+    }
 }
 
 /// The pin is saved the moment a button is tapped, but WidgetKit only redraws the widget once the
@@ -302,7 +316,8 @@ private struct SavingAware<Content: View>: View {
     }
 }
 
-/// A button after its save: green with a tick and "Saved", or amber with "No location".
+/// A button after its save: green with a tick and "Saved", amber with "No location", or red with
+/// "Not saved" if the pin couldn't be written.
 private struct SavedFace: View {
     let note: WidgetSavedNote
     /// Smaller type for the grid's quarter-size buttons.
@@ -310,14 +325,14 @@ private struct SavedFace: View {
 
     var body: some View {
         VStack(spacing: compact ? 2 : 6) {
-            Image(systemName: note.hasLocation ? "checkmark" : "location.slash")
+            Image(systemName: note.symbol)
                 .font(compact ? .title2.weight(.heavy) : .system(size: 40, weight: .bold))
             Text(note.shortMessage)
                 .font(compact ? .caption2.weight(.bold) : .system(.headline, design: .rounded, weight: .heavy))
         }
         .foregroundStyle(.white)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(note.hasLocation ? Color.savedGreen : Color.noLocationAmber)
+        .background(note.color)
     }
 }
 
@@ -394,6 +409,7 @@ private struct NotSetUpView: View {
 } timeline: {
     PinEntry(date: .now)
     PinEntry(date: .now, note: WidgetSavedNote(savedAt: .now, side: .unknown, distance: .unknown, hasLocation: true))
+    PinEntry(date: .now, note: WidgetSavedNote(savedAt: .now, side: .unknown, distance: .unknown, hasLocation: true, saved: false))
 }
 
 #Preview("Pin Left or Right", as: .systemMedium) {

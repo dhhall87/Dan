@@ -20,4 +20,10 @@ struct GPSStatusTests {
         #expect(status == .notAsked)
         #expect(status.pinsGetAPosition, "Passing asks on the first pin")
     }
+
+    @Test func aStoreThatWontOpenComesFirst() {
+        let status = GPSStatus(isAuthorized: true, isDenied: false, isPreciseLocationOff: false, hasFreshFix: true, canSave: false)
+        #expect(status == .cantSave)
+        #expect(status.title == "Can't save pins")
+    }
 }

@@ -132,7 +132,8 @@ struct GPSPill: View {
                 isAuthorized: location.isAuthorized,
                 isDenied: location.isDenied,
                 isPreciseLocationOff: location.isPreciseLocationOff,
-                hasFreshFix: location.freshFix(now: context.date) != nil
+                hasFreshFix: location.freshFix(now: context.date) != nil,
+                canSave: SharedStore.canSave
             )
             HStack(spacing: 6) {
                 Circle()
@@ -147,7 +148,7 @@ struct GPSPill: View {
             .frame(height: 24)
             .glassEffect(.regular, in: Capsule())
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(status.pinsGetAPosition ? status.title : "\(status.title). Pins still save, without a position.")
+            .accessibilityLabel(status.accessibilityText)
         }
     }
 }
@@ -160,7 +161,13 @@ private extension GPSStatus {
         case .notAsked: return .gray
         case .off: return .red
         case .notPrecise: return .orange
+        case .cantSave: return .red
         }
+    }
+
+    var accessibilityText: String {
+        if self == .cantSave { return "Can't save pins. Close Passing and open it again." }
+        return pinsGetAPosition ? title : "\(title). Pins still save, without a position."
     }
 }
 

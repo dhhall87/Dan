@@ -32,7 +32,7 @@ struct CapturePinIntent: AppIntent {
         ) {
             try await $label.requestValue("What did you see?")
         }
-        return .result(dialog: "\(IntentCapture.dialog(for: pin))")
+        return .result(dialog: "\(IntentCapture.dialog(for: pin, saved: pin.map { CaptureService.shared.isSaved($0) } ?? true))")
     }
 }
 
@@ -58,7 +58,7 @@ struct PinMilesBackIntent: AppIntent {
         ) {
             try await $label.requestValue("What did you see?")
         }
-        return .result(dialog: "\(IntentCapture.dialog(for: pin))")
+        return .result(dialog: "\(IntentCapture.dialog(for: pin, saved: pin.map { CaptureService.shared.isSaved($0) } ?? true))")
     }
 }
 
@@ -71,7 +71,7 @@ struct QuickPinIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let pin = await IntentCapture.run(service: .shared, source: .actionButton, ask: false) { nil }
-        return .result(dialog: "\(IntentCapture.dialog(for: pin))")
+        return .result(dialog: "\(IntentCapture.dialog(for: pin, saved: pin.map { CaptureService.shared.isSaved($0) } ?? true))")
     }
 }
 

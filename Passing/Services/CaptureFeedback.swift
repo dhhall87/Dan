@@ -82,6 +82,16 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
+    /// A tap whose pin couldn't be written to disk: the error haptic instead of the success one, no
+    /// tone, and "Pin not saved" if spoken confirmation is on, so the driver knows to try again.
+    func captureFailed() {
+        haptics.notificationOccurred(.error)
+        haptics.prepare()
+        if AppSettings.spokenConfirmation {
+            preview("Pin not saved.")
+        }
+    }
+
     /// The capture screen's "Add a note" button: asks "What's your note?" and listens. What's said is
     /// saved as a note in Pins (text only, no pin or location). Saying nothing saves nothing.
     /// Permission is only ever asked in Settings, never here.
@@ -92,10 +102,15 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
             preview("Voice notes are off. Turn on Listen after tap in Settings once to allow them.")
             return
         }
-        haptics.notificationOccurred(.success)
-        haptics.prepare()
         // Saved first, like every capture, so a note can't be lost mid-sentence; removed if empty.
         let note = CaptureService.shared.addNote(nil)
+        guard CaptureService.shared.isSaved(note) else {
+            CaptureService.shared.discardEmptyNote(note)
+            captureFailed()
+            return
+        }
+        haptics.notificationOccurred(.success)
+        haptics.prepare()
         listenForLabel(on: note, question: ListenPolicy.noteQuestion)
     }
 
