@@ -42,6 +42,18 @@ struct PinDetailView: View {
                     // A new map after a move, so it frames the new spot.
                     .id("\(pin.targetLatitude ?? 0),\(pin.targetLongitude ?? 0)")
                     .frame(height: 260)
+                    // On the map itself, so it's found where you'd look for it.
+                    .overlay(alignment: .bottomTrailing) {
+                        Button {
+                            movingPin = true
+                        } label: {
+                            Label("Move", systemImage: "hand.point.up.left")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                        .buttonStyle(.glass)
+                        .padding(10)
+                        .accessibilityLabel("Move Pin")
+                    }
                     .listRowInsets(EdgeInsets())
                 } else {
                     Label("No location was recorded for this pin. GPS didn't have a usable fix in time, so Passing saved the time only. You can place it on the map yourself.", systemImage: "location.slash")

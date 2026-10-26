@@ -30,6 +30,8 @@ struct PinListView: View {
     @State private var exportError: String?
     @State private var addingNote = false
     @State private var noteText = ""
+    /// The pin "Move Pin…" (touch and hold) is moving.
+    @State private var movingPin: Pin?
 
     /// `filter` is where the list starts: All Pins, or Needs Review from a review reminder.
     init(filter: GroupFilter = .all) {
@@ -119,6 +121,9 @@ struct PinListView: View {
         }
         .sheet(isPresented: $managingGroups) {
             GroupsView()
+        }
+        .sheet(item: $movingPin) { pin in
+            MovePinView(pin: pin)
         }
         .newGroupAlert(isPresented: newGroupShown, message: newGroupMessage, onCreate: fileNewGroup(for: newGroupFor))
         .alert("Couldn't export pins", isPresented: exportErrorShown) {
@@ -288,6 +293,13 @@ struct PinListView: View {
                 newGroupFor = .pin(pin)
             } label: {
                 Label("New Group…", systemImage: "folder.badge.plus")
+            }
+            if !pin.isNote {
+                Button {
+                    movingPin = pin
+                } label: {
+                    Label(pin.lookUpCoordinate == nil ? "Place on Map…" : "Move Pin…", systemImage: "hand.point.up.left")
+                }
             }
         }
     }
