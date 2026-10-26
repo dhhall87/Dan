@@ -118,9 +118,9 @@ Dark, high contrast, no map, no clutter. Settings picks the layout Passing opens
 ## Widget (CarPlay path, no entitlement needed)
 
 - WidgetKit `systemSmall` widget with `Button(intent:)` calling the capture intent. iOS 26 shows small widgets in CarPlay, and buttons work on touchscreen cars without a CarPlay app.
-- Two variants: a single "Pin" button, and a 2x2 side/distance grid (match the left/right logic of the phone layout).
+- Two small variants: a single "Pin" button, and a 2x2 side/distance grid (match the left/right logic of the phone layout). Plus a medium "Pin Left or Right" widget (Dan's request, for medium Smart Stacks; iPhone only, since CarPlay shows small widgets): big left and right arrow buttons that save the side with distance unknown, and a "Passing" oval between them that saves a side-unknown pin (a button, so a tap in the middle never opens the app).
 - Widget captures are silent (no voice prompt). Labels get added later.
-- **Tap feedback:** WidgetKit only redraws after `perform()` returns, and the widget intent waits up to 15 s for a GPS reading first. So the button faces use `.invalidatableContent()` and read `redactionReasons.contains(.invalidated)`: the single button shows a greyed tick with "Saving…" (the grid greys all four) from the tap until the redraw, then the tapped button shows a tick with "Saved" or "No location" for 5 s (`WidgetSavedNote`). Dan asked for this after the tick arrived too late on his phone.
+- **Tap feedback:** WidgetKit only redraws after `perform()` returns, and the widget intent waits up to 15 s for a GPS reading first. So each widget's content is wrapped in `SavingAware` with `.invalidatableContent()`, which reads `redactionReasons.contains(.invalidated)`: from the tap until the redraw the whole widget shows green with a tick and "Saving…" (it can't know which button was tapped yet), then the tapped button shows green "Saved" or amber "No location" for 5 s (`SavedFace`, `WidgetSavedNote`). Green rather than grey was Dan's choice. Dan asked for this after the tick arrived too late on his phone.
 - Native CarPlay template app is out of scope unless Dan decides to publish. It would need the Driving Task entitlement from Apple, approval isn't guaranteed, and it would be limited to templates (grid of buttons, not the custom layout).
 
 ## Review screen

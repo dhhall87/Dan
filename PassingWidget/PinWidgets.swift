@@ -74,12 +74,13 @@ struct PinWidgetView: View {
             if entry.isListening {
                 StopListeningButton()
             } else if entry.isSetUp {
-                Button(intent: WidgetPinIntent(side: .unknown, distance: .unknown)) {
-                    PinButtonFace(note: entry.savedNote(side: .unknown, distance: .unknown))
-                        // Greyed "Saving…" from the tap until the save (and its GPS wait) finishes.
-                        .invalidatableContent()
+                SavingAware {
+                    Button(intent: WidgetPinIntent(side: .unknown, distance: .unknown)) {
+                        PinButtonFace(note: entry.savedNote(side: .unknown, distance: .unknown))
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
+                .invalidatableContent()
             } else {
                 NotSetUpView()
             }
@@ -113,50 +114,25 @@ struct PinGridWidgetView: View {
             if entry.isListening {
                 StopListeningButton()
             } else if entry.isSetUp {
-                VStack(spacing: 4) {
-                    HStack(spacing: 4) {
-                        GridButton(side: .left, distance: .far, note: entry.savedNote(side: .left, distance: .far))
-                        GridButton(side: .right, distance: .far, note: entry.savedNote(side: .right, distance: .far))
+                SavingAware {
+                    VStack(spacing: 4) {
+                        HStack(spacing: 4) {
+                            GridButton(side: .left, distance: .far, note: entry.savedNote(side: .left, distance: .far))
+                            GridButton(side: .right, distance: .far, note: entry.savedNote(side: .right, distance: .far))
+                        }
+                        HStack(spacing: 4) {
+                            GridButton(side: .left, distance: .near, note: entry.savedNote(side: .left, distance: .near))
+                            GridButton(side: .right, distance: .near, note: entry.savedNote(side: .right, distance: .near))
+                        }
                     }
-                    HStack(spacing: 4) {
-                        GridButton(side: .left, distance: .near, note: entry.savedNote(side: .left, distance: .near))
-                        GridButton(side: .right, distance: .near, note: entry.savedNote(side: .right, distance: .near))
-                    }
+                    .padding(4)
                 }
-                .padding(4)
+                .invalidatableContent()
             } else {
                 NotSetUpView()
             }
         }
         .containerBackground(Color.captureBackground, for: .widget)
-    }
-}
-
-/// The single Pin button's face. The pin is saved the moment it's tapped, but WidgetKit only redraws
-/// the widget once the button's work is done, which includes waiting up to 15 seconds for a GPS
-/// reading. So from the tap until then it shows a greyed "Saving…" (WidgetKit marks the content
-/// `.invalidated` for that time), then a tick with "Saved" or "No location" for 5 seconds.
-private struct PinButtonFace: View {
-    let note: WidgetSavedNote?
-    @Environment(\.redactionReasons) private var redactionReasons
-
-    var body: some View {
-        let isSaving = redactionReasons.contains(.invalidated)
-        VStack(spacing: 8) {
-            if isSaving || note != nil {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 48, weight: .bold))
-            } else {
-                // The app icon's pin, as on the phone's Simple screen.
-                PinGlyph()
-                    .frame(width: 56, height: 56)
-            }
-            Text(isSaving ? "Saving…" : note?.shortMessage ?? "Pin")
-                .font(.system(.title2, design: .rounded, weight: .heavy))
-        }
-        .foregroundStyle(.white.opacity(isSaving ? 0.5 : 1))
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
     }
 }
 
@@ -167,44 +143,205 @@ private struct GridButton: View {
 
     var body: some View {
         Button(intent: WidgetPinIntent(side: side, distance: distance)) {
-            GridButtonFace(side: side, distance: distance, note: note)
-                // Greyed from the tap until the save finishes, then the tapped button shows a tick.
-                .invalidatableContent()
+            Group {
+                if let note {
+                    SavedFace(note: note, compact: true)
+                } else {
+                    Text(title)
+                        .font(.headline.weight(.heavy))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(ZoneFill(far: distance == .far, seed: (side == .left ? 0 : 2) + (distance == .far ? 0 : 1)))
+                }
+            }
+            .clipShape(ContainerRelativeShape())
         }
         .buttonStyle(.plain)
-    }
-}
-
-/// One grid button's face. WidgetKit doesn't say which button was tapped while it waits, so all four
-/// grey out together; once the save finishes, the tapped one shows the tick for 5 seconds.
-private struct GridButtonFace: View {
-    let side: Side
-    let distance: Distance
-    let note: WidgetSavedNote?
-    @Environment(\.redactionReasons) private var redactionReasons
-
-    var body: some View {
-        let isSaving = redactionReasons.contains(.invalidated)
-        VStack(spacing: 2) {
-            if let note {
-                Image(systemName: "checkmark")
-                    .font(.title2.weight(.heavy))
-                Text(note.shortMessage)
-                    .font(.caption2.weight(.bold))
-            } else {
-                Text(title)
-                    .font(.headline.weight(.heavy))
-            }
-        }
-        .foregroundStyle(.white)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(ZoneFill(far: distance == .far, seed: (side == .left ? 0 : 2) + (distance == .far ? 0 : 1)).clipShape(ContainerRelativeShape()))
-        .opacity(isSaving ? 0.45 : 1)
     }
 
     /// "← Far", "Near →": the arrow points to the side of the road.
     private var title: String {
         side == .left ? "← \(distance.title)" : "\(distance.title) →"
+    }
+}
+
+// MARK: Left or right (medium)
+
+/// A wide widget for the Home Screen and Smart Stacks: a big left button and a big right button,
+/// with "Passing" in an oval between them, which saves a pin with the side unknown (so a tap in the
+/// middle never opens the app). The buttons save the side only; distance can be set later in Pins.
+/// CarPlay only shows small widgets, so this one is for the iPhone.
+struct PinSidesWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "PinSidesWidget", provider: PinTimelineProvider()) { entry in
+            PinSidesWidgetView(entry: entry)
+        }
+        .configurationDisplayName("Pin Left or Right")
+        .description("Tap the side of the road the thing was on. Fits in a medium Smart Stack.")
+        .supportedFamilies([.systemMedium])
+        .contentMarginsDisabled()
+    }
+}
+
+struct PinSidesWidgetView: View {
+    let entry: PinEntry
+
+    var body: some View {
+        Group {
+            if entry.isListening {
+                StopListeningButton()
+            } else if entry.isSetUp {
+                SavingAware {
+                    HStack(spacing: 6) {
+                        SideButton(side: .left, note: entry.savedNote(side: .left, distance: .unknown))
+                        CenterOvalButton(note: entry.savedNote(side: .unknown, distance: .unknown))
+                        SideButton(side: .right, note: entry.savedNote(side: .right, distance: .unknown))
+                    }
+                    .padding(6)
+                }
+                .invalidatableContent()
+            } else {
+                NotSetUpView()
+            }
+        }
+        .containerBackground(Color.captureBackground, for: .widget)
+    }
+}
+
+/// One big side button: just an arrow pointing to that side of the road, no words.
+private struct SideButton: View {
+    let side: Side
+    let note: WidgetSavedNote?
+
+    var body: some View {
+        Button(intent: WidgetPinIntent(side: side, distance: .unknown)) {
+            Group {
+                if let note {
+                    SavedFace(note: note, compact: false)
+                } else {
+                    Image(systemName: side == .left ? "arrow.up.left" : "arrow.up.right")
+                        .font(.system(size: 44, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.quickSurface.softGradient)
+                }
+            }
+            .clipShape(ContainerRelativeShape())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(side == .left ? "Save pin, left side" : "Save pin, right side")
+    }
+}
+
+/// "Passing" in an oval between the side buttons. Saves a pin with the side unknown.
+private struct CenterOvalButton: View {
+    let note: WidgetSavedNote?
+
+    var body: some View {
+        Button(intent: WidgetPinIntent(side: .unknown, distance: .unknown)) {
+            Group {
+                if let note {
+                    Image(systemName: note.hasLocation ? "checkmark" : "location.slash")
+                        .font(.title2.weight(.heavy))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(note.hasLocation ? Color.savedGreen : Color.noLocationAmber, in: Capsule())
+                } else {
+                    Text("Passing")
+                        .font(.system(.subheadline, design: .rounded, weight: .heavy))
+                        .foregroundStyle(Color.pinYellow)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .padding(.horizontal, 6)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.asphalt, in: Capsule())
+                }
+            }
+            .frame(width: 76)
+            .padding(.vertical, 24)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Save pin")
+    }
+}
+
+// MARK: Tap feedback
+
+/// Widget feedback colors. White text reads on both.
+private extension Color {
+    /// Saving, and saved with a location.
+    static let savedGreen = Color(red: 0.12, green: 0.50, blue: 0.26)
+    /// Saved, but no GPS reading arrived in time.
+    static let noLocationAmber = Color(red: 0.62, green: 0.38, blue: 0.02)
+}
+
+/// The pin is saved the moment a button is tapped, but WidgetKit only redraws the widget once the
+/// button's work is done, which includes waiting up to 15 seconds for a GPS reading. WidgetKit marks
+/// the content `.invalidated` for that time, so this swaps in a green "Saving…" across the whole
+/// widget straight away. (It can't tell which button was tapped until the redraw.) After the redraw,
+/// the tapped button shows `SavedFace` for 5 seconds.
+private struct SavingAware<Content: View>: View {
+    @Environment(\.redactionReasons) private var redactionReasons
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        if redactionReasons.contains(.invalidated) {
+            VStack(spacing: 6) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 40, weight: .bold))
+                Text("Saving…")
+                    .font(.system(.headline, design: .rounded, weight: .heavy))
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.savedGreen)
+        } else {
+            content()
+        }
+    }
+}
+
+/// A button after its save: green with a tick and "Saved", or amber with "No location".
+private struct SavedFace: View {
+    let note: WidgetSavedNote
+    /// Smaller type for the grid's quarter-size buttons.
+    let compact: Bool
+
+    var body: some View {
+        VStack(spacing: compact ? 2 : 6) {
+            Image(systemName: note.hasLocation ? "checkmark" : "location.slash")
+                .font(compact ? .title2.weight(.heavy) : .system(size: 40, weight: .bold))
+            Text(note.shortMessage)
+                .font(compact ? .caption2.weight(.bold) : .system(.headline, design: .rounded, weight: .heavy))
+        }
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(note.hasLocation ? Color.savedGreen : Color.noLocationAmber)
+    }
+}
+
+/// The single Pin button: the app icon's pin with "Pin", or `SavedFace` for 5 seconds after a save.
+private struct PinButtonFace: View {
+    let note: WidgetSavedNote?
+
+    var body: some View {
+        Group {
+            if let note {
+                SavedFace(note: note, compact: false)
+            } else {
+                VStack(spacing: 8) {
+                    // The app icon's pin, as on the phone's Simple screen.
+                    PinGlyph()
+                        .frame(width: 56, height: 56)
+                    Text("Pin")
+                        .font(.system(.title2, design: .rounded, weight: .heavy))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .contentShape(Rectangle())
     }
 }
 
@@ -259,11 +396,18 @@ private struct NotSetUpView: View {
     PinEntry(date: .now, note: WidgetSavedNote(savedAt: .now, side: .unknown, distance: .unknown, hasLocation: true))
 }
 
+#Preview("Pin Left or Right", as: .systemMedium) {
+    PinSidesWidget()
+} timeline: {
+    PinEntry(date: .now)
+    PinEntry(date: .now, note: WidgetSavedNote(savedAt: .now, side: .left, distance: .unknown, hasLocation: true))
+    PinEntry(date: .now, note: WidgetSavedNote(savedAt: .now, side: .unknown, distance: .unknown, hasLocation: false))
+}
+
 #Preview("Saving (just tapped)") {
-    PinButtonFace(note: nil)
+    SavingAware { Text("Pin") }
         .redacted(reason: .invalidated)
         .frame(width: 170, height: 170)
-        .background(Color.quickSurface.softGradient)
 }
 
 #Preview("Pin by Side", as: .systemSmall) {
