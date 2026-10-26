@@ -101,6 +101,8 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Siri:** what you say to Siri goes through Siri, under your iPhone's Siri settings. Listen after tap stays on the iPhone.
 - **Exports and map links:** only when you share an export or tap Open in Apple Maps / Google Maps (Google then gets that spot). Passing deletes its own copy of an export once it's shared. A KML file reaches Google only when you upload it yourself.
 
+**Drive log** (off unless you turn it on): timings and outcomes only, never locations, labels, notes or speeds. It stays on the iPhone until you share it.
+
 **How long it's kept:** pins move to Recently Deleted after 7 days unless kept, and Recently Deleted empties after 30. The rolling trail of where you've driven lives in memory only; a miles-back pin keeps just the stretch of road it measured, and goes when the pin does. Clean-up also runs in the background now and then.
 
 **With the iPhone locked:** the pin database uses iOS's standard protection (encrypted until you first unlock after a restart), so it can still be written while the phone is locked. Whether CarPlay widget buttons actually run with the iPhone locked is still to be checked in a car.
@@ -113,6 +115,20 @@ Capture things you pass while driving, then look them up later. One tap saves a 
   - Nothing else runs in the background apart from the occasional clean-up.
 - **Listen after tap** (off by default) uses the microphone and speech recognition for a few seconds per tap.
 - **Maps and Look Around** are the heaviest screens for memory and data. Look Around loads only when you tap it.
+
+## Drive log (for real-drive feedback)
+
+Settings → Feedback → **Drive Log** → turn on **Keep a drive log**. From then on Passing notes how each drive went, on the iPhone only:
+
+- **Every pin:** where it came from (phone, Siri, widget, Control Center), whether GPS was ready at the tap, how long it waited for a reading if not, how accurate the reading was, whether it's approximate, and whether it saved.
+- **Siri and widget requests:** how long each took from start to finish, and how Siri's "What did you see?" went (answered, nothing said, cancelled or failed, with the error).
+- **GPS:** how long it ran each time (with the capture screen, or a short burst for Siri and widgets), and when it was skipped because location or Precise Location was off.
+- **Miles back:** whether the pin landed on the trail or fell back to words, and every trail restart with its reason (a gap that could hide a turn, a GPS jump, or a long break).
+- **Speed of the app:** how long Passing took to open and the database to load, save failures, clean-up runs that took a while, and town lookups.
+
+It never records where you were, labels, notes or speeds. The Drive Log screen shows a summary and the newest 100 events (pull down to refresh). **Share** makes a text file with the summary and every event, ready to send or paste. **Clear** deletes it. Each part of the app keeps about its newest 2,500 events. Turning it off stops recording and keeps what's there.
+
+**After a drive:** note roughly when you tapped things (for example, "8:14 widget in CarPlay, phone locked"), then share the log. A widget tap with no matching event means the button didn't run at all.
 
 ## Run it
 

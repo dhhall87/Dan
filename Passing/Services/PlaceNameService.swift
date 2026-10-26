@@ -30,6 +30,15 @@ final class PlaceNameService {
         case noName
         /// Offline, throttled or another error: worth trying again later.
         case failed
+
+        /// For the drive log, which never holds the town itself.
+        var logName: String {
+            switch self {
+            case .found: return "found"
+            case .noName: return "noName"
+            case .failed: return "failed"
+            }
+        }
     }
 
     func fillMissing(in pins: [Pin]) async {
@@ -63,7 +72,9 @@ final class PlaceNameService {
             // Moved during the wait: the new spot gets its own lookup.
             guard isWaiting(pin, at: spot) else { continue }
             lastRequestAt = .now
+            let asked = Date.now
             let outcome = await Self.lookUp(coordinate)
+            DriveLog.record(DriveLogEntry(at: .now, kind: .townLookup, outcome: outcome.logName, seconds: Date.now.timeIntervalSince(asked)))
             // Moved, or given a place's town, while the request was out: the answer is for the old spot.
             let stillHere = isWaiting(pin, at: spot)
 

@@ -8,6 +8,7 @@ enum SettingsRoute: Hashable {
     case voice
     case phrases
     case reviewReminders
+    case driveLog
 }
 
 struct SettingsView: View {
@@ -28,6 +29,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.deleteAfterExport) private var deleteAfterExport = false
     /// In the App Group's shared settings, so the widget and Control Center follow it too.
     @AppStorage(LocationPrivacy.key, store: AppGroup.defaults) private var preciseLocation = true
+    @AppStorage(DriveLog.enabledKey, store: AppGroup.defaults) private var driveLogOn = false
     @State private var confirmingDeleteAll = false
     @State private var deletedCount: Int?
     @State private var listenProblem: SpeechListener.Availability?
@@ -186,6 +188,16 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    NavigationLink(value: SettingsRoute.driveLog) {
+                        LabeledContent("Drive Log", value: driveLogOn ? "On" : "Off")
+                    }
+                } header: {
+                    Text("Feedback")
+                } footer: {
+                    Text("A record of how Passing does on real drives: how long GPS takes, how accurate pins are, whether they saved. No locations, labels, notes or speeds. Stays on this iPhone until you share it.")
+                }
+
+                Section {
                     LabeledContent("Location access", value: locationStatus)
                     if location.authorization != .notDetermined {
                         Button("Open iOS Settings") {
@@ -231,6 +243,7 @@ struct SettingsView: View {
                 case .voice: VoicePickerView()
                 case .phrases: PhrasesView()
                 case .reviewReminders: ReviewRemindersView()
+                case .driveLog: DriveLogView()
                 }
             }
             .toolbar {

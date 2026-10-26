@@ -32,6 +32,16 @@ enum SharedStore {
     static var container: ModelContainer { opened.container }
 
     private static let opened: (container: ModelContainer, state: State) = {
+        let started = Date.now
+        let result = open()
+        DriveLog.record(DriveLogEntry(
+            at: .now, kind: .storeOpened, outcome: "\(result.state)",
+            seconds: Date.now.timeIntervalSince(started), count: result.tries
+        ))
+        return (result.container, result.state)
+    }()
+
+    private static func open() -> (container: ModelContainer, state: State, tries: Int) {
         let schema = Schema([Pin.self, PinGroup.self])
         if AppGroup.isAvailable, let identifier = AppGroup.identifier {
             let configuration = ModelConfiguration(
@@ -45,22 +55,22 @@ enum SharedStore {
             // a few tries.
             for attempt in 1...3 {
                 do {
-                    return (try ModelContainer(for: schema, configurations: configuration), .shared)
+                    return (try ModelContainer(for: schema, configurations: configuration), .shared, attempt)
                 } catch {
                     print("Passing: couldn't open the App Group store (try \(attempt) of 3): \(error)")
                     if attempt < 3 { Thread.sleep(forTimeInterval: 0.5) }
                 }
             }
             print("Passing: the App Group store won't open; saving is off until the next launch.")
-            return (memoryContainer(schema), .unavailable)
+            return (memoryContainer(schema), .unavailable, 3)
         }
         do {
             let configuration = ModelConfiguration("Passing", schema: schema, groupContainer: .none, cloudKitDatabase: .none)
-            return (try ModelContainer(for: schema, configurations: configuration), .appOnly)
+            return (try ModelContainer(for: schema, configurations: configuration), .appOnly, 1)
         } catch {
             fatalError("Passing: couldn't open the pin database: \(error)")
         }
-    }()
+    }
 
     static var context: ModelContext { container.mainContext }
 

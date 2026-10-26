@@ -108,12 +108,16 @@ final class CaptureService {
                 pin.coarsenLocation()
             }
             bump?.lastTap = now
-            if persist() {
+            let saved = persist()
+            if saved {
                 confirm(pin)
             } else {
                 unsavedPinIDs.insert(pin.id)
                 failed(pin)
             }
+            var entry = DriveLogEntry(at: .now, kind: .bump, source: pin.source.rawValue, outcome: pin.targetSource.rawValue, saved: saved, miles: pin.milesBack)
+            entry.trailMiles = current.trail.length / Geo.metersPerMile
+            DriveLog.record(entry)
             return pin
         }
 
@@ -122,7 +126,7 @@ final class CaptureService {
         // Snapshot the trail now, so later bumps measure back from this tap, not from wherever the car is by then.
         let snapshot = trail()
         var start: TrailPoint?
-        save(newPin: pin) { pin in
+        save(newPin: pin, trailMeters: snapshot.length) { pin in
             start = pin.captureTrailPoint
             self.estimateTarget(for: pin, from: start, along: snapshot)
         }
@@ -179,21 +183,37 @@ final class CaptureService {
     /// For a pin saved before any usable fix: attach the first usable fix that arrives within
     /// `FixPolicy.lateFixWindow`. If none arrives, the pin stays saved with no location.
     func attachLateFix(to pin: Pin) async {
-        guard let fix = await lateFix(),
-              pin.modelContext != nil, !pin.isDeleted, !pin.hasLocation,
-              FixPolicy.acceptsLateFix(capturedAt: pin.capturedAt, fixTimestamp: fix.timestamp)
-        else { return }
+        let fix = await lateFix()
+        var entry = DriveLogEntry(at: .now, kind: .lateFix, source: pin.source.rawValue)
+        // From the tap until the fix arrived, or until the wait gave up.
+        entry.seconds = Date.now.timeIntervalSince(pin.capturedAt)
+        defer { DriveLog.record(entry) }
+
+        guard let fix else {
+            entry.outcome = "none"
+            return
+        }
+        guard pin.modelContext != nil, !pin.isDeleted, !pin.hasLocation else {
+            entry.outcome = "pinChanged"
+            return
+        }
+        guard FixPolicy.acceptsLateFix(capturedAt: pin.capturedAt, fixTimestamp: fix.timestamp) else {
+            entry.outcome = "tooLate"
+            return
+        }
         pin.applyFix(fix)
         if !isPrecise() {
             pin.coarsenLocation()
         }
-        persist()
+        entry.saved = persist()
+        entry.outcome = "attached"
+        entry.add(fixOf: pin)
     }
 
     // MARK: Private
 
     /// Stamps the current fix (if fresh), runs `prepare`, saves, confirms, and waits for a late fix if needed.
-    private func save(newPin pin: Pin, prepare: (Pin) -> Void = { _ in }) {
+    private func save(newPin pin: Pin, trailMeters: Double? = nil, prepare: (Pin) -> Void = { _ in }) {
         if let fix = currentFix() {
             pin.applyFix(fix)
         }
@@ -217,6 +237,8 @@ final class CaptureService {
         if pin.needsReview {
             reviewWaiting(needsReviewCount())
         }
+        // After the feedback, so logging never delays it.
+        DriveLog.record(.capture(pin, saved: saved, trailMeters: trailMeters))
 
         if !pin.hasLocation {
             let id = pin.id
@@ -253,6 +275,7 @@ final class CaptureService {
             return true
         } catch {
             print("Passing: save failed: \(error)")
+            DriveLog.record(DriveLogEntry(at: .now, kind: .saveFailed, outcome: "\(type(of: error))"))
             return false
         }
     }

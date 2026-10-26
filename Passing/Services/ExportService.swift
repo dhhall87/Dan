@@ -50,8 +50,13 @@ extension ExportService {
         let folder = FileManager.default.temporaryDirectory
         let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
         let extensions = Set(ExportFormat.allCases.map(\.fileExtension))
-        for file in files where file.lastPathComponent.hasPrefix("Passing pins") && extensions.contains(file.pathExtension) {
-            try? FileManager.default.removeItem(at: file)
+        for file in files {
+            let name = file.lastPathComponent
+            let isPinExport = name.hasPrefix("Passing pins") && extensions.contains(file.pathExtension)
+            let isDriveLog = name.hasPrefix(DriveLog.exportPrefix) && file.pathExtension == "txt"
+            if isPinExport || isDriveLog {
+                try? FileManager.default.removeItem(at: file)
+            }
         }
     }
 }

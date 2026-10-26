@@ -21,6 +21,8 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
     @ObservationIgnored private var captureScreenVisible = false
     @ObservationIgnored private var isUpdating = false
     @ObservationIgnored private var waiters: [UUID: CheckedContinuation<CLLocation?, Never>] = [:]
+    /// For the drive log: when GPS was turned on, why ("screen" or "burst"), and readings since.
+    @ObservationIgnored private var session: (started: Date, reason: String, readings: Int)?
 
     var isAuthorized: Bool {
         authorization == .authorizedWhenInUse || authorization == .authorizedAlways
@@ -57,6 +59,8 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
     func setCaptureScreenVisible(_ visible: Bool) {
         captureScreenVisible = visible
         if visible {
+            // Already on for a Siri burst: from now on it's the capture screen's.
+            if isUpdating { session?.reason = "screen" }
             startUpdatesIfAuthorized()
         } else {
             stopIfIdle()
@@ -77,6 +81,7 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
         // is coming, so Siri and the widget don't wait the full time for nothing. Not asked yet is
         // different: the app may be showing the permission prompt right now.
         if isDenied || (isAuthorized && isPreciseLocationOff) {
+            DriveLog.record(DriveLogEntry(at: .now, kind: .noGPS, outcome: isDenied ? "denied" : "preciseOff"))
             return nil
         }
         if isUpdating {
@@ -84,8 +89,7 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
             manager.stopUpdatingLocation()
             manager.startUpdatingLocation()
         } else if isAuthorized {
-            manager.startUpdatingLocation()
-            isUpdating = true
+            startUpdates(reason: "burst")
         }
         let id = UUID()
         let fix = await withCheckedContinuation { continuation in
@@ -103,8 +107,13 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
 
     private func startUpdatesIfAuthorized() {
         guard captureScreenVisible, isAuthorized, !isUpdating else { return }
+        startUpdates(reason: "screen")
+    }
+
+    private func startUpdates(reason: String) {
         manager.startUpdatingLocation()
         isUpdating = true
+        session = (.now, reason, 0)
     }
 
     /// Stops GPS unless the capture screen is showing or a capture is still waiting for a fix.
@@ -117,6 +126,13 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
         guard isUpdating else { return }
         manager.stopUpdatingLocation()
         isUpdating = false
+        if let session {
+            DriveLog.record(DriveLogEntry(
+                at: .now, kind: .gps, outcome: session.reason,
+                seconds: Date.now.timeIntervalSince(session.started), count: session.readings
+            ))
+        }
+        session = nil
     }
 
     private func resolveWaiter(_ id: UUID, with fix: CLLocation?) {
@@ -130,16 +146,21 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
     }
 
     private func handle(_ locations: [CLLocation]) {
+        session?.readings += locations.count
         for location in locations where location.horizontalAccuracy >= 0 {
             if latestFix == nil || location.timestamp >= latestFix!.timestamp {
                 latestFix = location
             }
             // Only precise fixes go on the trail, so miles-back estimates don't zigzag.
-            if location.horizontalAccuracy <= FixPolicy.exactAccuracy {
-                breadcrumbs.add(
-                    TrailPoint(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude),
-                    at: location.timestamp
-                )
+            if location.horizontalAccuracy <= FixPolicy.exactAccuracy,
+               let restart = breadcrumbs.add(
+                   TrailPoint(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude),
+                   at: location.timestamp
+               ) {
+                DriveLog.record(DriveLogEntry(
+                    at: .now, kind: .trailRestart, outcome: restart.reason.rawValue, seconds: restart.seconds,
+                    trailMiles: restart.lostMeters / Geo.metersPerMile, meters: restart.meters
+                ))
             }
         }
         if let fix = freshFix() {
@@ -153,8 +174,7 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
             startUpdatesIfAuthorized()
             // Someone is waiting on a fix (e.g. the very first capture, made before permission was granted).
             if !waiters.isEmpty && !isUpdating {
-                manager.startUpdatingLocation()
-                isUpdating = true
+                startUpdates(reason: "burst")
             }
         } else if isDenied {
             stopUpdates()

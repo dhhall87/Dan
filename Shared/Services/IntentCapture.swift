@@ -20,6 +20,7 @@ enum IntentCapture {
         ask: Bool,
         askForLabel: () async throws -> String?
     ) async -> Pin? {
+        let started = Date.now
         let given = clean(label)
         let pin: Pin?
         if milesBack > 0 {
@@ -30,14 +31,20 @@ enum IntentCapture {
         }
         guard let pin else { return nil }
 
+        // For the drive log: how Siri's question went.
+        var question = given == nil ? "notAsked" : "labelGiven"
         if ask, given == nil {
             do {
                 let answer = try await askForLabel()
                 if let cleaned = clean(answer) {
                     service.setLabel(cleaned, on: pin)
+                    question = "answered"
+                } else {
+                    question = "nothing"
                 }
             } catch {
                 // Cancelled, timed out or failed: the pin stays saved, unlabeled.
+                question = "error-\(type(of: error))-\((error as NSError).code)"
             }
         }
 
@@ -46,6 +53,10 @@ enum IntentCapture {
         if !service.isSaved(pin) {
             service.retrySave()
         }
+        DriveLog.record(DriveLogEntry(
+            at: .now, kind: .intent, source: source.rawValue, outcome: question,
+            seconds: Date.now.timeIntervalSince(started), saved: service.isSaved(pin)
+        ))
         return pin
     }
 

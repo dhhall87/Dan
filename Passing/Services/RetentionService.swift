@@ -32,6 +32,7 @@ final class RetentionService {
             return Summary(deferred: true)
         }
         var summary = Summary()
+        let started = Date.now
 
         // Recently Deleted holds at most 30 days of deletions, so it's checked in full.
         let inRecentlyDeleted = FetchDescriptor<Pin>(predicate: #Predicate { $0.deletedAt != nil })
@@ -62,6 +63,11 @@ final class RetentionService {
 
         if summary.expired > 0 || summary.purged > 0 {
             save()
+        }
+        // Only runs that did something or took a while, since it runs every time Passing opens.
+        let took = Date.now.timeIntervalSince(started)
+        if summary.expired + summary.purged > 0 || took > 0.05 {
+            DriveLog.record(DriveLogEntry(at: .now, kind: .cleanUp, seconds: took, count: summary.expired + summary.purged))
         }
         return summary
     }

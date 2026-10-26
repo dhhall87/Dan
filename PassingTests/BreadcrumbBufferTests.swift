@@ -72,9 +72,22 @@ struct BreadcrumbBufferTests {
         // 400 m east in 20 s: plausible speed, but the road between is unknown.
         let east = 400 / (TestDrive.metersPerDegreeLatitude * cos(40 * .pi / 180))
         let last = buffer.points.last!
-        buffer.add(TrailPoint(latitude: last.latitude, longitude: last.longitude + east), at: end.addingTimeInterval(20))
+        let lost = buffer.length
+        let restart = buffer.add(TrailPoint(latitude: last.latitude, longitude: last.longitude + east), at: end.addingTimeInterval(20))
         #expect(buffer.points.count == 1)
         #expect(buffer.length == 0)
+        #expect(restart?.reason == .gap)
+        #expect(restart?.seconds == 20)
+        #expect(restart?.lostMeters == lost)
+    }
+
+    @Test func saysWhyTheTrailRestarted() {
+        var buffer = BreadcrumbBuffer()
+        let end = TestDrive.north(miles: 1, into: &buffer)
+        #expect(buffer.add(TrailPoint(latitude: 40, longitude: -75), at: end.addingTimeInterval(5))?.reason == .jump)
+        let later = end.addingTimeInterval(5 + BreadcrumbBuffer.maxGap + 1)
+        #expect(buffer.add(TrailPoint(latitude: 40, longitude: -75), at: later)?.reason == .longBreak)
+        #expect(buffer.add(TrailPoint(latitude: 40.0001, longitude: -75), at: later.addingTimeInterval(1)) == nil, "ordinary driving")
     }
 
     @Test func aShortGapKeepsTheTrail() {

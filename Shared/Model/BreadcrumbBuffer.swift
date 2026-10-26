@@ -29,24 +29,51 @@ struct BreadcrumbBuffer {
     private(set) var length: Double = 0
     private var lastFix: (point: TrailPoint, time: Date)?
 
-    mutating func add(_ point: TrailPoint, at timestamp: Date) {
+    /// Why the trail started again, for the drive log.
+    struct Restart: Equatable {
+        enum Reason: String {
+            /// Readings more than `maxJoin` apart: a turn could hide between them.
+            case gap
+            /// Faster than `maxPlausibleSpeed`: a GPS glitch.
+            case jump
+            /// No reading for more than `maxGap`.
+            case longBreak
+        }
+        var reason: Reason
+        var seconds: TimeInterval
+        var meters: Double
+        /// How much trail was dropped.
+        var lostMeters: Double
+    }
+
+    /// Adds a reading. Returns why the trail started again, if this reading made it.
+    @discardableResult
+    mutating func add(_ point: TrailPoint, at timestamp: Date) -> Restart? {
+        var restart: Restart?
         if let lastFix {
-            if timestamp < lastFix.time { return }
+            if timestamp < lastFix.time { return nil }
             let elapsed = timestamp.timeIntervalSince(lastFix.time)
             let apart = Geo.distance(lastFix.point, point)
-            let jumped = apart > Self.maxPlausibleSpeed * max(elapsed, 1)
-            if elapsed > Self.maxGap || jumped || apart > Self.maxJoin { reset() }
+            let reason: Restart.Reason? = elapsed > Self.maxGap ? .longBreak
+                : apart > Self.maxPlausibleSpeed * max(elapsed, 1) ? .jump
+                : apart > Self.maxJoin ? .gap
+                : nil
+            if let reason {
+                restart = Restart(reason: reason, seconds: elapsed, meters: apart, lostMeters: length)
+                reset()
+            }
         }
         lastFix = (point, timestamp)
         guard let last = points.last else {
             points = [point]
-            return
+            return restart
         }
         let step = Geo.distance(last, point)
-        guard step >= Self.sampleSpacing else { return }
+        guard step >= Self.sampleSpacing else { return restart }
         points.append(point)
         length += step
         trimToMaxLength()
+        return restart
     }
 
     mutating func reset() {

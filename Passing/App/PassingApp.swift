@@ -6,6 +6,7 @@ import UserNotifications
 @main
 struct PassingApp: App {
     init() {
+        LaunchClock.startedAt = .now
         // An export left behind if the app was closed while sharing it.
         ExportService.removeExportedFiles()
         // Set before launch finishes, so tapping a review reminder that launched Passing is handled.
@@ -22,6 +23,18 @@ struct PassingApp: App {
         .backgroundTask(.appRefresh(RetentionScheduler.taskIdentifier)) {
             await RetentionScheduler.handleAppRefresh()
         }
+    }
+}
+
+/// When Passing started, so the drive log can say how long it took to be ready. Cleared once logged.
+@MainActor
+enum LaunchClock {
+    static var startedAt: Date?
+
+    static func becameActive() {
+        guard let startedAt else { return }
+        self.startedAt = nil
+        DriveLog.record(DriveLogEntry(at: .now, kind: .opened, seconds: Date.now.timeIntervalSince(startedAt)))
     }
 }
 
@@ -138,6 +151,7 @@ struct RootView: View {
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
             case .active:
+                LaunchClock.becameActive()
                 // Again here, in case the window didn't exist yet when the setting was first applied.
                 appearance.apply()
                 modeChoice.cameBack(at: .now)

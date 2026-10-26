@@ -24,6 +24,8 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
     /// Set by the Stop button, so a session still asking its question doesn't go on to listen.
     @ObservationIgnored private var sessionStopped = false
     @ObservationIgnored private var listenTask: Task<Void, Never>?
+    /// When the current listen started, for the drive log.
+    @ObservationIgnored private var listenStartedAt = Date.distantPast
     @ObservationIgnored private var deactivateTask: Task<Void, Never>?
     @ObservationIgnored private var stopObserver: (any NSObjectProtocol)?
     @ObservationIgnored private var voicesObserver: (any NSObjectProtocol)?
@@ -221,6 +223,7 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         interruptSpeech()
         sessionStopped = false
         listeningPin = pin
+        listenStartedAt = .now
         ListeningSignal.setListening(true)
         WidgetCenter.shared.reloadAllTimelines()
 
@@ -250,6 +253,11 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
 
     private func finishListening(for pin: Pin, heard label: String?) {
         let stillCurrent = listeningPin === pin
+        DriveLog.record(DriveLogEntry(
+            at: .now, kind: .listen, source: pin.isNote ? "note" : pin.source.rawValue,
+            outcome: label != nil ? "heard" : sessionStopped ? "stopped" : "nothing",
+            seconds: Date.now.timeIntervalSince(listenStartedAt)
+        ))
         if stillCurrent {
             listeningPin = nil
             ListeningSignal.setListening(false)
