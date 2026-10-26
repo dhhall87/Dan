@@ -48,6 +48,9 @@ final class Pin {
     /// The Apple Maps Place ID of the business or landmark chosen from "What's here?", if any.
     /// Apple says Place IDs can be kept and used later. Added later, optional, so it migrates lightly.
     var placeID: String?
+    /// Free-text notes added while reviewing ("for sale, call after 5"), separate from the label.
+    /// Added later, optional, so it migrates lightly.
+    var notes: String?
 
     init(capturedAt: Date, side: Side, distance: Distance, source: CaptureSource) {
         self.capturedAt = capturedAt

@@ -20,6 +20,8 @@ struct PinRecord: Codable, Equatable {
     var targetSource: String
     var trail: Data?
     var label: String?
+    /// Notes added while reviewing.
+    var notes: String?
     var placeName: String?
     /// The name of the pin's group, if it's in one.
     var group: String?
@@ -74,7 +76,7 @@ enum PinExport {
     static let csvColumns = [
         "id", "capturedAt", "fixTimestamp", "latitude", "longitude", "horizontalAccuracy",
         "course", "courseReliable", "side", "distance", "milesBack",
-        "targetLatitude", "targetLongitude", "targetSource", "label", "placeName", "group", "source",
+        "targetLatitude", "targetLongitude", "targetSource", "label", "notes", "placeName", "group", "source",
         "isNote", "isReviewed", "isKept", "deletedAt", "appleMapsURL", "googleMapsURL",
     ]
 
@@ -92,7 +94,7 @@ enum PinExport {
                 number(pin.course), "\(pin.courseReliable)",
                 pin.side, pin.distance, "\(pin.milesBack)",
                 number(pin.targetLatitude), number(pin.targetLongitude), pin.targetSource,
-                pin.label ?? "", pin.placeName ?? "", pin.group ?? "", pin.source,
+                pin.label ?? "", pin.notes ?? "", pin.placeName ?? "", pin.group ?? "", pin.source,
                 "\(pin.isNote)", "\(pin.isReviewed)", "\(pin.isKept)", date(pin.deletedAt),
                 pin.appleMapsURL ?? "", pin.googleMapsURL ?? "",
             ]
@@ -176,6 +178,7 @@ enum PinExport {
                 ("Miles back", pin.milesBack > 0 ? Geo.milesText(pin.milesBack) : nil),
                 ("Place", pin.placeName),
                 ("Group", pin.group),
+                ("Notes", pin.notes.flatMap { $0.isEmpty ? nil : $0 }),
                 ("Accuracy", pin.horizontalAccuracy.map { "±\(Int($0.rounded())) m" }),
                 ("Apple Maps", pin.appleMapsURL),
             ]

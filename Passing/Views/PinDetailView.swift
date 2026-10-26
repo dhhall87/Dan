@@ -7,6 +7,7 @@ struct PinDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @AppStorage(SettingsKey.keepIndefinitely) private var keepIndefinitely = false
+    @AppStorage(SettingsKey.showsPinDetails) private var showsGPSDetails = false
     @Query(sort: PinGroup.displayOrder) private var groups: [PinGroup]
     @State private var lookAround: LookAroundState = .notRequested
     @State private var addingGroup = false
@@ -102,6 +103,18 @@ struct PinDetailView: View {
                 Toggle("Reviewed", isOn: $pin.isReviewed)
             }
 
+            // A note's text already is its note, so only pins get the extra field.
+            if !pin.isNote {
+                Section {
+                    TextField("Anything to remember about it", text: notesBinding, axis: .vertical)
+                        .lineLimit(3...12)
+                } header: {
+                    Text("Notes")
+                } footer: {
+                    Text("Included in exports.")
+                }
+            }
+
             if pin.lookUpCoordinate != nil {
                 Section {
                     switch lookAround {
@@ -160,27 +173,10 @@ struct PinDetailView: View {
                 if pin.lookUpCoordinate != nil {
                     LabeledContent("Town", value: pin.placeName ?? "Not looked up yet")
                 }
-                if let latitude = pin.latitude, let longitude = pin.longitude {
-                    LabeledContent("Coordinates", value: MapLinks.coordinateString(latitude: latitude, longitude: longitude))
-                        .textSelection(.enabled)
+                // Tucked away until wanted; open or closed, it stays that way for every pin.
+                DisclosureGroup("More Details", isExpanded: $showsGPSDetails) {
+                    gpsDetails
                 }
-                if pin.targetSource == .manual, let latitude = pin.targetLatitude, let longitude = pin.targetLongitude {
-                    LabeledContent("Moved to", value: MapLinks.coordinateString(latitude: latitude, longitude: longitude))
-                        .textSelection(.enabled)
-                }
-                if !pin.isNote {
-                    LabeledContent("Accuracy", value: PinFormat.accuracy(of: pin))
-                }
-                if let fixTimestamp = pin.fixTimestamp {
-                    LabeledContent("GPS fix", value: fixOffset(fixTimestamp))
-                }
-                if let speed = pin.speed {
-                    LabeledContent("Speed", value: "\(Int((speed * 2.236_94).rounded())) mph")
-                }
-                if pin.courseReliable, let course = pin.course {
-                    LabeledContent("Heading", value: "\(Int(course.rounded()))° \(Geo.compassName(for: course, short: true))")
-                }
-                LabeledContent("Saved from", value: pin.source.title)
             }
 
             Section {
@@ -246,10 +242,45 @@ struct PinDetailView: View {
     }
 
     /// Typing an empty label clears it back to "Unlabeled".
+    /// Coordinates, accuracy, the GPS fix, speed, heading and where it was saved from, under
+    /// "More Details".
+    @ViewBuilder
+    private var gpsDetails: some View {
+        if let latitude = pin.latitude, let longitude = pin.longitude {
+            LabeledContent("Coordinates", value: MapLinks.coordinateString(latitude: latitude, longitude: longitude))
+                .textSelection(.enabled)
+        }
+        if pin.targetSource == .manual, let latitude = pin.targetLatitude, let longitude = pin.targetLongitude {
+            LabeledContent("Moved to", value: MapLinks.coordinateString(latitude: latitude, longitude: longitude))
+                .textSelection(.enabled)
+        }
+        if !pin.isNote {
+            LabeledContent("Accuracy", value: PinFormat.accuracy(of: pin))
+        }
+        if let fixTimestamp = pin.fixTimestamp {
+            LabeledContent("GPS fix", value: fixOffset(fixTimestamp))
+        }
+        if let speed = pin.speed {
+            LabeledContent("Speed", value: "\(Int((speed * 2.236_94).rounded())) mph")
+        }
+        if pin.courseReliable, let course = pin.course {
+            LabeledContent("Heading", value: "\(Int(course.rounded()))° \(Geo.compassName(for: course, short: true))")
+        }
+        LabeledContent("Saved from", value: pin.source.title)
+    }
+
     private var labelBinding: Binding<String> {
         Binding(
             get: { pin.label ?? "" },
             set: { pin.label = $0.isEmpty ? nil : $0 }
+        )
+    }
+
+    /// Clearing the notes removes them.
+    private var notesBinding: Binding<String> {
+        Binding(
+            get: { pin.notes ?? "" },
+            set: { pin.notes = $0.isEmpty ? nil : $0 }
         )
     }
 

@@ -75,6 +75,7 @@ extension PinRecord {
             targetSource: pin.targetSource.rawValue,
             trail: pin.trail,
             label: pin.label,
+            notes: pin.notes,
             placeName: pin.placeName,
             group: pin.group?.name,
             source: pin.source.rawValue,

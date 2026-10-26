@@ -41,6 +41,9 @@ enum SettingsKey {
     static let deleteAfterExport = "deleteAfterExport"
     /// Ask Apple Maps for each pin's town. Off keeps pin locations entirely on the iPhone.
     static let lookUpPlaceNames = "lookUpPlaceNames"
+    /// A pin's screen shows its GPS details (coordinates, accuracy, fix, speed, heading, saved from).
+    /// Off by default; the choice is remembered for every pin.
+    static let showsPinDetails = "showsPinDetails"
     /// Debug builds only: pushes the retention clock forward this many days for testing.
     static let debugDayOffset = "debugDayOffset"
 }

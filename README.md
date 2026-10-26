@@ -22,7 +22,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Save first:** a tap writes the pin immediately with no label. If GPS has no usable fix yet, the pin is still saved, marked "No location", and picks up the first good fix within 15 seconds. An old position is never used.
 - **Approximate flag:** a pin is marked approximate when its total uncertainty is more than about 50 m: how far the car could have moved between the GPS reading and the tap (speed × time apart), combined with how precise the reading itself was. A parked car's older reading counts as exact. A reading that arrives more than 3 seconds after the tap is always approximate, because the car may have braked after passing the thing.
 - **Non-visual confirmation:** a haptic and a short tone. Spoken "Left, far, saved" is optional. Repeat taps within 0.75 s are ignored, and the screen stays awake.
-- **Review:** pins grouped by day. Each pin's detail screen has a map, editable label/side/distance, Reviewed, and Apple Maps / Google Maps links.
+- **Review:** pins grouped by day. Each pin's detail screen has a map, editable label/side/distance, a **Notes** field for anything else to remember (exports include it), Reviewed, and Apple Maps / Google Maps links. Coordinates, accuracy, the GPS fix, speed and where it was saved from are under **More Details**; open or close it once and every pin follows.
 
 **Retention and export (Milestone 2)**
 - **7-day expiry:** pins move to **Recently Deleted** 7 days after you pin them. Each pin's row counts down ("Expires in 3 days").

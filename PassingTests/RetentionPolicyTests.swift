@@ -87,6 +87,16 @@ struct PinExportTests {
         )
     }
 
+    @Test func notesGoInEveryFormat() throws {
+        var pin = record(label: "Red barn")
+        pin.notes = "For sale, call after 5"
+        #expect(PinExport.csv([pin]).contains(",\"For sale, call after 5\","), "quoted, because of the comma")
+        let decoded = try PinExport.decodeJSON(PinExport.json([pin], exportedAt: when))
+        #expect(decoded.pins.first?.notes == "For sale, call after 5")
+        let kml = PinExport.kml([pin], title: "Passing pins", exportedAt: when)
+        #expect(kml.contains("<Data name=\"Notes\"><value>For sale, call after 5</value></Data>"))
+    }
+
     @Test func csvHasAHeaderAndOneRowPerPin() {
         var pin = record()
         // Map links contain commas (so they get quoted); leave them out to count fields simply.
