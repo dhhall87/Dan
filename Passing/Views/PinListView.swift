@@ -56,6 +56,75 @@ struct PinListView: View {
     }
 
     var body: some View {
+        presented
+            .onChange(of: showsMap) {
+                // Back from the map, the list starts again at the top.
+                isScrolledDown = false
+            }
+            .onChange(of: isBusy, initial: true) {
+                holdsRefresh = isBusy
+            }
+            .onAppear {
+                // Catch up on anything that expired while this screen was closed.
+                RetentionService.shared.run()
+                refreshRecentlyDeletedCount()
+            }
+            .onChange(of: pins.count) {
+                refreshRecentlyDeletedCount()
+            }
+            .onChange(of: filter) {
+                selection = []
+            }
+            .onChange(of: needsReviewCount) {
+                needsReviewCountChanged()
+            }
+            .onChange(of: groups.map(\.id)) {
+                leaveDeletedGroup()
+            }
+            .task(id: pins.count) {
+                // Town names, a few at a time, for pins that don't have one yet.
+                await PlaceNameService.shared.fillMissing(in: pins)
+            }
+    }
+
+    // `body` is split into these pieces because as one long chain it was too much for the Swift
+    // compiler to type-check in reasonable time.
+
+    /// The list or map with its title and toolbar, plus the alerts and sheets it can show.
+    private var presented: some View {
+        titled
+            .alert("New Note", isPresented: $addingNote) {
+                TextField("What did you see?", text: $noteText)
+                Button("Save", action: saveNote)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Type it, or tap the microphone on the keyboard to dictate.")
+            }
+            .sheet(item: $exportFile) { file in
+                ShareSheet(items: [file.url]) { shared in
+                    ExportService.removeExportedFiles()
+                    if shared, deleteAfterExport {
+                        deleteExported(file.pinIDs)
+                    }
+                }
+                .presentationDetents([.medium, .large])
+                .ignoresSafeArea()
+            }
+            .sheet(isPresented: $managingGroups) {
+                GroupsView()
+            }
+            .sheet(item: $movingPin) { pin in
+                MovePinView(pin: pin)
+            }
+            .newGroupAlert(isPresented: newGroupShown, message: newGroupMessage, onCreate: fileNewGroup(for: newGroupFor))
+            .alert("Couldn't export pins", isPresented: exportErrorShown) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(exportError ?? "")
+            }
+    }
+
+    private var titled: some View {
         Group {
             if showsMap {
                 // A new map for each filter, so it zooms to fit the pins being shown.
@@ -68,119 +137,77 @@ struct PinListView: View {
         .navigationTitle(isSelecting ? selectionTitle : title)
         .navigationBarBackButtonHidden(isSelecting)
         .toolbar {
-            if isSelecting {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(allShownSelected ? "Deselect All" : "Select All") {
-                        selection = allShownSelected ? [] : Set(shownPins.map(\.id))
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        isSelecting = false
-                        selection = []
-                    }
-                    .fontWeight(.semibold)
-                }
-                ToolbarItemGroup(placement: .bottomBar) {
-                    bulkActions
-                }
-            } else {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button("Select") {
-                        showsMap = false
-                        selection = []
-                        isSelecting = true
-                    }
-                    .disabled(shownPins.isEmpty)
-                    Button {
-                        showsMap.toggle()
-                    } label: {
-                        Label(showsMap ? "List" : "Map", systemImage: showsMap ? "list.bullet" : "map")
-                    }
-                    groupMenu
-                    exportMenu
-                }
-                ToolbarItem(placement: .bottomBar) {
-                    Button {
-                        noteText = ""
-                        addingNote = true
-                    } label: {
-                        // Wider than the round toolbar buttons (about three or four of them), so
-                        // it's easy to find and reads as the main action here.
-                        HStack(spacing: 8) {
-                            Image(systemName: "square.and.pencil")
-                            Text("New Note")
-                        }
-                        .font(.body.weight(.semibold))
-                        .padding(.horizontal, 16)
-                        .frame(minWidth: 160)
-                    }
-                    .accessibilityLabel("New Note")
+            toolbarItems
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarItems: some ToolbarContent {
+        if isSelecting {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(allShownSelected ? "Deselect All" : "Select All") {
+                    selection = allShownSelected ? [] : Set(shownPins.map(\.id))
                 }
             }
-        }
-        .alert("New Note", isPresented: $addingNote) {
-            TextField("What did you see?", text: $noteText)
-            Button("Save", action: saveNote)
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Type it, or tap the microphone on the keyboard to dictate.")
-        }
-        .sheet(item: $exportFile) { file in
-            ShareSheet(items: [file.url]) { shared in
-                ExportService.removeExportedFiles()
-                if shared, deleteAfterExport {
-                    deleteExported(file.pinIDs)
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Done") {
+                    isSelecting = false
+                    selection = []
                 }
+                .fontWeight(.semibold)
             }
-            .presentationDetents([.medium, .large])
-            .ignoresSafeArea()
-        }
-        .sheet(isPresented: $managingGroups) {
-            GroupsView()
-        }
-        .sheet(item: $movingPin) { pin in
-            MovePinView(pin: pin)
-        }
-        .newGroupAlert(isPresented: newGroupShown, message: newGroupMessage, onCreate: fileNewGroup(for: newGroupFor))
-        .alert("Couldn't export pins", isPresented: exportErrorShown) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(exportError ?? "")
-        }
-        .onChange(of: showsMap) {
-            // Back from the map, the list starts again at the top.
-            isScrolledDown = false
-        }
-        .onChange(of: isBusy, initial: true) {
-            holdsRefresh = isBusy
-        }
-        .onAppear {
-            // Catch up on anything that expired while this screen was closed.
-            RetentionService.shared.run()
-            refreshRecentlyDeletedCount()
-        }
-        .onChange(of: pins.count) {
-            refreshRecentlyDeletedCount()
-        }
-        .onChange(of: filter) {
-            selection = []
-        }
-        .onChange(of: needsReviewCount) {
-            // Everything reviewed: no reminder should nag about it.
-            if needsReviewCount == 0 {
-                ReviewReminders.cancel()
+            ToolbarItemGroup(placement: .bottomBar) {
+                bulkActions
             }
-        }
-        .onChange(of: groups.map(\.id)) {
-            // The group being shown was deleted: go back to everything.
-            if case .group(let id) = filter, !groups.contains(where: { $0.id == id }) {
-                filter = .all
+        } else {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button("Select") {
+                    showsMap = false
+                    selection = []
+                    isSelecting = true
+                }
+                .disabled(shownPins.isEmpty)
+                Button {
+                    showsMap.toggle()
+                } label: {
+                    Label(showsMap ? "List" : "Map", systemImage: showsMap ? "list.bullet" : "map")
+                }
+                groupMenu
+                exportMenu
+            }
+            ToolbarItem(placement: .bottomBar) {
+                Button {
+                    noteText = ""
+                    addingNote = true
+                } label: {
+                    // Wider than the round toolbar buttons (about three or four of them), so
+                    // it's easy to find and reads as the main action here.
+                    HStack(spacing: 8) {
+                        Image(systemName: "square.and.pencil")
+                        Text("New Note")
+                    }
+                    .font(.body.weight(.semibold))
+                    .padding(.horizontal, 16)
+                    .frame(minWidth: 160)
+                }
+                .accessibilityLabel("New Note")
             }
         }
-        .task(id: pins.count) {
-            // Town names, a few at a time, for pins that don't have one yet.
-            await PlaceNameService.shared.fillMissing(in: pins)
+    }
+
+    /// Everything reviewed: no reminder should nag about it.
+    private func needsReviewCountChanged() {
+        if needsReviewCount == 0 {
+            ReviewReminders.cancel()
+        }
+    }
+
+    /// The group being shown was deleted: go back to everything.
+    private func leaveDeletedGroup() {
+        guard case .group(let id) = filter else { return }
+        let stillThere = groups.contains { $0.id == id }
+        if !stillThere {
+            filter = .all
         }
     }
 
