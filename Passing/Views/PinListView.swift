@@ -13,10 +13,11 @@ struct PinListView: View {
     @AppStorage(SettingsKey.deleteAfterExport) private var deleteAfterExport = false
     /// A plain count rather than a second live query: Recently Deleted has its own.
     @State private var recentlyDeletedCount = 0
-    @State private var filter: GroupFilter
+    /// Held by RootView, so it survives the list being rebuilt when a widget saves a pin.
+    @Binding var filter: GroupFilter
     @State private var showsMap = false
     @State private var managingGroups = false
-    @State private var isSelecting = false
+    @Binding var isSelecting: Bool
     @State private var selection = Set<UUID>()
     /// What a group made with "New Group…" is for: nothing yet, one pin, or the selected pins.
     @State private var newGroupFor: NewGroupFor?
@@ -33,9 +34,10 @@ struct PinListView: View {
     /// The pin "Move Pin…" (touch and hold) is moving.
     @State private var movingPin: Pin?
 
-    /// `filter` is where the list starts: All Pins, or Needs Review from a review reminder.
-    init(filter: GroupFilter = .all) {
-        self.filter = filter
+    /// `filter` is what the list shows: All Pins, or Needs Review from a review reminder.
+    init(filter: Binding<GroupFilter>, isSelecting: Binding<Bool>) {
+        _filter = filter
+        _isSelecting = isSelecting
     }
 
     var body: some View {

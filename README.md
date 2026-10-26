@@ -57,6 +57,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Pin Left or Right widget** (medium, for the Home Screen and medium Smart Stacks): a big left button and a big right button with arrows, and a **Passing** oval between them. The side buttons save the side (set the distance later in Pins if you like); the oval saves a pin with the side unknown. CarPlay only shows small widgets, so use the small ones there.
 - **Location:** when you add a widget, iOS asks whether Passing's widgets may use your location. Allow it, and Passing's location setting becomes "While Using the App or Widgets". Each widget tap saves the pin first, then waits up to 15 seconds for a GPS reading, as Siri does.
 - Repeat taps on the same widget button within 0.75 s count as one, as on the capture screen.
+- **Pins updates by itself:** if Pins is open on the phone while you tap a widget (say, in CarPlay), the new pin appears at the top as soon as it's saved. If you're in **Select**, it appears when you tap **Done**.
 
 **Review polish (Milestone 6)**
 - **Town names:** each pin picks up the town it was near ("Garden City, KS") from Apple Maps. It shows in the list row and on the pin's screen. Lookups happen only while you're looking at your pins and online, a few seconds apart, so capture never waits on them. Miles-back pins use the estimated spot.

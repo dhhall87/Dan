@@ -10,6 +10,8 @@ struct PassingApp: App {
         ExportService.removeExportedFiles()
         // Set before launch finishes, so tapping a review reminder that launched Passing is handled.
         UNUserNotificationCenter.current().delegate = ReviewReminderDelegate.shared
+        // Pins saved from a widget or Control Center while Passing is open show up in Pins straight away.
+        WidgetActivity.startObserving()
     }
 
     var body: some Scene {
@@ -44,6 +46,11 @@ struct RootView: View {
     /// Bumped to rebuild the pin list after the widget or Control Center saved pins.
     @State private var listRefresh = 0
     @State private var seenWidgetCapture = WidgetActivity.lastCaptureAt
+    /// Kept here rather than in the Pins list, so rebuilding the list for a widget pin keeps what
+    /// it was showing.
+    @State private var listFilter: GroupFilter = .all
+    /// While Select is on, rebuilding the list would drop the ticks, so the refresh waits.
+    @State private var listSelecting = false
     private let feedback = CaptureFeedback.shared
     private let reviewRoute = ReviewRoute.shared
 
@@ -64,6 +71,8 @@ struct RootView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Button {
+                            listFilter = .all
+                            listSelecting = false
                             path.append(Route.pins)
                         } label: {
                             Label("Pins", systemImage: "list.bullet")
@@ -86,8 +95,8 @@ struct RootView: View {
                 }
                 .navigationDestination(for: Route.self) { route in
                     switch route {
-                    case .pins: PinListView().id(listRefresh)
-                    case .needsReview: PinListView(filter: .needsReview).id(listRefresh)
+                    case .pins, .needsReview:
+                        PinListView(filter: $listFilter, isSelecting: $listSelecting).id(listRefresh)
                     case .recentlyDeleted: RecentlyDeletedView()
                     }
                 }
@@ -109,8 +118,19 @@ struct RootView: View {
             guard reviewRoute.openNeedsReview else { return }
             reviewRoute.openNeedsReview = false
             showingSettings = false
+            listFilter = .needsReview
+            listSelecting = false
             path = NavigationPath()
             path.append(Route.needsReview)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: WidgetActivity.pinSaved)) { _ in
+            refreshIfWidgetSaved()
+        }
+        .onChange(of: listSelecting) {
+            // A widget pin that arrived during Select shows up once Select is done.
+            if !listSelecting {
+                refreshIfWidgetSaved()
+            }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
@@ -147,7 +167,7 @@ struct RootView: View {
     /// reliably notice changes saved by another process. Rebuild the list when they've saved since we last looked.
     private func refreshIfWidgetSaved() {
         let latest = WidgetActivity.lastCaptureAt
-        guard latest != seenWidgetCapture else { return }
+        guard latest != seenWidgetCapture, !listSelecting else { return }
         seenWidgetCapture = latest
         listRefresh += 1
     }
