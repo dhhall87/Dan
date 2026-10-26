@@ -75,22 +75,9 @@ struct PinWidgetView: View {
                 StopListeningButton()
             } else if entry.isSetUp {
                 Button(intent: WidgetPinIntent(side: .unknown, distance: .unknown)) {
-                    let note = entry.savedNote(side: .unknown, distance: .unknown)
-                    VStack(spacing: 8) {
-                        if note == nil {
-                            // The app icon's pin, as on the phone's Simple screen.
-                            PinGlyph()
-                                .frame(width: 56, height: 56)
-                        } else {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 48, weight: .bold))
-                        }
-                        Text(note?.shortMessage ?? "Pin")
-                            .font(.system(.title2, design: .rounded, weight: .heavy))
-                    }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .contentShape(Rectangle())
+                    PinButtonFace(note: entry.savedNote(side: .unknown, distance: .unknown))
+                        // Greyed "Saving…" from the tap until the save (and its GPS wait) finishes.
+                        .invalidatableContent()
                 }
                 .buttonStyle(.plain)
             } else {
@@ -145,6 +132,34 @@ struct PinGridWidgetView: View {
     }
 }
 
+/// The single Pin button's face. The pin is saved the moment it's tapped, but WidgetKit only redraws
+/// the widget once the button's work is done, which includes waiting up to 15 seconds for a GPS
+/// reading. So from the tap until then it shows a greyed "Saving…" (WidgetKit marks the content
+/// `.invalidated` for that time), then a tick with "Saved" or "No location" for 5 seconds.
+private struct PinButtonFace: View {
+    let note: WidgetSavedNote?
+    @Environment(\.redactionReasons) private var redactionReasons
+
+    var body: some View {
+        let isSaving = redactionReasons.contains(.invalidated)
+        VStack(spacing: 8) {
+            if isSaving || note != nil {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 48, weight: .bold))
+            } else {
+                // The app icon's pin, as on the phone's Simple screen.
+                PinGlyph()
+                    .frame(width: 56, height: 56)
+            }
+            Text(isSaving ? "Saving…" : note?.shortMessage ?? "Pin")
+                .font(.system(.title2, design: .rounded, weight: .heavy))
+        }
+        .foregroundStyle(.white.opacity(isSaving ? 0.5 : 1))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+    }
+}
+
 private struct GridButton: View {
     let side: Side
     let distance: Distance
@@ -152,22 +167,39 @@ private struct GridButton: View {
 
     var body: some View {
         Button(intent: WidgetPinIntent(side: side, distance: distance)) {
-            VStack(spacing: 2) {
-                if let note {
-                    Image(systemName: "checkmark")
-                        .font(.title2.weight(.heavy))
-                    Text(note.shortMessage)
-                        .font(.caption2.weight(.bold))
-                } else {
-                    Text(title)
-                        .font(.headline.weight(.heavy))
-                }
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(ZoneFill(far: distance == .far, seed: (side == .left ? 0 : 2) + (distance == .far ? 0 : 1)).clipShape(ContainerRelativeShape()))
+            GridButtonFace(side: side, distance: distance, note: note)
+                // Greyed from the tap until the save finishes, then the tapped button shows a tick.
+                .invalidatableContent()
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// One grid button's face. WidgetKit doesn't say which button was tapped while it waits, so all four
+/// grey out together; once the save finishes, the tapped one shows the tick for 5 seconds.
+private struct GridButtonFace: View {
+    let side: Side
+    let distance: Distance
+    let note: WidgetSavedNote?
+    @Environment(\.redactionReasons) private var redactionReasons
+
+    var body: some View {
+        let isSaving = redactionReasons.contains(.invalidated)
+        VStack(spacing: 2) {
+            if let note {
+                Image(systemName: "checkmark")
+                    .font(.title2.weight(.heavy))
+                Text(note.shortMessage)
+                    .font(.caption2.weight(.bold))
+            } else {
+                Text(title)
+                    .font(.headline.weight(.heavy))
+            }
+        }
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(ZoneFill(far: distance == .far, seed: (side == .left ? 0 : 2) + (distance == .far ? 0 : 1)).clipShape(ContainerRelativeShape()))
+        .opacity(isSaving ? 0.45 : 1)
     }
 
     /// "← Far", "Near →": the arrow points to the side of the road.
@@ -225,6 +257,13 @@ private struct NotSetUpView: View {
 } timeline: {
     PinEntry(date: .now)
     PinEntry(date: .now, note: WidgetSavedNote(savedAt: .now, side: .unknown, distance: .unknown, hasLocation: true))
+}
+
+#Preview("Saving (just tapped)") {
+    PinButtonFace(note: nil)
+        .redacted(reason: .invalidated)
+        .frame(width: 170, height: 170)
+        .background(Color.quickSurface.softGradient)
 }
 
 #Preview("Pin by Side", as: .systemSmall) {

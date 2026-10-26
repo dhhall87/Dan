@@ -53,7 +53,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Pin by Side widget:** four buttons. The left column is the left side of the road and the right column the right side, as on the phone. The top row is far and the bottom row near, like looking up the road. Near is green and far is blue, as on the capture screen.
 - **CarPlay:** both widgets are small, so they can go on CarPlay's Widgets screen. On a touchscreen car, tapping a button saves a pin. Passing doesn't need its own CarPlay app for this.
 - **Control Center:** a **Pin That** control. It can also go on the Lock Screen, or on the Action Button on recent iPhones.
-- Widget and Control Center pins are **silent**: no tone, no voice. For about 5 seconds, the button you tapped shows a tick with "Saved", or "No location" if no GPS reading arrived. Labels get added later in Pins.
+- Widget and Control Center pins are **silent**: no tone, no voice. The moment you tap a widget button it greys out and says **Saving…** while Passing gets a GPS reading (usually a second or two, at most 15). Then the button you tapped shows a tick with "Saved", or "No location" if no GPS reading arrived, for 5 seconds. Labels get added later in Pins.
 - **Location:** when you add a widget, iOS asks whether Passing's widgets may use your location. Allow it, and Passing's location setting becomes "While Using the App or Widgets". Each widget tap saves the pin first, then waits up to 15 seconds for a GPS reading, as Siri does.
 - Repeat taps on the same widget button within 0.75 s count as one, as on the capture screen.
 

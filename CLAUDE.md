@@ -120,6 +120,7 @@ Dark, high contrast, no map, no clutter. Settings picks the layout Passing opens
 - WidgetKit `systemSmall` widget with `Button(intent:)` calling the capture intent. iOS 26 shows small widgets in CarPlay, and buttons work on touchscreen cars without a CarPlay app.
 - Two variants: a single "Pin" button, and a 2x2 side/distance grid (match the left/right logic of the phone layout).
 - Widget captures are silent (no voice prompt). Labels get added later.
+- **Tap feedback:** WidgetKit only redraws after `perform()` returns, and the widget intent waits up to 15 s for a GPS reading first. So the button faces use `.invalidatableContent()` and read `redactionReasons.contains(.invalidated)`: the single button shows a greyed tick with "Saving…" (the grid greys all four) from the tap until the redraw, then the tapped button shows a tick with "Saved" or "No location" for 5 s (`WidgetSavedNote`). Dan asked for this after the tick arrived too late on his phone.
 - Native CarPlay template app is out of scope unless Dan decides to publish. It would need the Driving Task entitlement from Apple, approval isn't guaranteed, and it would be limited to templates (grid of buttons, not the custom layout).
 
 ## Review screen
