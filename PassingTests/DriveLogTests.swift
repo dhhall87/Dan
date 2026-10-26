@@ -79,6 +79,18 @@ struct DriveLogTests {
         #expect(lines.contains("GPS on with the capture screen: 1 time, 15m 00s in all, longest 15m 00s"))
     }
 
+    @Test func listsEachVersionOnce() {
+        var first = entry(.opened, outcome: "1.0.1 (build 2)")
+        first.seconds = 0.8
+        var again = entry(.opened, after: 3_600, outcome: "1.0.1 (build 2)")
+        again.seconds = 0.6
+        var updated = entry(.opened, after: 86_400, outcome: "1.0.2 (build 3)")
+        updated.seconds = 0.7
+        let lines = DriveLogSummary.lines(for: [first, again, updated], timeZone: utc)
+        #expect(lines.contains("Versions: 1.0.1 (build 2), 1.0.2 (build 3)"))
+        #expect(AppVersion.text(version: "1.0.1", build: "2") == "1.0.1 (build 2)")
+    }
+
     @Test func emptyLogSaysSo() {
         #expect(DriveLogSummary.lines(for: []) == ["Nothing logged yet."])
     }

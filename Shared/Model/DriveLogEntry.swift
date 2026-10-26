@@ -30,7 +30,8 @@ struct DriveLogEntry: Codable, Equatable {
         case cleanUp
         /// One town-name request to Apple Maps (`outcome` found, noName or failed).
         case townLookup
-        /// Passing opened from scratch: `seconds` until it was on screen and active.
+        /// Passing opened from scratch: `seconds` until it was on screen and active, and `outcome`
+        /// the version running, so a log that spans an update shows which drives used which.
         case opened
     }
 
@@ -242,6 +243,13 @@ enum DriveLogSummary {
         let launches = of(.opened).compactMap(\.seconds)
         if !launches.isEmpty {
             lines.append("Opening Passing: \(DriveLogFormat.times(launches.count)), \(spread(launches))")
+        }
+        var versions: [String] = []
+        for version in of(.opened).compactMap(\.outcome) where !versions.contains(version) {
+            versions.append(version)
+        }
+        if !versions.isEmpty {
+            lines.append("Versions: \(versions.joined(separator: ", "))")
         }
 
         let lookups = of(.townLookup)

@@ -116,6 +116,10 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Listen after tap** (off by default) uses the microphone and speech recognition for a few seconds per tap.
 - **Maps and Look Around** are the heaviest screens for memory and data. Look Around loads only when you tap it.
 
+## Which version is installed
+
+Settings → About → **Version**, for example "1.0.1 (build 2)". Each update steps it (1.0.1, 1.0.2, …; 1.1 for a bigger batch), and the drive log notes the version each time Passing opens, so a shared log shows which drives used which version.
+
 ## Drive log (for real-drive feedback)
 
 Settings → Feedback → **Drive Log** → turn on **Keep a drive log**. From then on Passing notes how each drive went, on the iPhone only:

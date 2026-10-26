@@ -85,12 +85,10 @@ enum DriveLog {
         let stamp = DateFormatter()
         stamp.locale = Locale(identifier: "en_US_POSIX")
         stamp.dateFormat = "yyyy-MM-dd"
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
 
         var lines = [
             "Passing drive log",
-            "Exported \(now.formatted(date: .abbreviated, time: .shortened)) · Passing \(version) (\(build)) · \(ProcessInfo.processInfo.operatingSystemVersionString)",
+            "Exported \(now.formatted(date: .abbreviated, time: .shortened)) · Passing \(AppVersion.current) · \(ProcessInfo.processInfo.operatingSystemVersionString)",
             "Records timings, GPS accuracy and outcomes only: no locations, labels, notes or speeds.",
             "",
             "SUMMARY",

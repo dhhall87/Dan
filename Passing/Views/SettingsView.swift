@@ -227,6 +227,14 @@ struct SettingsView: View {
                 }
                 #endif
 
+                Section {
+                    LabeledContent("Version", value: AppVersion.current)
+                } header: {
+                    Text("About")
+                } footer: {
+                    Text("Goes up with every update (1.0.1, 1.0.2, …), so you can tell which one is installed. The drive log notes it each time Passing opens.")
+                }
+
                 if SharedStore.state == .appOnly {
                     Section {
                         Label("The App Group isn't set up, so pins are stored in the app's own space. The widgets and Control Center can't save pins here. See “Set up the App Group” in the README.", systemImage: "exclamationmark.triangle")

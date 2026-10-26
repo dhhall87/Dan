@@ -34,7 +34,7 @@ enum LaunchClock {
     static func becameActive() {
         guard let startedAt else { return }
         self.startedAt = nil
-        DriveLog.record(DriveLogEntry(at: .now, kind: .opened, seconds: Date.now.timeIntervalSince(startedAt)))
+        DriveLog.record(DriveLogEntry(at: .now, kind: .opened, outcome: AppVersion.current, seconds: Date.now.timeIntervalSince(startedAt)))
     }
 }
 
