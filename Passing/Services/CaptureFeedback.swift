@@ -346,7 +346,7 @@ private final class AudioWorker: @unchecked Sendable {
 
     /// Turns the session on, plays the tone if asked, then calls `activated` (on the queue).
     enum Mode {
-        /// Just the tone: mixes with music without interrupting it.
+        /// Just the tone: mixes with music without interrupting it, and is silenced by the Silent switch.
         case toneOnly
         /// Speech: other audio pauses, then resumes when Passing deactivates its session.
         case speechPausingOthers
@@ -355,12 +355,37 @@ private final class AudioWorker: @unchecked Sendable {
         /// Listen after tap: the microphone is on, and other audio pauses (or is lowered) so the
         /// recognizer hears the driver rather than the music.
         case listening(pausingOthers: Bool)
+
+        var isToneOnly: Bool {
+            if case .toneOnly = self { return true }
+            return false
+        }
+
+        var isListening: Bool {
+            if case .listening = self { return true }
+            return false
+        }
     }
 
     func activateAndPlay(tone: Bool, mode: Mode, activated: @escaping @Sendable () -> Void) {
         queue.async {
+            if tone, !mode.isListening, let tonePlayer = self.tonePlayer {
+                // The confirmation tone always plays in a session the Silent switch silences, so on
+                // silent a tap is haptic only (Dan's request). Speech, if any, starts once the tone
+                // has finished, in its own session.
+                Self.activateSession(.toneOnly)
+                tonePlayer.currentTime = 0
+                tonePlayer.play()
+                if mode.isToneOnly {
+                    activated()
+                    return
+                }
+                Thread.sleep(forTimeInterval: self.toneDuration)
+            }
             Self.activateSession(mode)
-            if tone, let tonePlayer = self.tonePlayer {
+            if tone, mode.isListening, let tonePlayer = self.tonePlayer {
+                // Listen after tap's chime is the cue to start talking, so it plays with the
+                // microphone session, like the question would.
                 tonePlayer.currentTime = 0
                 tonePlayer.play()
             }
@@ -384,16 +409,17 @@ private final class AudioWorker: @unchecked Sendable {
         }
     }
 
-    /// The tone mixes with whatever is playing and still plays with the ring switch on silent,
-    /// because the haptic is easy to miss with the phone in a dash mount. Speech either pauses
-    /// other audio (a non-mixing session interrupts it; deactivating with `notifyOthersOnDeactivation`
-    /// tells it to resume) or lowers it, depending on the driver's setting.
+    /// The tone mixes with whatever is playing, and the Silent switch silences it (`.ambient`), so on
+    /// silent a tap is haptic only. Spoken confirmation, which the driver turns on deliberately,
+    /// still speaks on silent, like directions in Maps. Speech either pauses other audio (a
+    /// non-mixing session interrupts it; deactivating with `notifyOthersOnDeactivation` tells it to
+    /// resume) or lowers it, depending on the driver's setting.
     private static func activateSession(_ mode: Mode) {
         let session = AVAudioSession.sharedInstance()
         do {
             switch mode {
             case .toneOnly:
-                try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+                try session.setCategory(.ambient, mode: .default, options: [])
             case .speechPausingOthers:
                 try session.setCategory(.playback, mode: .voicePrompt, options: [])
             case .speechLoweringOthers:

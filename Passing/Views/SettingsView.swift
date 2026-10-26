@@ -115,8 +115,8 @@ struct SettingsView: View {
                     Text("Confirmation")
                 } footer: {
                     Text(spokenConfirmation
-                         ? "Every pin gets a haptic. The tone plays even with the ring switch on silent. After each pin, Passing says one of your phrases, like “Left, far. Got it boss.” “+1 mi back” says the distance instead. Music and podcasts pause while Passing speaks and pick up again after, unless you turn that off (then they're just lowered)."
-                         : "Every pin gets a haptic. The tone plays even with the ring switch on silent. Turn on spoken confirmation to choose a voice and your own phrases.")
+                         ? "Every pin gets a haptic. The tone follows the Silent switch: on silent, a tap is haptic only, but Passing still speaks. After each pin, Passing says one of your phrases, like “Left, far. Got it boss.” “+1 mi back” says the distance instead. Music and podcasts pause while Passing speaks and pick up again after, unless you turn that off (then they're just lowered)."
+                         : "Every pin gets a haptic. The tone follows the Silent switch: on silent, a tap is haptic only. Turn on spoken confirmation to choose a voice and your own phrases.")
                 }
 
                 Section {
@@ -187,7 +187,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Privacy")
                 } footer: {
-                    Text("Pins, labels and groups stay on this iPhone. Passing has no account, no analytics and no server, and syncs nothing itself; pins are included in the iPhone's own backups, like any app's data.\n\n**Precise location** off keeps only roughly where each pin was (within about half a mile) and its general direction, with no speed and no route. Enough to find the town, not the exact spot. It applies to new pins; pins already saved keep their exact position.\n\n**Town names** are looked up by sending a pin's location to Apple Maps. Turn this off and pin locations never leave the iPhone, except for map pictures and Look Around when you open them.\n\nExports leave only when you share them. They never include speed (JSON does include the stretch of road on miles-back pins), and Passing deletes its copy afterwards. **Delete All Pins** erases every pin for good, including kept ones and Recently Deleted. Groups and your Work and Home places stay; delete those in Manage Groups and Review Reminders.")
+                    Text("Pins, labels, photos and groups stay on this iPhone. Passing has no account, no analytics and no server, and syncs nothing itself; pins are included in the iPhone's own backups, like any app's data.\n\n**Precise location** off keeps only roughly where each pin was (within about half a mile) and its general direction, with no speed and no route. Enough to find the town, not the exact spot. It applies to new pins; pins already saved keep their exact position.\n\n**Town names** are looked up by sending a pin's location to Apple Maps. Turn this off and pin locations never leave the iPhone, except for map pictures and Look Around when you open them.\n\nExports leave only when you share them. They never include speed (JSON does include the stretch of road on miles-back pins), and Passing deletes its copy afterwards. **Delete All Pins** erases every pin for good, including kept ones and Recently Deleted. Groups and your Work and Home places stay; delete those in Manage Groups and Review Reminders.")
                 }
 
                 Section {
@@ -268,7 +268,7 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Every pin is deleted for good, including kept pins and Recently Deleted. This can't be undone. Your groups stay.")
+                Text("Every pin and its photos are deleted for good, including kept pins and Recently Deleted. This can't be undone. Your groups stay.")
             }
             .onAppear {
                 // Permission can be taken away in iOS Settings; say so rather than silently not listening.

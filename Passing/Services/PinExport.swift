@@ -22,6 +22,8 @@ struct PinRecord: Codable, Equatable {
     var label: String?
     /// Notes added while reviewing.
     var notes: String?
+    /// How many photos the pin has. The photos themselves stay on the iPhone and aren't exported.
+    var photoCount: Int = 0
     var placeName: String?
     /// The name of the pin's group, if it's in one.
     var group: String?
@@ -76,7 +78,7 @@ enum PinExport {
     static let csvColumns = [
         "id", "capturedAt", "fixTimestamp", "latitude", "longitude", "horizontalAccuracy",
         "course", "courseReliable", "side", "distance", "milesBack",
-        "targetLatitude", "targetLongitude", "targetSource", "label", "notes", "placeName", "group", "source",
+        "targetLatitude", "targetLongitude", "targetSource", "label", "notes", "photos", "placeName", "group", "source",
         "isNote", "isReviewed", "isKept", "deletedAt", "appleMapsURL", "googleMapsURL",
     ]
 
@@ -94,7 +96,7 @@ enum PinExport {
                 number(pin.course), "\(pin.courseReliable)",
                 pin.side, pin.distance, "\(pin.milesBack)",
                 number(pin.targetLatitude), number(pin.targetLongitude), pin.targetSource,
-                pin.label ?? "", pin.notes ?? "", pin.placeName ?? "", pin.group ?? "", pin.source,
+                pin.label ?? "", pin.notes ?? "", "\(pin.photoCount)", pin.placeName ?? "", pin.group ?? "", pin.source,
                 "\(pin.isNote)", "\(pin.isReviewed)", "\(pin.isKept)", date(pin.deletedAt),
                 pin.appleMapsURL ?? "", pin.googleMapsURL ?? "",
             ]

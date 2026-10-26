@@ -2,7 +2,7 @@
 
 Capture things you pass while driving, then look them up later. One tap saves a pin, and identifying the thing happens afterwards. The full spec is in [CLAUDE.md](CLAUDE.md).
 
-**Status:** Milestones 1–7 are done. Routes (Milestone 8) and the Apple Watch app (Milestone 9) are built and waiting for their test runs, as is the refreshed capture screen (design option A, tuned for iOS 27 on an iPhone 16 Pro). See "Milestone 8 manual test checklist", "Milestone 9 manual test checklist" and "Design refresh checklist".
+**Status:** Milestones 1–7 are done. Routes (Milestone 8), the Apple Watch app (Milestone 9) and version 1.1's photos and Silent-switch tone are built and waiting for their test runs, as is the refreshed capture screen (design option A, tuned for iOS 27 on an iPhone 16 Pro). See the checklists for Milestone 8, Version 1.1, Milestone 9 and the design refresh.
 
 ## What it does so far
 
@@ -22,7 +22,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Save first:** a tap writes the pin immediately with no label. If GPS has no usable fix yet, the pin is still saved, marked "No location", and picks up the first good fix within 15 seconds. An old position is never used.
 - **Approximate flag:** a pin is marked approximate when its total uncertainty is more than about 50 m: how far the car could have moved between the GPS reading and the tap (speed × time apart), combined with how precise the reading itself was. A parked car's older reading counts as exact. A reading that arrives more than 3 seconds after the tap is always approximate, because the car may have braked after passing the thing.
 - **Non-visual confirmation:** a haptic and a short tone. Spoken "Left, far, saved" is optional. Repeat taps within 0.75 s are ignored. The screen dims and locks on your usual Auto-Lock schedule (GPS stops when it locks); Settings → **Keep screen on** keeps it lit for a dash mount.
-- **Review:** pins grouped by day. Each pin's detail screen has a map, editable label/side/distance, a **Notes** field for anything else to remember (exports include it), Reviewed, and Apple Maps / Google Maps links. Coordinates, accuracy, the GPS fix, speed and where it was saved from are under **More Details**; open or close it once and every pin follows.
+- **Review:** pins grouped by day. Each pin's detail screen has a map, editable label/side/distance, a **Notes** field for anything else to remember (exports include it), **Photos**, Reviewed, and Apple Maps / Google Maps links. Coordinates, accuracy, the GPS fix, speed and where it was saved from are under **More Details**; open or close it once and every pin follows.
 
 **Retention and export (Milestone 2)**
 - **7-day expiry:** pins move to **Recently Deleted** 7 days after you pin them. Each pin's row counts down ("Expires in 3 days").
@@ -59,6 +59,13 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - Repeat taps on the same widget button within 0.75 s count as one, as on the capture screen.
 - **Pins updates by itself:** if Pins is open on the phone while you tap a widget (say, in CarPlay), the new pin appears at the top as soon as it's saved. If you're busy in Pins (Select, the map, a note, an export, Move Pin, an open pin, or scrolled down to older pins), it waits and appears once you're done, so nothing you were doing gets reset.
 
+**Photos (1.1)**
+- On a pin's screen (or a note's), **Photos** → **Take Photo** opens the camera, and **Choose Photo** picks from your library (up to 6 per pin). Tap a photo to see it full screen and swipe between them; **Delete Photo** removes one.
+- Passing keeps a smaller copy of each (about 0.3–0.5 MB), without the photo's hidden location. The original in your library isn't touched.
+- Photos go when their pin does: after 7 days unless it's kept, with Recently Deleted, and with Delete All Pins. Exports say how many photos a pin has (`photos` in CSV, `photoCount` in JSON) but don't include them.
+- Pins with photos show a small photo icon in the list. Only while reviewing: there's no camera on the capture screen.
+- Camera permission is asked the first time you tap Take Photo. Choose Photo needs no permission.
+
 **Review polish (Milestone 6)**
 - **Town names:** each pin picks up the town it was near ("Garden City, KS") from Apple Maps. It shows in the list row and on the pin's screen. Lookups happen only while you're looking at your pins and online, a few seconds apart, so capture never waits on them. Miles-back pins use the estimated spot.
 - **Look Around:** tap **Show Look Around** on a pin's screen for Apple's street-level imagery of the spot, then tap the preview to look around. It loads only when you ask, needs the network, and rural roads often have no imagery.
@@ -86,7 +93,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 
 ## Privacy and footprint
 
-**What stays on the iPhone:** everything Passing saves. That means pins (where the car was, when, speed and direction, side and distance, label, town, group), the short stretch of road on miles-back pins, and settings. There's no account, analytics, ads or server, and Passing doesn't sync anything itself. Like any app's data, though, pins are part of your iPhone's own backups (iCloud Backup, or a backup to a computer). The App Store privacy label would be **Data Not Collected**. The App Store's required privacy declarations are in `Passing/Resources/PrivacyInfo.xcprivacy` and `PassingWidget/PrivacyInfo.xcprivacy`.
+**What stays on the iPhone:** everything Passing saves. That means pins (where the car was, when, speed and direction, side and distance, label, town, group, photos), the short stretch of road on miles-back pins, and settings. There's no account, analytics, ads or server, and Passing doesn't sync anything itself. Like any app's data, though, pins are part of your iPhone's own backups (iCloud Backup, or a backup to a computer). The App Store privacy label would be **Data Not Collected**. The App Store's required privacy declarations are in `Passing/Resources/PrivacyInfo.xcprivacy` and `PassingWidget/PrivacyInfo.xcprivacy`.
 
 **Your controls** (Settings):
 - **Precise location** (on by default). Off keeps only roughly where each pin was (within about half a mile) and its general direction: no speed and no miles-back route. Enough to find the town. It applies to the widgets and Control Center too. It only changes pins saved from then on: pins already saved keep their exact position (delete them if that matters).
@@ -111,7 +118,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 **With the iPhone locked:** the pin database uses iOS's standard protection (encrypted until you first unlock after a restart), so it can still be written while the phone is locked. Whether CarPlay widget buttons actually run with the iPhone locked is still to be checked in a car.
 
 **Footprint:**
-- **App size:** no bundled voices, maps or third-party code. The icon and tone are about 100 KB. A pin takes about 1 KB.
+- **App size:** no bundled voices, maps or third-party code. The icon and tone are about 100 KB. A pin takes about 1 KB, plus about 0.3–0.5 MB per photo you add.
 - **Battery:**
   - The capture screen is the main cost. It keeps the screen on and GPS running, and only while it's open.
   - Otherwise, GPS runs for a few seconds per Siri, widget or Control Center pin.
@@ -254,6 +261,18 @@ Plan a trip through pins you saved: Pins → **Select**, then tap pins in the or
 8. Select 12 pins (or 11 plus an address end): Google Maps shows **part 1 of 2** and **part 2 of 2**; part 2 starts where part 1 ends.
 9. Select a note and a "No location" pin with two real pins: the route has the two real pins and says 2 picked items have no location.
 
+## Version 1.1 checklist (photos and the Silent switch)
+
+1. **Silent switch:** turn on Silent mode (Action button or Control Center). Tap the capture screen: a haptic, no tone. Turn Silent off: the tone again. With music playing, the tone mixes in without pausing it.
+2. With **Spoken confirmation** on and Silent mode on: no tone, but Passing still speaks (and music pauses for it, then resumes). In CarPlay, check whether you hear the tone with Silent on, and tell me.
+3. **Take Photo** on a pin: iOS asks for camera permission the first time. Take one: it appears in the pin's Photos row. The list shows a photo icon on that pin.
+4. **Choose Photo:** pick 3 at once: they appear in the order you picked, a spinner while they're added.
+5. Tap a photo: full screen, swipe between them. **Delete Photo** → it's gone, the pin stays. Delete the last one: the viewer closes.
+6. Add photos until there are 6: Take Photo and Choose Photo turn grey, and the footer says to delete one first.
+7. Export CSV: the `photos` column shows each pin's count.
+8. Delete the pin, then **Delete Now** in Recently Deleted: its photos go too (Settings → iPhone Storage → Passing should drop back after a while).
+9. Settings → Privacy & Security → Camera → Passing off, then Take Photo: an alert offers Open Settings.
+
 ## Apple Watch (Milestone 9)
 
 Passing on Apple Watch saves a pin with the watch's own GPS, mostly for walks and sometimes in the car.
@@ -365,7 +384,7 @@ If the App Group is set up but its database won't open (rare; it could happen mi
 ## Decisions so far
 
 - **Fix freshness:** a reading up to 10 s old and within 200 m accuracy can be used. The numbers are in `WatchShared/FixPolicy.swift`, which the watch uses too.
-- **The tone plays even with the ring switch on silent**, because a haptic is easy to miss with the phone in a dash mount. It mixes with music rather than pausing it.
+- **The tone follows the Silent switch** (your call): on silent, a tap is haptic only. Spoken confirmation and listen after tap, which you turn on yourself, still speak on silent, like directions in Maps. The tone mixes with music rather than pausing it.
 - **Capture colors come from the app icon** (navy, verge green, deep blue, asphalt, pin yellow). Near and far differ in brightness as well as color, so they're easy to tell apart at a glance and for color-blind drivers, and nothing is glaring at night.
 - **Gradient capture buttons, not Liquid Glass.** Each zone is brightest near the top and darkens toward the bottom while staying green or blue (colors sampled from your mockup), with a subtle smoky variation, slightly darker side edges and a faint border. Each zone has its own fixed smoke pattern, so nothing moves or uses battery. The labels sit in the middle, where white text stands out.
 - **Still runs on iOS 26.** It's tuned for iOS 27 and the iPhone 16 Pro, but the minimum stays iOS 26, so iPhones that haven't updated can still install it. Nothing in the app needs iOS 27 yet.

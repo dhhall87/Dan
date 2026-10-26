@@ -115,9 +115,15 @@ final class RetentionService {
     /// for good. Groups stay (empty) and are deleted separately.
     @discardableResult
     func deleteAllPins() -> Int {
+        // Any photo that somehow lost its pin goes too, so "all" really is all.
+        let strays = (try? context.fetch(FetchDescriptor<PinPhoto>(predicate: #Predicate { $0.pin == nil }))) ?? []
         let pins = (try? context.fetch(FetchDescriptor<Pin>())) ?? []
         for pin in pins {
+            // Its photos go with it.
             context.delete(pin)
+        }
+        for photo in strays {
+            context.delete(photo)
         }
         save()
         return pins.count

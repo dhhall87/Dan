@@ -121,6 +121,8 @@ struct PinDetailView: View {
                 }
             }
 
+            PinPhotosSection(pin: pin)
+
             if pin.lookUpCoordinate != nil {
                 Section {
                     switch lookAround {

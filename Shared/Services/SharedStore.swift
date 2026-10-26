@@ -42,7 +42,7 @@ enum SharedStore {
     }()
 
     private static func open() -> (container: ModelContainer, state: State, tries: Int) {
-        let schema = Schema([Pin.self, PinGroup.self])
+        let schema = Schema([Pin.self, PinGroup.self, PinPhoto.self])
         if AppGroup.isAvailable, let identifier = AppGroup.identifier {
             let configuration = ModelConfiguration(
                 "Passing",

@@ -773,6 +773,11 @@ struct PinRow: View {
                         .foregroundStyle(.green)
                         .accessibilityLabel("Reviewed")
                 }
+                if pin.photoCount > 0 {
+                    Image(systemName: "photo")
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel(pin.photoCount == 1 ? "1 photo" : "\(pin.photoCount) photos")
+                }
             }
         }
         .padding(.vertical, 2)

@@ -51,6 +51,13 @@ final class Pin {
     /// Free-text notes added while reviewing ("for sale, call after 5"), separate from the label.
     /// Added later, optional, so it migrates lightly.
     var notes: String?
+    /// Photos added while reviewing. Deleting the pin for good deletes them too.
+    /// Added later, so it migrates lightly.
+    @Relationship(deleteRule: .cascade, inverse: \PinPhoto.pin)
+    var photos: [PinPhoto] = []
+    /// How many photos it has, kept beside them so the Pins list can show a photo icon without
+    /// loading any. Added later, with a default, so it migrates lightly.
+    var photoCount: Int = 0
 
     init(capturedAt: Date, side: Side, distance: Distance, source: CaptureSource) {
         self.capturedAt = capturedAt

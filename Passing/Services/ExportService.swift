@@ -81,6 +81,7 @@ extension PinRecord {
             trail: pin.trail,
             label: pin.label,
             notes: pin.notes,
+            photoCount: pin.photoCount,
             placeName: pin.placeName,
             group: pin.group?.name,
             source: pin.source.rawValue,

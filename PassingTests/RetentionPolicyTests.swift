@@ -97,6 +97,15 @@ struct PinExportTests {
         #expect(kml.contains("<Data name=\"Notes\"><value>For sale, call after 5</value></Data>"))
     }
 
+    @Test func exportsSayHowManyPhotosAPinHas() throws {
+        var pin = record(label: "House for sale")
+        pin.photoCount = 3
+        let column = try #require(PinExport.csvColumns.firstIndex(of: "photos"))
+        let row = PinExport.csv([pin]).components(separatedBy: "\r\n")[1]
+        #expect(row.split(separator: ",", omittingEmptySubsequences: false)[column] == "3")
+        #expect(try PinExport.decodeJSON(PinExport.json([pin], exportedAt: when)).pins.first?.photoCount == 3)
+    }
+
     @Test func csvHasAHeaderAndOneRowPerPin() {
         var pin = record()
         // Map links contain commas (so they get quoted); leave them out to count fields simply.
