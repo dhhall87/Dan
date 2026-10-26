@@ -49,8 +49,9 @@ struct RootView: View {
     /// Kept here rather than in the Pins list, so rebuilding the list for a widget pin keeps what
     /// it was showing.
     @State private var listFilter: GroupFilter = .all
-    /// While Select is on, rebuilding the list would drop the ticks, so the refresh waits.
-    @State private var listSelecting = false
+    /// True while the list has something open that a rebuild would close (Select, a sheet, an
+    /// alert, the map), so the refresh waits.
+    @State private var listBusy = false
     private let feedback = CaptureFeedback.shared
     private let reviewRoute = ReviewRoute.shared
 
@@ -72,7 +73,6 @@ struct RootView: View {
                     ToolbarItem(placement: .topBarLeading) {
                         Button {
                             listFilter = .all
-                            listSelecting = false
                             path.append(Route.pins)
                         } label: {
                             Label("Pins", systemImage: "list.bullet")
@@ -96,7 +96,7 @@ struct RootView: View {
                 .navigationDestination(for: Route.self) { route in
                     switch route {
                     case .pins, .needsReview:
-                        PinListView(filter: $listFilter, isSelecting: $listSelecting).id(listRefresh)
+                        PinListView(filter: $listFilter, holdsRefresh: $listBusy).id(listRefresh)
                     case .recentlyDeleted: RecentlyDeletedView()
                     }
                 }
@@ -119,18 +119,21 @@ struct RootView: View {
             reviewRoute.openNeedsReview = false
             showingSettings = false
             listFilter = .needsReview
-            listSelecting = false
             path = NavigationPath()
             path.append(Route.needsReview)
         }
         .onReceive(NotificationCenter.default.publisher(for: WidgetActivity.pinSaved)) { _ in
             refreshIfWidgetSaved()
         }
-        .onChange(of: listSelecting) {
-            // A widget pin that arrived during Select shows up once Select is done.
-            if !listSelecting {
+        .onChange(of: listBusy) {
+            // A widget pin that arrived during Select (or with a sheet open) shows up once it's done.
+            if !listBusy {
                 refreshIfWidgetSaved()
             }
+        }
+        .onChange(of: path.count) {
+            // Or once the pin opened on top of the list is closed.
+            refreshIfWidgetSaved()
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
@@ -167,9 +170,15 @@ struct RootView: View {
     /// reliably notice changes saved by another process. Rebuild the list when they've saved since we last looked.
     private func refreshIfWidgetSaved() {
         let latest = WidgetActivity.lastCaptureAt
-        guard latest != seenWidgetCapture, !listSelecting else { return }
+        guard latest != seenWidgetCapture, listCanRebuild else { return }
         seenWidgetCapture = latest
         listRefresh += 1
+    }
+
+    /// Rebuilding the list closes whatever is open in it, so it waits while the list is busy or has
+    /// a pin (or Recently Deleted) open on top. With the list closed there's nothing to interrupt.
+    private var listCanRebuild: Bool {
+        path.isEmpty || (path.count == 1 && !listBusy)
     }
 }
 

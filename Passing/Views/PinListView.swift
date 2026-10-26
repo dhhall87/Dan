@@ -15,9 +15,11 @@ struct PinListView: View {
     @State private var recentlyDeletedCount = 0
     /// Held by RootView, so it survives the list being rebuilt when a widget saves a pin.
     @Binding var filter: GroupFilter
+    /// Tells RootView when a rebuild for a widget pin would interrupt something here (see `isBusy`).
+    @Binding var holdsRefresh: Bool
     @State private var showsMap = false
     @State private var managingGroups = false
-    @Binding var isSelecting: Bool
+    @State private var isSelecting = false
     @State private var selection = Set<UUID>()
     /// What a group made with "New Group…" is for: nothing yet, one pin, or the selected pins.
     @State private var newGroupFor: NewGroupFor?
@@ -33,11 +35,20 @@ struct PinListView: View {
     @State private var noteText = ""
     /// The pin "Move Pin…" (touch and hold) is moving.
     @State private var movingPin: Pin?
+    @State private var isScrolledDown = false
 
     /// `filter` is what the list shows: All Pins, or Needs Review from a review reminder.
-    init(filter: Binding<GroupFilter>, isSelecting: Binding<Bool>) {
+    init(filter: Binding<GroupFilter>, holdsRefresh: Binding<Bool>) {
         _filter = filter
-        _isSelecting = isSelecting
+        _holdsRefresh = holdsRefresh
+    }
+
+    /// Something a rebuild of the list would close or reset: Select and its ticks, the scroll or map
+    /// position, the New Note text, an export or Move Pin sheet, or an alert. While it's true, a pin
+    /// saved by a widget waits to appear until it's done.
+    private var isBusy: Bool {
+        isSelecting || isScrolledDown || showsMap || addingNote || exportFile != nil || exportError != nil
+            || managingGroups || movingPin != nil || newGroupFor != nil
     }
 
     var body: some View {
@@ -133,6 +144,13 @@ struct PinListView: View {
         } message: {
             Text(exportError ?? "")
         }
+        .onChange(of: showsMap) {
+            // Back from the map, the list starts again at the top.
+            isScrolledDown = false
+        }
+        .onChange(of: isBusy, initial: true) {
+            holdsRefresh = isBusy
+        }
         .onAppear {
             // Catch up on anything that expired while this screen was closed.
             RetentionService.shared.run()
@@ -226,6 +244,12 @@ struct PinListView: View {
                      ? "Pins are kept until you delete them."
                      : "Pins move to Recently Deleted 7 days after you pin them. Swipe right to keep one.")
             }
+        }
+        // Scrolled down to older pins, a rebuild would jump back to the top, so it waits.
+        .onScrollGeometryChange(for: Bool.self) { geometry in
+            geometry.contentOffset.y + geometry.contentInsets.top > 40
+        } action: { _, scrolledDown in
+            isScrolledDown = scrolledDown
         }
     }
 
