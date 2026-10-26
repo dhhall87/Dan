@@ -29,9 +29,11 @@ enum Geo {
         )
     }
 
-    /// Eight-point compass name for a bearing in degrees (0 = north).
-    static func compassName(for bearing: Double) -> String {
-        let names = ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"]
+    /// Eight-point compass name for a bearing in degrees (0 = north): "southwest", or "SW" when `short`.
+    static func compassName(for bearing: Double, short: Bool = false) -> String {
+        let names = short
+            ? ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+            : ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"]
         let normalized = (bearing.truncatingRemainder(dividingBy: 360) + 360).truncatingRemainder(dividingBy: 360)
         return names[Int((normalized + 22.5) / 45) % 8]
     }

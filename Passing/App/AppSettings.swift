@@ -68,10 +68,6 @@ enum AppSettings {
         return defaults
     }()
 
-    static var captureMode: CaptureMode {
-        CaptureMode(rawValue: defaults.string(forKey: SettingsKey.captureMode) ?? "") ?? .quick
-    }
-
     static var confirmationTone: Bool { defaults.bool(forKey: SettingsKey.confirmationTone) }
 
     static var spokenConfirmation: Bool { defaults.bool(forKey: SettingsKey.spokenConfirmation) }

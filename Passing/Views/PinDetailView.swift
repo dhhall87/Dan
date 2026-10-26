@@ -155,7 +155,7 @@ struct PinDetailView: View {
                     LabeledContent("Speed", value: "\(Int((speed * 2.236_94).rounded())) mph")
                 }
                 if pin.courseReliable, let course = pin.course {
-                    LabeledContent("Heading", value: "\(Int(course.rounded()))° \(compassName(course))")
+                    LabeledContent("Heading", value: "\(Int(course.rounded()))° \(Geo.compassName(for: course, short: true))")
                 }
                 LabeledContent("Saved from", value: pin.source.title)
             }
@@ -227,11 +227,5 @@ struct PinDetailView: View {
         if abs(seconds) < 1 { return "At the moment you tapped" }
         let amount = String(format: "%.0f s", abs(seconds))
         return seconds < 0 ? "\(amount) before you tapped" : "\(amount) after you tapped"
-    }
-
-    private func compassName(_ bearing: Double) -> String {
-        let names = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-        let normalized = (bearing.truncatingRemainder(dividingBy: 360) + 360).truncatingRemainder(dividingBy: 360)
-        return names[Int((normalized + 22.5) / 45) % 8]
     }
 }

@@ -135,6 +135,8 @@ struct GeoTests {
     @Test func compassNames() {
         #expect(Geo.compassName(for: 0) == "north")
         #expect(Geo.compassName(for: 225) == "southwest")
+        #expect(Geo.compassName(for: 225, short: true) == "SW", "the pin screen's Heading row")
+        #expect(Geo.compassName(for: -10, short: true) == "N")
         #expect(Geo.compassName(for: 225 + 180) == "northeast")
         #expect(Geo.compassName(for: -90) == "west")
     }

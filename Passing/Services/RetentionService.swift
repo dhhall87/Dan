@@ -33,6 +33,7 @@ final class RetentionService {
         }
         var summary = Summary()
 
+        // Recently Deleted holds at most 30 days of deletions, so it's checked in full.
         let inRecentlyDeleted = FetchDescriptor<Pin>(predicate: #Predicate { $0.deletedAt != nil })
         for pin in (try? context.fetch(inRecentlyDeleted)) ?? [] {
             if let deletedAt = pin.deletedAt, RetentionPolicy.shouldPurge(deletedAt: deletedAt, now: now) {
@@ -42,8 +43,13 @@ final class RetentionService {
         }
 
         if !keepIndefinitely {
-            let activeUnkept = FetchDescriptor<Pin>(predicate: #Predicate { $0.deletedAt == nil && $0.isKept == false })
-            for pin in (try? context.fetch(activeUnkept)) ?? [] {
+            // Only pins at least 7 days old come back from the store, so this stays quick however
+            // many pins there are. The policy check below still has the final say.
+            let expireBefore = now.addingTimeInterval(-RetentionPolicy.activeLifetime)
+            let dueExpiry = FetchDescriptor<Pin>(predicate: #Predicate {
+                $0.deletedAt == nil && $0.isKept == false && $0.capturedAt <= expireBefore
+            })
+            for pin in (try? context.fetch(dueExpiry)) ?? [] {
                 if RetentionPolicy.shouldExpire(capturedAt: pin.capturedAt, isKept: pin.isKept, keepIndefinitely: keepIndefinitely, now: now) {
                     // Stamped with when it moved, not when it hit 7 days, so every pin gets its full
                     // 30 days in Recently Deleted, even after a long break or after turning off

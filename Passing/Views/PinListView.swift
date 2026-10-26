@@ -28,13 +28,13 @@ struct PinListView: View {
     }
     @State private var exportFile: ExportFile?
     @State private var exportError: String?
+    @State private var addingNote = false
+    @State private var noteText = ""
 
     /// `filter` is where the list starts: All Pins, or Needs Review from a review reminder.
     init(filter: GroupFilter = .all) {
         self.filter = filter
     }
-    @State private var addingNote = false
-    @State private var noteText = ""
 
     var body: some View {
         Group {
@@ -158,7 +158,8 @@ struct PinListView: View {
     // MARK: List
 
     private var list: some View {
-        List {
+        let sections = daySections
+        return List {
             if filter == .all, !isSelecting, needsReviewCount > 0 {
                 Section {
                     Button {
@@ -174,7 +175,7 @@ struct PinListView: View {
                     Text("Pins from the widget, CarPlay or Control Center that you haven't marked Reviewed yet.")
                 }
             }
-            if shownPins.isEmpty {
+            if sections.isEmpty {
                 if filter == .needsReview {
                     ContentUnavailableView(
                         "All caught up",
@@ -195,7 +196,7 @@ struct PinListView: View {
                     )
                 }
             }
-            ForEach(daySections) { section in
+            ForEach(sections) { section in
                 Section {
                     ForEach(section.pins) { pin in
                         row(for: pin)
