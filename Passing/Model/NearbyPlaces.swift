@@ -10,12 +10,19 @@ enum NearbyPlaces {
         }
     }
 
-    /// "Look farther" after a first search finds little.
-    static let widerRadius: Double = 2_000
+    /// "Look Farther": about a mile around the pin.
+    static let widerRadius: Double = 1_609
 
     /// At most this many places are listed, closest first: enough to find the one you passed,
-    /// short enough to scan.
-    static let maxShown = 5
+    /// short enough to scan (7, Dan's choice).
+    static let maxShown = 7
+    /// After Look Farther, a longer list (15, Dan's choice).
+    static let maxShownFarther = 15
+
+    /// How many places to list for a search this wide.
+    static func maxShown(radius: Double) -> Int {
+        radius >= widerRadius ? maxShownFarther : maxShown
+    }
 
     /// "Gas Station" from Apple's "MKPOICategoryGasStation"; nil for an unknown format.
     static func categoryTitle(fromRawValue raw: String) -> String? {

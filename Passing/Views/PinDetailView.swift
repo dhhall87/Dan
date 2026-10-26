@@ -278,7 +278,7 @@ struct PinDetailView: View {
     private var labelBinding: Binding<String> {
         Binding(
             get: { pin.label ?? "" },
-            set: { pin.label = $0.isEmpty ? nil : $0 }
+            set: { pin.applyReviewLabel($0.isEmpty ? nil : $0) }
         )
     }
 

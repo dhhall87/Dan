@@ -122,7 +122,7 @@ struct NearbyPlacesSection: View {
                     return (item, Geo.distance(here, TrailPoint(latitude: spot.latitude, longitude: spot.longitude)))
                 }
                 .sorted { $0.1 < $1.1 }
-                .prefix(NearbyPlaces.maxShown)
+                .prefix(NearbyPlaces.maxShown(radius: radius))
                 .enumerated()
                 .map { Found(id: $0.offset, item: $0.element.0, meters: $0.element.1) }
             state = places.isEmpty ? .nothing : .found(places)

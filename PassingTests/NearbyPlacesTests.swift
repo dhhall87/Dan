@@ -7,6 +7,13 @@ struct NearbyPlacesTests {
         #expect(NearbyPlaces.searchRadius(for: .near) < NearbyPlaces.searchRadius(for: .far))
         #expect(NearbyPlaces.searchRadius(for: .unknown) == NearbyPlaces.searchRadius(for: .far))
         #expect(NearbyPlaces.widerRadius > NearbyPlaces.searchRadius(for: .far))
+        #expect(abs(NearbyPlaces.widerRadius - 1_609) < 1, "about a mile")
+    }
+
+    @Test func lookingFartherListsMore() {
+        #expect(NearbyPlaces.maxShown(radius: NearbyPlaces.searchRadius(for: .near)) == 7)
+        #expect(NearbyPlaces.maxShown(radius: NearbyPlaces.searchRadius(for: .far)) == 7)
+        #expect(NearbyPlaces.maxShown(radius: NearbyPlaces.widerRadius) == 15)
     }
 
     @Test func categoryNamesReadNaturally() {

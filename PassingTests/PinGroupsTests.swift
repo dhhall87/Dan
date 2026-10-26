@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import SwiftData
 import Testing
@@ -87,6 +88,20 @@ struct PinGroupsTests {
         #expect(fromWidget.isReviewed && fromControl.isReviewed)
         #expect(!fromWidget.needsReview && !fromControl.needsReview)
         #expect(!fromPhone.isReviewed, "phone pins were never in Needs Review, so they're left as they were")
+    }
+
+    @Test func labellingANeedsReviewPinMarksItReviewed() {
+        let typed = pin("", source: .widget)
+        let matched = pin("", source: .control)
+        #expect(typed.needsReview && matched.needsReview)
+
+        typed.applyReviewLabel(nil)
+        #expect(typed.needsReview, "clearing the label isn't a review")
+        typed.applyReviewLabel("red barn")
+        #expect(typed.isReviewed && !typed.needsReview)
+
+        matched.choosePlace(name: "Joe's Diner", coordinate: .init(latitude: 37.71, longitude: -100.31), placeID: nil, town: nil)
+        #expect(matched.isReviewed && !matched.needsReview, "choosing a place in What's here? labels it too")
     }
 
     @Test func severalPinsMoveTogether() throws {

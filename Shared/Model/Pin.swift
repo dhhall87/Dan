@@ -130,12 +130,21 @@ extension Pin {
         placeID = nil
     }
 
+    /// A label typed or chosen while reviewing. Giving a Needs Review pin a label marks it Reviewed,
+    /// as filing it in a group does (Dan's request): someone has looked at it.
+    func applyReviewLabel(_ text: String?) {
+        label = text
+        if let text, !text.isEmpty, needsReview {
+            isReviewed = true
+        }
+    }
+
     /// "What's here?": this pin is that business or landmark. It takes the place's name as its label,
     /// moves to the place, and links to the place's own card in Apple Maps. The car's position stays.
     func choosePlace(name: String?, coordinate: CLLocationCoordinate2D, placeID: String?, town: String?) {
         moveTarget(to: coordinate)
         if let name, !name.isEmpty {
-            label = name
+            applyReviewLabel(name)
         }
         self.placeID = placeID
         placeName = town
