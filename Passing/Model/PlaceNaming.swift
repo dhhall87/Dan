@@ -11,4 +11,10 @@ enum PlaceNaming {
         }
         return nil
     }
+
+    /// Pins within about half a mile of each other share a town lookup, so a run of pins through one
+    /// town asks Apple once. Coordinates rounded to two decimals (~1 km squares).
+    static func cacheKey(latitude: Double, longitude: Double) -> String {
+        String(format: "%.2f,%.2f", latitude, longitude)
+    }
 }

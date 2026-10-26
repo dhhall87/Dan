@@ -48,6 +48,11 @@ struct GroupNamingTests {
 }
 
 struct PlaceNamingTests {
+    @Test func nearbyPinsShareATownLookup() {
+        #expect(PlaceNaming.cacheKey(latitude: 37.9712, longitude: -100.8731) == PlaceNaming.cacheKey(latitude: 37.9741, longitude: -100.8688))
+        #expect(PlaceNaming.cacheKey(latitude: 37.97, longitude: -100.87) != PlaceNaming.cacheKey(latitude: 38.05, longitude: -100.87))
+    }
+
     @Test func prefersTheTownWithContext() {
         #expect(PlaceNaming.name(cityWithContext: "Garden City, KS", cityName: "Garden City", fallback: "US-50") == "Garden City, KS")
     }

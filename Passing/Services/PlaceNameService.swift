@@ -18,6 +18,8 @@ final class PlaceNameService {
     private var inFlight: Set<UUID> = []
     /// Pins Apple had no name for. Skipped until the next launch.
     private var noName: Set<UUID> = []
+    /// Town names already looked up this launch, by `PlaceNaming.cacheKey`. Memory only.
+    private var known: [String: String] = [:]
 
     enum Outcome: Equatable {
         case found(String)
@@ -31,21 +33,34 @@ final class PlaceNameService {
         guard AppSettings.lookUpPlaceNames else { return }
         let todo = pins.filter { $0.needsPlaceName && !noName.contains($0.id) && !inFlight.contains($0.id) }
             .prefix(Self.maxPerPass)
-        for (index, pin) in todo.enumerated() {
-            if index > 0 {
-                try? await Task.sleep(for: Self.spacing)
-            }
+        var asked = false
+        for pin in todo {
             guard !Task.isCancelled else { return }
             guard pin.modelContext != nil, !pin.isDeleted, pin.needsPlaceName,
                   let coordinate = pin.lookUpCoordinate, !inFlight.contains(pin.id)
             else { continue }
 
+            // Same neighbourhood as a pin already looked up: no request needed.
+            let key = PlaceNaming.cacheKey(latitude: coordinate.latitude, longitude: coordinate.longitude)
+            if let name = known[key] {
+                pin.placeName = name
+                try? pin.modelContext?.save()
+                continue
+            }
+
+            // Only real requests are spaced out.
+            if asked {
+                try? await Task.sleep(for: Self.spacing)
+                guard !Task.isCancelled else { return }
+            }
+            asked = true
             inFlight.insert(pin.id)
             let outcome = await Self.lookUp(coordinate)
             inFlight.remove(pin.id)
 
             switch outcome {
             case .found(let name):
+                known[key] = name
                 guard pin.modelContext != nil, !pin.isDeleted else { continue }
                 pin.placeName = name
                 try? pin.modelContext?.save()
