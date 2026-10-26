@@ -57,12 +57,25 @@ enum IntentCapture {
             at: .now, kind: .intent, source: source.rawValue, outcome: question,
             seconds: Date.now.timeIntervalSince(started), saved: service.isSaved(pin)
         ))
+        // The request is about to finish, and iOS may suspend the process right after.
+        DriveLog.flush()
         return pin
     }
 
-    /// Siri's spoken reply. Short, because it's heard while driving.
-    static func dialog(for pin: Pin?, saved: Bool = true) -> String {
-        guard saved else { return "Sorry, I couldn't save that pin. Please try again." }
+    /// Siri's spoken reply, from what's actually on disk.
+    static func dialog(for pin: Pin?, service: CaptureService) -> String {
+        dialog(for: pin, state: pin.map { service.saveState(of: $0) } ?? .saved)
+    }
+
+    /// Siri's spoken reply. Short, because it's heard while driving. It never says "Saved" for
+    /// anything that's only in memory. A pin that didn't save stays pending and is written by the
+    /// next save that works, so it doesn't ask for another try (that would make a duplicate).
+    static func dialog(for pin: Pin?, state: CaptureService.SaveState) -> String {
+        switch state {
+        case .notSaved: return "Sorry, I couldn't save that pin."
+        case .changesPending: return "I saved the pin, but not all of its details. Check it in Passing later."
+        case .saved: break
+        }
         guard let pin else { return "Saved." }
         var text: String
         if pin.milesBack > 0 {

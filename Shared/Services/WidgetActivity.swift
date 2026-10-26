@@ -16,11 +16,16 @@ enum WidgetActivity {
 
     /// Called once a widget or Control Center capture has finished (location attached or given up).
     @MainActor
-    static func record(_ pin: Pin, saved: Bool = true, now: Date = .now) {
+    /// `state` decides the button's face: "Not saved" if the pin isn't on disk, and "No location"
+    /// if its position arrived but couldn't be written.
+    static func record(_ pin: Pin, state: CaptureService.SaveState = .saved, now: Date = .now) {
         guard let defaults = AppGroup.defaults else { return }
         defaults.set(now, forKey: lastCaptureKey)
         if pin.source == .widget {
-            let note = WidgetSavedNote(savedAt: now, side: pin.side, distance: pin.distance, hasLocation: pin.hasLocation, saved: saved)
+            let note = WidgetSavedNote(
+                savedAt: now, side: pin.side, distance: pin.distance,
+                hasLocation: pin.hasLocation && state == .saved, saved: state != .notSaved
+            )
             if let data = try? JSONEncoder().encode(note) {
                 defaults.set(data, forKey: noteKey)
             }

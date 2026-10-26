@@ -52,7 +52,7 @@ struct IntentCaptureTests {
         #expect(pinsSavedWhenAsked == 1, "the pin is saved before Siri asks")
         #expect(pin?.label == "red barn")
         #expect(pin?.source == .siri)
-        #expect(IntentCapture.dialog(for: pin) == "Saved “red barn”.")
+        #expect(IntentCapture.dialog(for: pin, service: capture) == "Saved “red barn”.")
     }
 
     @Test func cancellingTheQuestionKeepsThePin() async throws {
@@ -62,7 +62,7 @@ struct IntentCaptureTests {
         }
         #expect(try savedPins().count == 1)
         #expect(pin?.label == nil)
-        #expect(IntentCapture.dialog(for: pin) == "Saved.")
+        #expect(IntentCapture.dialog(for: pin, service: capture) == "Saved.")
     }
 
     @Test func aBlankAnswerLeavesThePinUnlabeled() async throws {
@@ -104,14 +104,14 @@ struct IntentCaptureTests {
         let capture = service(currentFix: nil, lateFix: fix(at: now.addingTimeInterval(2), speed: 0))
         let pin = await IntentCapture.run(service: capture, source: .siri, ask: false) { nil }
         #expect(pin?.hasLocation == true)
-        #expect(IntentCapture.dialog(for: pin) == "Saved.")
+        #expect(IntentCapture.dialog(for: pin, service: capture) == "Saved.")
     }
 
     @Test func saysSoWhenThereIsNoLocation() async throws {
         let capture = service(currentFix: nil, lateFix: nil)
         let pin = await IntentCapture.run(service: capture, source: .siri, ask: false) { nil }
         #expect(pin?.hasLocation == false)
-        #expect(IntentCapture.dialog(for: pin) == "Saved. I couldn't get your location, so it has the time only.")
+        #expect(IntentCapture.dialog(for: pin, service: capture) == "Saved. I couldn't get your location, so it has the time only.")
     }
 
     @Test func widgetButtonSavesItsSideAndDistanceAndWaitsForTheFix() async throws {
@@ -131,11 +131,44 @@ struct IntentCaptureTests {
         #expect(pin?.milesBack == 2)
         #expect(pin?.label == "diner")
         #expect(pin?.targetSource == .textOnly, "no trail in this test")
-        #expect(IntentCapture.dialog(for: pin) == "Saved, 2 miles back.")
+        #expect(IntentCapture.dialog(for: pin, service: capture) == "Saved, 2 miles back.")
     }
 
     @Test func neverSaysSavedWhenItWasNot() {
         let pin = Pin(capturedAt: now, side: .left, distance: .far, source: .siri)
-        #expect(IntentCapture.dialog(for: pin, saved: false) == "Sorry, I couldn't save that pin. Please try again.")
+        #expect(IntentCapture.dialog(for: pin, state: .notSaved) == "Sorry, I couldn't save that pin.")
+        #expect(IntentCapture.dialog(for: pin, state: .changesPending) == "I saved the pin, but not all of its details. Check it in Passing later.")
+    }
+
+    private struct DiskFull: Error {}
+
+    private final class Writes {
+        var allowed = 1
+    }
+
+    @Test func aLabelThatDidNotSaveIsNotReadBack() async throws {
+        // The pin's first write works; the label's write (and the retry) fail.
+        let writes = Writes()
+        let capture = CaptureService(
+            context: container.mainContext,
+            currentFix: { self.fix(at: self.now) },
+            lateFix: { nil },
+            trail: { BreadcrumbBuffer() },
+            confirm: { _ in },
+            persist: { context in
+                guard writes.allowed > 0 else { throw DiskFull() }
+                writes.allowed -= 1
+                try context.save()
+            }
+        )
+        let result = await IntentCapture.run(service: capture, source: .siri, ask: true) { "red barn" }
+        let pin = try #require(result)
+        #expect(capture.saveState(of: pin) == .changesPending)
+        #expect(IntentCapture.dialog(for: pin, service: capture) == "I saved the pin, but not all of its details. Check it in Passing later.")
+
+        // The next write that works saves the label too.
+        writes.allowed = 1
+        #expect(capture.retrySave())
+        #expect(capture.saveState(of: pin) == .saved)
     }
 }

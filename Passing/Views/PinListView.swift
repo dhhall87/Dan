@@ -33,6 +33,8 @@ struct PinListView: View {
     @State private var exportError: String?
     @State private var addingNote = false
     @State private var noteText = ""
+    /// The typed note couldn't be saved; its text is kept for Try Again.
+    @State private var noteSaveFailed = false
     /// The pin "Move Pin…" (touch and hold) is moving.
     @State private var movingPin: Pin?
     @State private var isScrolledDown = false
@@ -49,7 +51,7 @@ struct PinListView: View {
     private var isBusy: Bool {
         // Separate lines: one long chain of these is too slow for the Swift compiler to check.
         let inList: Bool = isSelecting || isScrolledDown || showsMap
-        let typing: Bool = addingNote || newGroupFor != nil
+        let typing: Bool = addingNote || noteSaveFailed || newGroupFor != nil
         let sheetOpen: Bool = exportFile != nil || exportError != nil
         let editing: Bool = managingGroups || movingPin != nil
         return inList || typing || sheetOpen || editing
@@ -117,6 +119,12 @@ struct PinListView: View {
                 MovePinView(pin: pin)
             }
             .newGroupAlert(isPresented: newGroupShown, message: newGroupMessage, onCreate: fileNewGroup(for: newGroupFor))
+            .alert("Couldn't save the note", isPresented: $noteSaveFailed) {
+                Button("Try Again") { addingNote = true }
+                Button("Cancel", role: .cancel) { noteText = "" }
+            } message: {
+                Text("Your text is still there. Try again in a moment.")
+            }
             .alert("Couldn't export pins", isPresented: exportErrorShown) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -590,9 +598,19 @@ struct PinListView: View {
     /// A typed (or keyboard-dictated) note, filed in the group being shown, if any.
     private func saveNote() {
         let text = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
-        noteText = ""
-        guard !text.isEmpty else { return }
+        guard !text.isEmpty else {
+            noteText = ""
+            return
+        }
         let note = CaptureService.shared.addNote(text)
+        guard CaptureService.shared.isSaved(note) else {
+            // Taken back, so it can't also be written later; the text stays for Try Again.
+            CaptureService.shared.discardUnsaved(note)
+            noteText = text
+            noteSaveFailed = true
+            return
+        }
+        noteText = ""
         if case .group = filter, let group = shownGroup {
             PinGroups.move(note, to: group, in: context)
         }

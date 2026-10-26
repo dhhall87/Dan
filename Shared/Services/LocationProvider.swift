@@ -47,9 +47,11 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
         isPreciseLocationOff = manager.accuracyAuthorization == .reducedAccuracy
     }
 
-    /// The latest fix if it passes `FixPolicy`, otherwise nil. Never a stale coordinate.
+    /// The latest fix if it passes `FixPolicy`, otherwise nil. Never a stale coordinate, and never
+    /// one from before location or iOS Precise Location was turned off.
     func freshFix(now: Date = .now) -> CLLocation? {
-        guard let fix = latestFix,
+        guard FixPolicy.permitsFixes(isDenied: isDenied, isReducedAccuracy: isPreciseLocationOff),
+              let fix = latestFix,
               FixPolicy.isUsable(fixTimestamp: fix.timestamp, horizontalAccuracy: fix.horizontalAccuracy, now: now)
         else { return nil }
         return fix
@@ -170,6 +172,11 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
 
     private func authorizationChanged(to status: CLAuthorizationStatus) {
         authorization = status
+        if !FixPolicy.permitsFixes(isDenied: isDenied, isReducedAccuracy: isPreciseLocationOff) {
+            // Readings from before the change aren't to be used any more, nor the trail made of them.
+            latestFix = nil
+            breadcrumbs.reset()
+        }
         if isAuthorized {
             startUpdatesIfAuthorized()
             // Someone is waiting on a fix (e.g. the very first capture, made before permission was granted).

@@ -15,6 +15,12 @@ struct FixPolicyTests {
         #expect(!FixPolicy.isUsable(fixTimestamp: tap, horizontalAccuracy: 8, now: tap.addingTimeInterval(3_600)))
     }
 
+    @Test func noFixOnceLocationOrPreciseLocationIsOff() {
+        #expect(FixPolicy.permitsFixes(isDenied: false, isReducedAccuracy: false))
+        #expect(!FixPolicy.permitsFixes(isDenied: true, isReducedAccuracy: false))
+        #expect(!FixPolicy.permitsFixes(isDenied: false, isReducedAccuracy: true))
+    }
+
     @Test func invalidOrVeryInaccurateFixIsNotUsable() {
         #expect(!FixPolicy.isUsable(fixTimestamp: tap, horizontalAccuracy: -1, now: tap))
         #expect(!FixPolicy.isUsable(fixTimestamp: tap, horizontalAccuracy: FixPolicy.maxAccuracy + 1, now: tap))

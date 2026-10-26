@@ -221,8 +221,8 @@ struct PinDetailView: View {
         guard let coordinate = pin.lookUpCoordinate else { return }
         let key = pin.lookUpKey
         let scene = try? await MKLookAroundSceneRequest(coordinate: coordinate).scene
-        // Moved while it loaded: this scene is for the old spot.
-        guard pin.lookUpKey == key else { return }
+        // Deleted for good, or moved, while it loaded: this scene isn't for this pin any more.
+        guard pin.modelContext != nil, !pin.isDeleted, pin.lookUpKey == key else { return }
         lookAround = scene.map(LookAroundState.ready) ?? .unavailable
     }
 

@@ -160,6 +160,7 @@ struct RootView: View {
                 updateReviewReminders()
             case .background:
                 modeChoice.wentToBackground(at: .now)
+                DriveLog.flush()
                 RetentionScheduler.schedule()
                 updateReviewReminders()
             default:

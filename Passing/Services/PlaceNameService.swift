@@ -21,8 +21,8 @@ final class PlaceNameService {
     private var noName: Set<String> = []
     /// Town names already looked up this launch, by `PlaceNaming.cacheKey`. Memory only.
     private var known: [String: String] = [:]
-    /// When the last real request went out, so requests from the list and a pin's screen together
-    /// are still spaced out.
+    /// When the latest real request went out, or is booked to go out, so requests from the list and
+    /// a pin's screen together stay spaced out.
     private var lastRequestAt: ContinuousClock.Instant?
 
     enum Outcome: Equatable {
@@ -59,19 +59,26 @@ final class PlaceNameService {
                 continue
             }
 
-            // Only real requests are spaced out.
+            // Only real requests are spaced out. The slot is reserved before waiting, so callers
+            // that arrive together (the list and a pin's screen) queue up instead of all waking at
+            // the same moment.
             inFlight.insert(spot)
             defer { inFlight.remove(spot) }
-            if let lastRequestAt {
-                let wait = Self.spacing - (ContinuousClock.now - lastRequestAt)
-                if wait > .zero {
-                    try? await Task.sleep(for: wait)
-                }
+            let now = ContinuousClock.now
+            let slot = lastRequestAt.map { max(now, $0 + Self.spacing) } ?? now
+            lastRequestAt = slot
+            if slot > now {
+                try? await Task.sleep(for: slot - now)
             }
             guard !Task.isCancelled, AppSettings.lookUpPlaceNames else { return }
             // Moved during the wait: the new spot gets its own lookup.
             guard isWaiting(pin, at: spot) else { continue }
-            lastRequestAt = .now
+            // Another lookup may have named this neighbourhood while this one waited.
+            if let name = known[key] {
+                pin.placeName = name
+                try? pin.modelContext?.save()
+                continue
+            }
             let asked = Date.now
             let outcome = await Self.lookUp(coordinate)
             DriveLog.record(DriveLogEntry(at: .now, kind: .townLookup, outcome: outcome.logName, seconds: Date.now.timeIntervalSince(asked)))

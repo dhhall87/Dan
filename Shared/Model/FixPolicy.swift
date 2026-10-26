@@ -26,6 +26,12 @@ enum FixPolicy {
     /// A pin saved before any usable fix keeps waiting this long for one.
     static let lateFixWindow: TimeInterval = 15
 
+    /// Whether current permissions allow using any fix. Once location is off, or iOS Precise
+    /// Location is off, not even a precise reading taken just before the change may be used.
+    static func permitsFixes(isDenied: Bool, isReducedAccuracy: Bool) -> Bool {
+        !isDenied && !isReducedAccuracy
+    }
+
     /// Whether a fix may be used as "where the car is right now".
     static func isUsable(fixTimestamp: Date, horizontalAccuracy: Double, now: Date) -> Bool {
         horizontalAccuracy >= 0

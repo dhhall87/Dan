@@ -113,8 +113,8 @@ struct NearbyPlacesSection: View {
         let request = MKLocalPointsOfInterestRequest(center: center, radius: min(radius, MKLocalPointsOfInterestRequest.maxRadius))
         do {
             let response = try await MKLocalSearch(request: request).start()
-            // Moved while searching: these results are for the old spot.
-            guard pin.lookUpKey == key else { return }
+            // Deleted for good, or moved, while searching: these results aren't for this pin any more.
+            guard isStill(at: key) else { return }
             let here = TrailPoint(latitude: center.latitude, longitude: center.longitude)
             let places = response.mapItems
                 .map { item in
@@ -127,10 +127,15 @@ struct NearbyPlacesSection: View {
                 .map { Found(id: $0.offset, item: $0.element.0, meters: $0.element.1) }
             state = places.isEmpty ? .nothing : .found(places)
         } catch {
-            guard pin.lookUpKey == key else { return }
+            guard isStill(at: key) else { return }
             // "Not found" just means Apple Maps has nothing listed there.
             state = (error as? MKError)?.code == .placemarkNotFound ? .nothing : .failed
         }
+    }
+
+    /// Still in the store (reading a pin deleted for good crashes) and still at the searched spot.
+    private func isStill(at key: String) -> Bool {
+        pin.modelContext != nil && !pin.isDeleted && pin.lookUpKey == key
     }
 
     private func choose(_ place: Found) {

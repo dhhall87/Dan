@@ -26,7 +26,7 @@ struct WidgetPinIntent: AppIntent {
     func perform() async throws -> some IntentResult {
         let pin = await IntentCapture.run(service: .shared, source: .widget, side: side, distance: distance, ask: false) { nil }
         if let pin {
-            WidgetActivity.record(pin, saved: CaptureService.shared.isSaved(pin))
+            WidgetActivity.record(pin, state: CaptureService.shared.saveState(of: pin))
         }
         // Returning makes WidgetKit reload the widget, which then shows the "Saved" tick.
         return .result()
@@ -58,7 +58,7 @@ struct ControlPinIntent: AppIntent {
     func perform() async throws -> some IntentResult {
         let pin = await IntentCapture.run(service: .shared, source: .control, ask: false) { nil }
         if let pin {
-            WidgetActivity.record(pin, saved: CaptureService.shared.isSaved(pin))
+            WidgetActivity.record(pin, state: CaptureService.shared.saveState(of: pin))
         }
         return .result()
     }

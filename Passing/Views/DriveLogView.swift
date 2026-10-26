@@ -80,11 +80,11 @@ struct DriveLogView: View {
         } message: {
             Text(exportError ?? "")
         }
-        .onAppear {
-            entries = DriveLog.load()
+        .task {
+            entries = await DriveLog.load()
         }
         .refreshable {
-            entries = DriveLog.load()
+            entries = await DriveLog.load()
         }
     }
 
@@ -93,10 +93,13 @@ struct DriveLogView: View {
     }
 
     private func share() {
-        do {
-            shareFile = try ExportFile(url: DriveLog.exportFile())
-        } catch {
-            exportError = error.localizedDescription
+        Task {
+            do {
+                let url = try await DriveLog.exportFile()
+                shareFile = ExportFile(url: url)
+            } catch {
+                exportError = error.localizedDescription
+            }
         }
     }
 }

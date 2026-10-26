@@ -229,6 +229,8 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
 
         let mode = AudioWorker.Mode.listening(pausingOthers: AppSettings.pauseAudioWhileSpeaking)
         let ask = AppSettings.askBeforeListening
+        // Read now, while the pin is certainly there: by the end it may have been deleted for good.
+        let about = ListenTarget(pin: pin, isNote: pin.isNote, source: pin.source)
         listenTask = Task { @MainActor in
             await previous?.value
             guard self.listeningPin === pin else { return }
@@ -243,18 +245,29 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
             // A short gap, so the microphone doesn't catch the end of the question or chime.
             try? await Task.sleep(for: .seconds(ask ? 0.15 : self.audio.toneDuration + 0.1))
             guard self.listeningPin === pin, !self.sessionStopped else {
-                self.finishListening(for: pin, heard: nil)
+                self.finishListening(about, heard: nil)
                 return
             }
             let label = await self.listener.listen()
-            self.finishListening(for: pin, heard: label)
+            self.finishListening(about, heard: label)
         }
     }
 
-    private func finishListening(for pin: Pin, heard label: String?) {
+    /// The pin being listened for, with what's needed from it read before listening began.
+    private struct ListenTarget {
+        let pin: Pin
+        let isNote: Bool
+        let source: CaptureSource
+    }
+
+    /// Ends a listen: always turns the Stop button off and puts the audio back, then labels the pin
+    /// if it's still in the store. (Delete All Pins could have removed it meanwhile, and reading a
+    /// deleted pin crashes.)
+    private func finishListening(_ target: ListenTarget, heard label: String?) {
+        let pin = target.pin
         let stillCurrent = listeningPin === pin
         DriveLog.record(DriveLogEntry(
-            at: .now, kind: .listen, source: pin.isNote ? "note" : pin.source.rawValue,
+            at: .now, kind: .listen, source: target.isNote ? "note" : target.source.rawValue,
             outcome: label != nil ? "heard" : sessionStopped ? "stopped" : "nothing",
             seconds: Date.now.timeIntervalSince(listenStartedAt)
         ))
@@ -263,16 +276,18 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
             ListeningSignal.setListening(false)
             WidgetCenter.shared.reloadAllTimelines()
         }
-        if label == nil, pin.isNote {
+        let pinExists = pin.modelContext != nil && !pin.isDeleted
+        if pinExists, label == nil, target.isNote {
             CaptureService.shared.discardEmptyNote(pin)
         }
-        if let label {
-            CaptureService.shared.setLabel(label, on: pin)
-            haptics.notificationOccurred(.success)
+        if pinExists, let label {
+            // Only read back what's actually saved.
+            let saved = CaptureService.shared.setLabel(label, on: pin)
+            haptics.notificationOccurred(saved ? .success : .error)
             if stillCurrent, AppSettings.spokenConfirmation {
                 // Read it back, so the driver knows what was heard without looking.
                 speechInProgress = true
-                speak(label, voiceIdentifier: AppSettings.voiceIdentifier)
+                speak(saved ? label : "Label not saved.", voiceIdentifier: AppSettings.voiceIdentifier)
                 return
             }
         }

@@ -450,5 +450,47 @@ struct CaptureServiceTests {
         let capture = failingService(store, confirmations: Confirmations())
         let note = capture.addNote("call the farm", now: tap)
         #expect(!capture.isSaved(note))
+        #expect(capture.saveState(of: note) == .notSaved)
+    }
+
+    @Test func aDiscardedNoteIsNotWrittenLater() throws {
+        // A typed note that didn't save is taken back (its text stays in the box), so trying again
+        // doesn't end up saving it twice.
+        let store = FlakyStore()
+        let capture = failingService(store, confirmations: Confirmations())
+        let note = capture.addNote("call the farm", now: tap)
+        capture.discardUnsaved(note)
+        store.failing = false
+        _ = capture.addNote("call the farm", now: tap.addingTimeInterval(5))
+        #expect(try savedPins().filter(\.isNote).count == 1)
+    }
+
+    @Test func aLabelOrFixThatDidNotSaveIsPending() async throws {
+        let store = FlakyStore()
+        store.failing = false
+        let capture = CaptureService(
+            context: container.mainContext,
+            currentFix: { nil },
+            lateFix: { self.fix(at: self.tap.addingTimeInterval(2), speed: 0) },
+            trail: { BreadcrumbBuffer() },
+            confirm: { _ in },
+            persist: { context in
+                if store.failing { throw DiskFull() }
+                try context.save()
+            }
+        )
+        let pin = try #require(capture.capture(side: .left, distance: .far, source: .widget, now: tap))
+        #expect(capture.saveState(of: pin) == .saved)
+
+        store.failing = true
+        #expect(!capture.setLabel("red barn", on: pin))
+        #expect(capture.saveState(of: pin) == .changesPending, "on disk, but its label isn't")
+
+        await capture.attachLateFix(to: pin)
+        #expect(capture.saveState(of: pin) == .changesPending, "nor its position")
+
+        store.failing = false
+        #expect(capture.retrySave())
+        #expect(capture.saveState(of: pin) == .saved)
     }
 }

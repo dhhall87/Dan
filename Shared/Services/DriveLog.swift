@@ -6,7 +6,8 @@ import Foundation
 ///
 /// Each process writes its own file (`DriveLog-app.jsonl`, `DriveLog-widget.jsonl`), one JSON
 /// entry per line, so the two never write to the same file at once. Each file keeps roughly its
-/// newest 2,500 entries.
+/// newest 2,500 entries. All file work happens on one serial background queue, in order, so the
+/// caller (often the main actor) never waits for the disk.
 enum DriveLog {
     /// In the App Group's shared settings, so the widget follows the switch.
     static let enabledKey = "driveLogOn"
@@ -24,15 +25,15 @@ enum DriveLog {
     private static let isTesting = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     private static let queue = DispatchQueue(label: "Passing.driveLog")
 
-    /// Adds an entry, if the log is on. Quick (one short line appended), and always called after
-    /// the thing it records, so it never delays a capture.
+    /// Adds an entry, if the log is on. Returns at once: the line is written in the background.
     static func record(_ entry: DriveLogEntry) {
         guard isOn, !isTesting, let url = file(for: process) else { return }
-        var entry = entry
-        entry.process = process
-        guard var line = try? encoder.encode(entry) else { return }
-        line.append(UInt8(ascii: "\n"))
-        queue.sync {
+        var copy = entry
+        copy.process = process
+        let stamped = copy
+        queue.async {
+            guard var line = try? encoder.encode(stamped) else { return }
+            line.append(UInt8(ascii: "\n"))
             do {
                 if FileManager.default.fileExists(atPath: url.path) {
                     if try append(line, to: url) > maxFileBytes {
@@ -47,27 +48,24 @@ enum DriveLog {
         }
     }
 
-    /// Both processes' entries, oldest first.
-    static func load() -> [DriveLogEntry] {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        var entries: [DriveLogEntry] = []
-        queue.sync {
-            for process in processes {
-                guard let url = file(for: process), let data = try? Data(contentsOf: url) else { continue }
-                for line in data.split(separator: UInt8(ascii: "\n")) {
-                    // A line from a newer version, or cut short, is skipped rather than failing the lot.
-                    if let entry = try? decoder.decode(DriveLogEntry.self, from: Data(line)) {
-                        entries.append(entry)
-                    }
-                }
+    /// Waits until every entry already recorded is on disk. For the moments iOS may suspend the
+    /// process soon after: the end of a Siri, widget or Control Center request, and Passing going
+    /// to the background. Only a few short appends at most.
+    static func flush() {
+        queue.sync {}
+    }
+
+    /// Both processes' entries, oldest first. Read in the background.
+    static func load() async -> [DriveLogEntry] {
+        await withCheckedContinuation { continuation in
+            queue.async {
+                continuation.resume(returning: readAll())
             }
         }
-        return entries.sorted { $0.at < $1.at }
     }
 
     static func clear() {
-        queue.sync {
+        queue.async {
             for process in processes {
                 if let url = file(for: process) {
                     try? FileManager.default.removeItem(at: url)
@@ -80,8 +78,37 @@ enum DriveLog {
     static let exportPrefix = "Passing drive log"
 
     /// A text file to share: what was and wasn't recorded, the summary, then every entry.
-    static func exportFile(now: Date = .now) throws -> URL {
-        let entries = load()
+    /// Made in the background.
+    static func exportFile(now: Date = .now) async throws -> URL {
+        try await withCheckedThrowingContinuation { continuation in
+            queue.async {
+                continuation.resume(with: Result { try makeExportFile(now: now) })
+            }
+        }
+    }
+
+    // MARK: Private
+
+    /// Runs on `queue`.
+    private static func readAll() -> [DriveLogEntry] {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        var entries: [DriveLogEntry] = []
+        for process in processes {
+            guard let url = file(for: process), let data = try? Data(contentsOf: url) else { continue }
+            for line in data.split(separator: UInt8(ascii: "\n")) {
+                // A line from a newer version, or cut short, is skipped rather than failing the lot.
+                if let entry = try? decoder.decode(DriveLogEntry.self, from: Data(line)) {
+                    entries.append(entry)
+                }
+            }
+        }
+        return entries.sorted { $0.at < $1.at }
+    }
+
+    /// Runs on `queue`.
+    private static func makeExportFile(now: Date) throws -> URL {
+        let entries = readAll()
         let stamp = DateFormatter()
         stamp.locale = Locale(identifier: "en_US_POSIX")
         stamp.dateFormat = "yyyy-MM-dd"
@@ -101,8 +128,6 @@ enum DriveLog {
         try (lines.joined(separator: "\n") + "\n").write(to: url, atomically: true, encoding: .utf8)
         return url
     }
-
-    // MARK: Private
 
     private static var encoder: JSONEncoder {
         let encoder = JSONEncoder()

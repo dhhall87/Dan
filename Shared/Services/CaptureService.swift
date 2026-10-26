@@ -28,8 +28,10 @@ final class CaptureService {
     private let failed: @MainActor (Pin) -> Void
     /// Writes the context to disk. Injectable so tests can make it fail.
     private let persistStore: @MainActor (ModelContext) throws -> Void
-    /// Pins whose save hasn't succeeded yet. Any later successful save writes them too.
+    /// Pins whose first save hasn't succeeded yet. Any later successful save writes them too.
     private var unsavedPinIDs: Set<UUID> = []
+    /// Pins that are on disk, but whose later change (a label, a late GPS fix, a bump) isn't yet.
+    private var unsavedChangeIDs: Set<UUID> = []
     private var debouncer = TapDebouncer<String>(interval: 0.75)
     /// The miles-back pin that further "+1" taps will bump, with the trail and the car's exact
     /// position as they were at the first tap (in memory only, even with precise location off).
@@ -60,16 +62,41 @@ final class CaptureService {
         self.persistStore = persist
     }
 
-    /// Whether this pin has been written to disk. Success feedback (the tone, Siri's "Saved", the
-    /// widget's green tick) depends on this, never just on the pin existing in memory.
+    enum SaveState: Equatable {
+        /// The pin and every change to it are on disk.
+        case saved
+        /// The pin is on disk, but a later change (its label, a late GPS fix) isn't yet.
+        case changesPending
+        /// The pin itself isn't on disk yet.
+        case notSaved
+    }
+
+    /// Success feedback (the tone, Siri's "Saved", the widget's green tick) depends on this, never
+    /// just on the pin existing in memory. Unsaved pins and changes stay in memory, and the next
+    /// save that works writes them too, so nothing is dropped.
+    func saveState(of pin: Pin) -> SaveState {
+        if unsavedPinIDs.contains(pin.id) { return .notSaved }
+        if unsavedChangeIDs.contains(pin.id) { return .changesPending }
+        return .saved
+    }
+
+    /// Whether the pin and all its changes are on disk.
     func isSaved(_ pin: Pin) -> Bool {
-        !unsavedPinIDs.contains(pin.id)
+        saveState(of: pin) == .saved
     }
 
     /// Tries the write again, for an intent that's about to report back. True if everything is saved.
     @discardableResult
     func retrySave() -> Bool {
-        unsavedPinIDs.isEmpty || persist()
+        (unsavedPinIDs.isEmpty && unsavedChangeIDs.isEmpty) || persist()
+    }
+
+    /// Takes back a pin whose first save failed, so it isn't written later. For a typed note, whose
+    /// text stays in the New Note box to try again: otherwise the retry would save it twice.
+    func discardUnsaved(_ pin: Pin) {
+        guard pin.modelContext != nil, !pin.isDeleted, unsavedPinIDs.contains(pin.id) else { return }
+        unsavedPinIDs.remove(pin.id)
+        context.delete(pin)
     }
 
     /// Saves a pin now. Taps in the app get the haptic and tone; Siri and shortcuts confirm out loud
@@ -108,11 +135,10 @@ final class CaptureService {
                 pin.coarsenLocation()
             }
             bump?.lastTap = now
-            let saved = persist()
+            let saved = persistChange(to: pin)
             if saved {
                 confirm(pin)
             } else {
-                unsavedPinIDs.insert(pin.id)
                 failed(pin)
             }
             var entry = DriveLogEntry(at: .now, kind: .bump, source: pin.source.rawValue, outcome: pin.targetSource.rawValue, saved: saved, miles: pin.milesBack)
@@ -162,16 +188,21 @@ final class CaptureService {
 
     /// Removes a spoken note that ended up with nothing said, so no empty notes pile up.
     func discardEmptyNote(_ note: Pin) {
-        guard note.isNote, note.label?.isEmpty ?? true, note.modelContext != nil else { return }
+        // Still in the store first: reading a pin that was deleted for good crashes.
+        guard note.modelContext != nil, !note.isDeleted, note.isNote, note.label?.isEmpty ?? true else { return }
+        unsavedPinIDs.remove(note.id)
+        unsavedChangeIDs.remove(note.id)
         context.delete(note)
         persist()
     }
 
     /// Adds or replaces a pin's label (e.g. Siri's answer to "What did you see?").
-    func setLabel(_ label: String?, on pin: Pin) {
-        guard pin.modelContext != nil, !pin.isDeleted else { return }
+    /// - Returns: whether the label is on disk, so nothing reads back a label that isn't saved.
+    @discardableResult
+    func setLabel(_ label: String?, on pin: Pin) -> Bool {
+        guard pin.modelContext != nil, !pin.isDeleted else { return false }
         pin.label = label
-        persist()
+        return persistChange(to: pin)
     }
 
     /// Waits until a pin that was saved without a location has picked one up or given up.
@@ -212,7 +243,7 @@ final class CaptureService {
         if !isPrecise() {
             pin.coarsenLocation()
         }
-        entry.saved = persist()
+        entry.saved = persistChange(to: pin)
         entry.outcome = "attached"
         entry.add(fixOf: pin)
     }
@@ -276,12 +307,23 @@ final class CaptureService {
         }
     }
 
-    /// Saves everything pending. A success also covers any pin whose own save failed earlier.
+    /// Saves a change to a pin that may already be on disk. If the write fails, the pin is marked as
+    /// having a change pending (or stays marked unsaved, if its first save never worked).
+    private func persistChange(to pin: Pin) -> Bool {
+        let saved = persist()
+        if !saved, !unsavedPinIDs.contains(pin.id) {
+            unsavedChangeIDs.insert(pin.id)
+        }
+        return saved
+    }
+
+    /// Saves everything pending. A success also covers any pin or change whose save failed earlier.
     @discardableResult
     private func persist() -> Bool {
         do {
             try persistStore(context)
             unsavedPinIDs.removeAll()
+            unsavedChangeIDs.removeAll()
             return true
         } catch {
             print("Passing: save failed: \(error)")
