@@ -10,6 +10,6 @@
 	<key>NSWidgetWantsLocation</key>
 	<true/>
 	<key>PassingAppGroup</key>
-	<string>group.com.example.passing</string>
+	<string>group.com.danhall.passing</string>
 </dict>
 </plist>

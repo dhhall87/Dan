@@ -13,7 +13,7 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Passing saves where your car is when you tap the capture screen, a Passing widget or Control Center, or ask Siri, so you can look up what you passed later. Location is only used for those captures and while the capture screen is open.</string>
 	<key>PassingAppGroup</key>
-	<string>group.com.example.passing</string>
+	<string>group.com.danhall.passing</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

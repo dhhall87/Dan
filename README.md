@@ -267,7 +267,7 @@ The Simulator uses your Mac's microphone. It usually has no on-device speech mod
 
 ## Set up the App Group (needed for your own iPhone)
 
-The project ships with the App Group `group.com.example.passing`. To run on your phone, the bundle IDs and App Group have to be yours. There are two targets to change, the app and the widget:
+The Info.plist files already use the App Group `group.com.danhall.passing`; the entitlements and bundle IDs still ship with `com.example` values. To run on your phone, the bundle IDs and App Group have to be yours. There are two targets to change, the app and the widget:
 
 1. In Xcode, click the blue **Passing** project at the top of the file list, then the **Passing** target, then **Signing & Capabilities**.
 2. **Team:** choose your team.
