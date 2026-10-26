@@ -45,6 +45,9 @@ final class Pin {
     /// A text note rather than a place: no location is recorded, and `label` holds the text.
     /// Added later, with a default, so the store migrates lightly.
     var isNote: Bool = false
+    /// The Apple Maps Place ID of the business or landmark chosen from "What's here?", if any.
+    /// Apple says Place IDs can be kept and used later. Added later, optional, so it migrates lightly.
+    var placeID: String?
 
     init(capturedAt: Date, side: Side, distance: Distance, source: CaptureSource) {
         self.capturedAt = capturedAt
@@ -113,6 +116,19 @@ extension Pin {
         targetLongitude = coordinate.longitude
         targetSource = .manual
         placeName = nil
+        // Moved by hand, so it's no longer that place.
+        placeID = nil
+    }
+
+    /// "What's here?": this pin is that business or landmark. It takes the place's name as its label,
+    /// moves to the place, and links to the place's own card in Apple Maps. The car's position stays.
+    func choosePlace(name: String?, coordinate: CLLocationCoordinate2D, placeID: String?, town: String?) {
+        moveTarget(to: coordinate)
+        if let name, !name.isEmpty {
+            label = name
+        }
+        self.placeID = placeID
+        placeName = town
     }
 
     /// True when the fix was imprecise, or the car could have moved a fair way between fix and tap.
@@ -145,12 +161,21 @@ extension Pin {
         TrailCoding.decode(trail).map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
     }
 
+    /// The chosen place's own card when there is one, otherwise a pin at the spot.
     var appleMapsURL: URL? {
+        if let placeID, !placeID.isEmpty {
+            return MapLinks.applePlace(id: placeID)
+        }
         guard let coordinate = lookUpCoordinate else { return nil }
         return MapLinks.apple(latitude: coordinate.latitude, longitude: coordinate.longitude, label: label)
     }
 
+    /// For a chosen place, a search for its name and town, which usually opens that business in
+    /// Google Maps; otherwise a pin at the spot.
     var googleMapsURL: URL? {
+        if placeID != nil, let label, !label.isEmpty, let placeName, !placeName.isEmpty {
+            return MapLinks.googleSearch(query: "\(label), \(placeName)")
+        }
         guard let coordinate = lookUpCoordinate else { return nil }
         return MapLinks.google(latitude: coordinate.latitude, longitude: coordinate.longitude)
     }

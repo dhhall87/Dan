@@ -54,6 +54,7 @@ Native iPhone app for capturing things you pass while driving so you can look th
 | isReviewed, isKept | Bool |
 | deletedAt | nil unless in Recently Deleted |
 | isNote | Bool, default false; a text note with no location (text in `label`) |
+| placeID | optional Apple Maps Place ID of the business chosen in "What's here?"; cleared by Move Pin |
 
 Keep capture coordinates and target coordinates separate. The app records where the car was plus the driver's directional clue. It never claims to know where the building actually is.
 
@@ -125,7 +126,8 @@ Dark, high contrast, no map, no clutter. Settings picks the layout Passing opens
 
 - List grouped by day, plus a map view. Each row: time, label or "Unlabeled", side/distance, miles back, place name, accuracy, "expires in X days".
 - Detail: map with capture point, target, and trail if present; **Move Pin** (`MovePinView`) drags a crosshair map to set the target by hand, never touching the capture point; Look Around preview at the target (or capture point); edit label/side/distance; mark reviewed; keep (star); delete.
-- Map links use the target if present, otherwise capture point:
+- **What's here?** (`NearbyPlacesSection`, on request only): `MKLocalPointsOfInterestRequest` around the pin (300 m near, 600 m far/unknown, "Look Farther" 2 km), closest first, up to 15. Choosing one (`Pin.choosePlace`) sets the label to its name, the target to its location (`targetSource = .manual`), `placeID`, and the town. Apple link then opens the place card (`maps.apple.com/place?place-id=`, unified Maps URLs, iOS 18.4+); Google link searches "name, town" (Google place IDs need a paid key). Labeled pins without a place also get "Search “label” Here in Apple Maps" (`/search?query=&center=&span=`). If `MKLocalSearch(request:)` doesn't accept the POI request in Xcode, the docs also list `init(pointsOfInterestRequest:)`.
+- Map links use the place card if a place was chosen, otherwise the target if present, otherwise capture point:
   - Apple: `https://maps.apple.com/?ll=LAT,LON&q=LABEL`
   - Google: `https://www.google.com/maps/search/?api=1&query=LAT,LON`
 - Reverse geocode lazily when online to fill `placeName` (answers "what town was that" automatically).
@@ -148,7 +150,7 @@ Dark, high contrast, no map, no clutter. Settings picks the layout Passing opens
 ## Privacy
 
 - When In Use location only, requested when the user first captures, with a clear purpose string.
-- No analytics. No location data leaves the device except map, geocoding, and Look Around requests to Apple. Review-reminder places (work/home) stay on the device; an address search sends the typed text to Apple Maps.
+- No analytics. No location data leaves the device except map, geocoding, and Look Around requests to Apple. Review-reminder places (work/home) stay on the device; an address search sends the typed text to Apple Maps. "What's here?" sends a pin's location to Apple only when tapped.
 
 ## Milestones
 

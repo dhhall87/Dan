@@ -54,6 +54,20 @@ struct MapLinksTests {
         #expect(MapLinks.apple(latitude: 40.7128, longitude: -74.006, label: "") == url)
     }
 
+    @Test func applePlaceLinkOpensThePlaceCard() {
+        #expect(MapLinks.applePlace(id: "I521E602783BA9605").absoluteString == "https://maps.apple.com/place?place-id=I521E602783BA9605")
+    }
+
+    @Test func appleSearchLinkLooksAroundTheSpot() {
+        let url = MapLinks.appleSearch(query: "red barn", latitude: 40.7128, longitude: -74.006)
+        #expect(url.absoluteString == "https://maps.apple.com/search?query=red%20barn&center=40.712800,-74.006000&span=0.02,0.02")
+    }
+
+    @Test func googleSearchLinkUsesTheName() {
+        let url = MapLinks.googleSearch(query: "Joe's Diner, Garden City, KS")
+        #expect(url.absoluteString == "https://www.google.com/maps/search/?api=1&query=Joe's%20Diner,%20Garden%20City,%20KS")
+    }
+
     @Test func googleMapsLinkUsesCoordinates() {
         let url = MapLinks.google(latitude: -33.856784, longitude: 151.215297)
         #expect(url.absoluteString == "https://www.google.com/maps/search/?api=1&query=-33.856784,151.215297")

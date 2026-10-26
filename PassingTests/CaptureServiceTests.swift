@@ -88,6 +88,24 @@ struct CaptureServiceTests {
         #expect(pin.needsPlaceName, "the town is looked up again for the new spot")
     }
 
+    @Test func choosingAPlaceNamesAndLinksThePin() throws {
+        let pin = try #require(service(currentFix: fix(at: tap)).capture(side: .right, distance: .near, source: .widget, now: tap))
+        pin.label = "diner"
+        pin.choosePlace(name: "Joe's Diner", coordinate: CLLocationCoordinate2D(latitude: 40.713, longitude: -74.007), placeID: "I521E602783BA9605", town: "Garden City, KS")
+
+        #expect(pin.label == "Joe's Diner")
+        #expect(pin.latitude == 40.7128, "the car's position stays")
+        #expect(pin.targetLatitude == 40.713)
+        #expect(pin.placeName == "Garden City, KS")
+        #expect(pin.appleMapsURL?.absoluteString == "https://maps.apple.com/place?place-id=I521E602783BA9605")
+        #expect(pin.googleMapsURL?.absoluteString.contains("query=Joe's%20Diner,%20Garden%20City,%20KS") == true)
+        #expect(PinFormat.accuracy(of: pin).hasPrefix("Matched to a place"))
+
+        pin.moveTarget(to: CLLocationCoordinate2D(latitude: 40.72, longitude: -74.01))
+        #expect(pin.placeID == nil, "moving by hand unlinks the place")
+        #expect(pin.appleMapsURL?.absoluteString.hasPrefix("https://maps.apple.com/?ll=") == true)
+    }
+
     @Test func aPinWithNoLocationCanBePlacedByHand() throws {
         let pin = try #require(service(currentFix: nil).capture(side: .unknown, distance: .unknown, source: .widget, now: tap))
         #expect(!pin.hasLocation)

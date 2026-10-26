@@ -59,6 +59,10 @@ struct PinDetailView: View {
             }
             }
 
+            if !pin.isNote, pin.lookUpCoordinate != nil {
+                NearbyPlacesSection(pin: pin)
+            }
+
             Section(pin.isNote ? "Note" : "What was it?") {
                 TextField(pin.isNote ? "Note" : "Label, e.g. large building", text: labelBinding, axis: .vertical)
                 if !pin.isNote {
@@ -125,6 +129,12 @@ struct PinDetailView: View {
                 Section("Look it up") {
                     Link(destination: apple) {
                         Label("Open in Apple Maps", systemImage: "map")
+                    }
+                    // With a label but no place chosen yet: let Apple Maps find "diner" right there.
+                    if pin.placeID == nil, let label = pin.label, !label.isEmpty, let spot = pin.lookUpCoordinate {
+                        Link(destination: MapLinks.appleSearch(query: label, latitude: spot.latitude, longitude: spot.longitude)) {
+                            Label("Search “\(label)” Here in Apple Maps", systemImage: "magnifyingglass")
+                        }
                     }
                     Link(destination: google) {
                         Label("Open in Google Maps", systemImage: "globe.americas")
