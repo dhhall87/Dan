@@ -125,6 +125,20 @@ enum PinExport {
         groupName.map { "Passing pins - \($0)" } ?? "Passing pins"
     }
 
+    /// The pins that become KML placemarks, with their coordinates: not notes, and with a location.
+    static func kmlPlaced(_ pins: [PinRecord]) -> [(PinRecord, String)] {
+        pins.filter { !$0.isNote }.compactMap { pin in kmlCoordinate(for: pin).map { (pin, $0) } }
+    }
+
+    /// The pins actually written into a file of this format. "Delete pins after exporting" removes
+    /// only these, so a note or a pin without a location left out of a KML file stays put.
+    static func includedIDs(_ pins: [PinRecord], format: ExportFormat) -> Set<UUID> {
+        switch format {
+        case .json, .csv: return Set(pins.map(\.id))
+        case .kml: return Set(kmlPlaced(pins).map(\.0.id))
+        }
+    }
+
     /// A KML file for Google My Maps (Create a new map, then Import) or Google Earth. Each pin is a
     /// placemark at its estimated spot if it has one, otherwise where the car was, with its details
     /// as fields My Maps shows in a table. Pins without a location can't go on a map, so they're left
@@ -139,7 +153,7 @@ enum PinExport {
         let iso = ISO8601DateFormatter()
 
         let places = pins.filter { !$0.isNote }
-        let mapped = places.compactMap { pin in kmlCoordinate(for: pin).map { (pin, $0) } }
+        let mapped = kmlPlaced(pins)
         let missing = places.count - mapped.count
         var summary = "Exported from Passing on \(display.string(from: exportedAt))."
         if missing > 0 {

@@ -175,6 +175,17 @@ struct PinExportTests {
         #expect(!kml.contains("left out"), "a note isn't a pin missing its location")
     }
 
+    @Test func kmlIncludedIDsMatchItsPlacemarks() {
+        var note = record(label: "note")
+        note.id = UUID()
+        note.isNote = true
+        var noLocation = record(latitude: nil, longitude: nil)
+        noLocation.id = UUID()
+        let mapped = record(label: "barn")
+        #expect(PinExport.includedIDs([mapped, note, noLocation], format: .kml) == [mapped.id])
+        #expect(PinExport.includedIDs([mapped, note, noLocation], format: .json).count == 3)
+    }
+
     @Test func kmlEscapesTextAndNamesUnlabeledPins() {
         let kml = PinExport.kml([record(label: "Tom & Jerry's <diner>"), record(group: "A \"B\"")], title: "Passing pins - Road trip", exportedAt: when)
         #expect(kml.contains("<name>Tom &amp; Jerry&apos;s &lt;diner&gt;</name>"))

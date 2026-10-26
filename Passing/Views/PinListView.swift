@@ -548,9 +548,9 @@ struct PinListView: View {
 
     private func export(_ format: ExportFormat) {
         do {
-            let url = try ExportService.exportActivePins(as: format, filter: filter, groupName: groupNameForExport)
-            // The export holds exactly the pins shown now (active, in the group being shown).
-            exportFile = ExportFile(url: url, pinIDs: Set(shownPins.map(\.id)))
+            // The file and the pins actually in it come from one fetch, so "Delete pins after
+            // exporting" never touches a note or a no-location pin that KML left out.
+            exportFile = try ExportService.exportActivePins(as: format, filter: filter, groupName: groupNameForExport)
         } catch {
             exportError = error.localizedDescription
         }

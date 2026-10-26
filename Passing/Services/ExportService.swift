@@ -3,9 +3,10 @@ import SwiftData
 
 /// Writes the active pins (not Recently Deleted) to a JSON, CSV or KML file for the share sheet.
 /// `filter` limits it to the group being shown in the list; `groupName` goes in the file name.
+/// Returns the file and the IDs of exactly the pins written into it, from the same fetch.
 @MainActor
 enum ExportService {
-    static func exportActivePins(as format: ExportFormat, filter: GroupFilter = .all, groupName: String? = nil) throws -> URL {
+    static func exportActivePins(as format: ExportFormat, filter: GroupFilter = .all, groupName: String? = nil) throws -> ExportFile {
         // The shared store is looked up here rather than as default arguments: default values are
         // evaluated outside the main actor, and the compiler rejects main-actor state there.
         try exportActivePins(as: format, filter: filter, groupName: groupName, context: SharedStore.context, retention: .shared, now: .now)
@@ -19,7 +20,7 @@ enum ExportService {
         context: ModelContext,
         retention: RetentionService,
         now: Date
-    ) throws -> URL {
+    ) throws -> ExportFile {
         try retention.whilePaused {
             let descriptor = FetchDescriptor<Pin>(
                 predicate: #Predicate { $0.deletedAt == nil },
@@ -37,7 +38,7 @@ enum ExportService {
             let url = FileManager.default.temporaryDirectory
                 .appendingPathComponent(PinExport.fileName(format: format, exportedAt: now, groupName: groupName))
             try data.write(to: url, options: .atomic)
-            return url
+            return ExportFile(url: url, pinIDs: PinExport.includedIDs(records, format: format))
         }
     }
 }

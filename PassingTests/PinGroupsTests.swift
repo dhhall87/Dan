@@ -101,17 +101,37 @@ struct PinGroupsTests {
         let retention = RetentionService(context: context)
 
         let url = try ExportService.exportActivePins(as: .json, filter: .group(trip.id), groupName: trip.name,
-                                                     context: context, retention: retention, now: now)
+                                                     context: context, retention: retention, now: now).url
         defer { try? FileManager.default.removeItem(at: url) }
         let document = try PinExport.decodeJSON(try Data(contentsOf: url))
         #expect(document.pins.map(\.label) == ["red barn"])
         #expect(document.pins.first?.group == "Road trip")
         #expect(url.lastPathComponent.hasPrefix("Passing pins - Road trip "))
 
-        let kmlURL = try ExportService.exportActivePins(as: .kml, filter: .ungrouped, context: context, retention: retention, now: now)
+        let kmlURL = try ExportService.exportActivePins(as: .kml, filter: .ungrouped, context: context, retention: retention, now: now).url
         defer { try? FileManager.default.removeItem(at: kmlURL) }
         let kml = try String(contentsOf: kmlURL, encoding: .utf8)
         #expect(kml.contains("<name>diner</name>"))
         #expect(!kml.contains("red barn"))
+    }
+
+    @Test func kmlReportsOnlyThePinsItContains() throws {
+        let mapped = pin("barn")
+        let noLocation = pin("no gps")
+        noLocation.latitude = nil
+        noLocation.longitude = nil
+        let note = pin("call about the farm")
+        note.isNote = true
+        note.latitude = nil
+        note.longitude = nil
+        let retention = RetentionService(context: context)
+
+        let kml = try ExportService.exportActivePins(as: .kml, context: context, retention: retention, now: now)
+        defer { try? FileManager.default.removeItem(at: kml.url) }
+        #expect(kml.pinIDs == [mapped.id], "Delete after exporting must leave the note and the no-location pin alone")
+
+        let csv = try ExportService.exportActivePins(as: .csv, context: context, retention: retention, now: now)
+        defer { try? FileManager.default.removeItem(at: csv.url) }
+        #expect(csv.pinIDs == [mapped.id, noLocation.id, note.id])
     }
 }

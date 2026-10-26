@@ -180,7 +180,7 @@ struct RetentionServiceTests {
         active.label = "red barn"
         pin(capturedDaysAgo: 1, from: start, deletedDaysAgo: 1)
 
-        let url = try ExportService.exportActivePins(as: .json, context: container.mainContext, retention: retention, now: start)
+        let url = try ExportService.exportActivePins(as: .json, context: container.mainContext, retention: retention, now: start).url
         defer { try? FileManager.default.removeItem(at: url) }
 
         let document = try PinExport.decodeJSON(try Data(contentsOf: url))
