@@ -14,8 +14,8 @@ struct PinGroupsTests {
 
     private var context: ModelContext { container.mainContext }
 
-    private func pin(_ label: String) -> Pin {
-        let pin = Pin(capturedAt: now, side: .left, distance: .near, source: .app)
+    private func pin(_ label: String, source: CaptureSource = .app) -> Pin {
+        let pin = Pin(capturedAt: now, side: .left, distance: .near, source: source)
         pin.label = label
         pin.latitude = 37.7
         pin.longitude = -100.3
@@ -51,6 +51,22 @@ struct PinGroupsTests {
         #expect(trip.pins.isEmpty)
         PinGroups.move(barn, to: nil, in: context)
         #expect(barn.group == nil)
+    }
+
+    @Test func filingANeedsReviewPinMarksItReviewed() throws {
+        let trip = try #require(PinGroups.create(named: "Road trip", in: context))
+        let fromWidget = pin("barn", source: .widget)
+        let fromControl = pin("silo", source: .control)
+        let fromPhone = pin("diner")
+        #expect(fromWidget.needsReview && fromControl.needsReview)
+
+        PinGroups.move(fromWidget, to: nil, in: context)
+        #expect(fromWidget.needsReview, "taking a pin out of a group isn't a review")
+
+        PinGroups.move([fromWidget, fromControl, fromPhone], to: trip, in: context)
+        #expect(fromWidget.isReviewed && fromControl.isReviewed)
+        #expect(!fromWidget.needsReview && !fromControl.needsReview)
+        #expect(!fromPhone.isReviewed, "phone pins were never in Needs Review, so they're left as they were")
     }
 
     @Test func severalPinsMoveTogether() throws {

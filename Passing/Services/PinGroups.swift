@@ -49,7 +49,8 @@ enum PinGroups {
         save(context)
     }
 
-    /// Files the pin in `group`, or takes it out of its group when `group` is nil.
+    /// Files the pin in `group`, or takes it out of its group when `group` is nil. Filing a pin that's
+    /// waiting in Needs Review also marks it Reviewed (Dan's request): putting it in a group is the review.
     static func move(_ pin: Pin, to group: PinGroup?, in context: ModelContext) {
         move([pin], to: group, in: context)
     }
@@ -58,6 +59,9 @@ enum PinGroups {
     static func move(_ pins: [Pin], to group: PinGroup?, in context: ModelContext) {
         for pin in pins {
             pin.group = group
+            if group != nil, pin.needsReview {
+                pin.isReviewed = true
+            }
         }
         save(context)
     }
