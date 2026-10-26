@@ -106,6 +106,13 @@ extension Pin {
         targetCoordinate ?? captureCoordinate
     }
 
+    /// Changes whenever `lookUpCoordinate` moves, so a screen can drop Look Around, nearby places or
+    /// a town lookup that belong to the old spot.
+    var lookUpKey: String {
+        guard let coordinate = lookUpCoordinate else { return "none" }
+        return "\(coordinate.latitude),\(coordinate.longitude)"
+    }
+
     /// In Needs Review: a widget or Control Center pin not yet marked Reviewed.
     var needsReview: Bool { source.needsReviewUntilReviewed && !isReviewed }
 

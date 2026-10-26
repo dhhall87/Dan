@@ -40,7 +40,7 @@ struct PinDetailView: View {
                         }
                     }
                     // A new map after a move, so it frames the new spot.
-                    .id("\(pin.targetLatitude ?? 0),\(pin.targetLongitude ?? 0)")
+                    .id(pin.lookUpKey)
                     .frame(height: 260)
                     // On the map itself, so it's found where you'd look for it.
                     .overlay(alignment: .bottomTrailing) {
@@ -200,8 +200,13 @@ struct PinDetailView: View {
         .newGroupAlert(isPresented: $addingGroup, message: "This pin goes into the new group.") { group in
             PinGroups.move(pin, to: group, in: context)
         }
-        .task {
+        // Again whenever the pin moves (Move Pin or What's here?), for the new spot's town.
+        .task(id: pin.lookUpKey) {
             await PlaceNameService.shared.fillMissing(in: [pin])
+        }
+        .onChange(of: pin.lookUpKey) {
+            // Imagery for the old spot is no longer this pin's; ask again for the new one.
+            lookAround = .notRequested
         }
     }
 
@@ -218,7 +223,10 @@ struct PinDetailView: View {
     /// on rural roads. The pin itself never depends on it.
     private func loadLookAround() async {
         guard let coordinate = pin.lookUpCoordinate else { return }
+        let key = pin.lookUpKey
         let scene = try? await MKLookAroundSceneRequest(coordinate: coordinate).scene
+        // Moved while it loaded: this scene is for the old spot.
+        guard pin.lookUpKey == key else { return }
         lookAround = scene.map(LookAroundState.ready) ?? .unavailable
     }
 

@@ -14,12 +14,16 @@ final class PlaceNameService {
     /// At most this many lookups each time the list opens.
     static let maxPerPass = 20
 
-    /// Pins being looked up right now, so the list and a detail screen don't both ask.
-    private var inFlight: Set<UUID> = []
-    /// Pins Apple had no name for. Skipped until the next launch.
-    private var noName: Set<UUID> = []
+    /// Pins being looked up right now, so the list and a detail screen don't both ask. By pin and
+    /// spot (`spotKey`), so a pin moved mid-lookup is looked up again for its new spot.
+    private var inFlight: Set<String> = []
+    /// Pins Apple had no name for, by pin and spot. Skipped until the next launch or a move.
+    private var noName: Set<String> = []
     /// Town names already looked up this launch, by `PlaceNaming.cacheKey`. Memory only.
     private var known: [String: String] = [:]
+    /// When the last real request went out, so requests from the list and a pin's screen together
+    /// are still spaced out.
+    private var lastRequestAt: ContinuousClock.Instant?
 
     enum Outcome: Equatable {
         case found(String)
@@ -29,16 +33,14 @@ final class PlaceNameService {
     }
 
     func fillMissing(in pins: [Pin]) async {
-        // Turned off in Settings → Privacy: pin locations never leave the iPhone for this.
-        guard AppSettings.lookUpPlaceNames else { return }
-        let todo = pins.filter { $0.needsPlaceName && !noName.contains($0.id) && !inFlight.contains($0.id) }
+        let todo = pins.filter { $0.needsPlaceName && !noName.contains(spotKey($0)) && !inFlight.contains(spotKey($0)) }
             .prefix(Self.maxPerPass)
-        var asked = false
         for pin in todo {
-            guard !Task.isCancelled else { return }
-            guard pin.modelContext != nil, !pin.isDeleted, pin.needsPlaceName,
-                  let coordinate = pin.lookUpCoordinate, !inFlight.contains(pin.id)
-            else { continue }
+            // Turned off in Settings → Privacy: pin locations never leave the iPhone for this.
+            // Checked for every pin, so turning it off stops a pass already under way.
+            guard !Task.isCancelled, AppSettings.lookUpPlaceNames else { return }
+            let spot = spotKey(pin)
+            guard isWaiting(pin, at: spot), !inFlight.contains(spot), let coordinate = pin.lookUpCoordinate else { continue }
 
             // Same neighbourhood as a pin already looked up: no request needed.
             let key = PlaceNaming.cacheKey(latitude: coordinate.latitude, longitude: coordinate.longitude)
@@ -49,27 +51,44 @@ final class PlaceNameService {
             }
 
             // Only real requests are spaced out.
-            if asked {
-                try? await Task.sleep(for: Self.spacing)
-                guard !Task.isCancelled else { return }
+            inFlight.insert(spot)
+            defer { inFlight.remove(spot) }
+            if let lastRequestAt {
+                let wait = Self.spacing - (ContinuousClock.now - lastRequestAt)
+                if wait > .zero {
+                    try? await Task.sleep(for: wait)
+                }
             }
-            asked = true
-            inFlight.insert(pin.id)
+            guard !Task.isCancelled, AppSettings.lookUpPlaceNames else { return }
+            // Moved during the wait: the new spot gets its own lookup.
+            guard isWaiting(pin, at: spot) else { continue }
+            lastRequestAt = .now
             let outcome = await Self.lookUp(coordinate)
-            inFlight.remove(pin.id)
+            // Moved, or given a place's town, while the request was out: the answer is for the old spot.
+            let stillHere = isWaiting(pin, at: spot)
 
             switch outcome {
             case .found(let name):
                 known[key] = name
-                guard pin.modelContext != nil, !pin.isDeleted else { continue }
+                guard stillHere else { continue }
                 pin.placeName = name
                 try? pin.modelContext?.save()
             case .noName:
-                noName.insert(pin.id)
+                noName.insert(spot)
             case .failed:
                 return
             }
         }
+    }
+
+    /// A pin and the spot its town is for. Moving the pin changes it.
+    private func spotKey(_ pin: Pin) -> String {
+        "\(pin.id.uuidString)|\(pin.lookUpKey)"
+    }
+
+    /// Still in the store, still at `spot`, and still without a town.
+    private func isWaiting(_ pin: Pin, at spot: String) -> Bool {
+        pin.modelContext != nil && !pin.isDeleted && pin.needsPlaceName && spotKey(pin) == spot
     }
 
     /// One reverse-geocoding request. Uses the iOS 26 MapKit request; `CLGeocoder` is the older way.

@@ -9,6 +9,9 @@ struct NearbyPlacesSection: View {
     @Bindable var pin: Pin
     @State private var state: LoadState = .notRequested
     @State private var radius: Double = 0
+    /// Where the pin went when a place here was chosen, so that move keeps the list (with its tick)
+    /// while a move by hand clears it.
+    @State private var chosenKey: String?
 
     private enum LoadState {
         case notRequested
@@ -57,6 +60,13 @@ struct NearbyPlacesSection: View {
         } footer: {
             Text("Places from Apple Maps near the pin, closest first. Tap the one you passed: the pin takes its name and **Open in Apple Maps** shows that place, ready for **Add to Guide**. The pin's location is sent to Apple only when you tap Find.")
         }
+        .onChange(of: pin.lookUpKey) {
+            // Moved by hand: these places were near the old spot.
+            if pin.lookUpKey != chosenKey {
+                state = .notRequested
+                radius = 0
+            }
+        }
     }
 
     private func row(for place: Found) -> some View {
@@ -97,11 +107,14 @@ struct NearbyPlacesSection: View {
 
     private func search(radius: Double) async {
         guard let center = pin.lookUpCoordinate else { return }
+        let key = pin.lookUpKey
         self.radius = radius
         state = .loading
         let request = MKLocalPointsOfInterestRequest(center: center, radius: min(radius, MKLocalPointsOfInterestRequest.maxRadius))
         do {
             let response = try await MKLocalSearch(request: request).start()
+            // Moved while searching: these results are for the old spot.
+            guard pin.lookUpKey == key else { return }
             let here = TrailPoint(latitude: center.latitude, longitude: center.longitude)
             let places = response.mapItems
                 .map { item in
@@ -114,6 +127,7 @@ struct NearbyPlacesSection: View {
                 .map { Found(id: $0.offset, item: $0.element.0, meters: $0.element.1) }
             state = places.isEmpty ? .nothing : .found(places)
         } catch {
+            guard pin.lookUpKey == key else { return }
             // "Not found" just means Apple Maps has nothing listed there.
             state = (error as? MKError)?.code == .placemarkNotFound ? .nothing : .failed
         }
@@ -127,6 +141,7 @@ struct NearbyPlacesSection: View {
             placeID: item.identifier?.rawValue,
             town: item.addressRepresentations?.cityWithContext
         )
+        chosenKey = pin.lookUpKey
         try? pin.modelContext?.save()
     }
 }
