@@ -21,6 +21,8 @@ struct DriveLogTests {
     }
 
     @Test func durationsStayShort() {
+        #expect(DriveLogFormat.duration(0.04) == "0.04s")
+        #expect(DriveLogFormat.duration(0) == "0.00s")
         #expect(DriveLogFormat.duration(2.34) == "2.3s")
         #expect(DriveLogFormat.duration(5) == "5s")
         #expect(DriveLogFormat.duration(723) == "12m 03s")

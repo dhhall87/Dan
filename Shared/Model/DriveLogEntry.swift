@@ -112,6 +112,8 @@ enum DriveLogFormat {
 
     /// "2.3s" under a minute, "12m 03s" under an hour, "1h 12m" beyond.
     static func duration(_ seconds: Double) -> String {
+        // Hundredths under a second, so a near-instant GPS reading shows as "0.04s", not "0s".
+        if seconds < 1 { return String(format: "%.2fs", max(seconds, 0)) }
         if seconds < 60 { return "\(decimal(seconds))s" }
         let whole = Int(seconds.rounded())
         if whole < 3600 { return String(format: "%dm %02ds", whole / 60, whole % 60) }

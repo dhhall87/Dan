@@ -154,11 +154,13 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
                 latestFix = location
             }
             // Only precise fixes go on the trail, so miles-back estimates don't zigzag.
-            if location.horizontalAccuracy <= FixPolicy.exactAccuracy,
+            // The trail is the capture screen's (for "+1 mi back"), so only its readings go on it, not
+            // a Siri or widget burst's. Only a restart that dropped some trail is worth logging.
+            if captureScreenVisible, location.horizontalAccuracy <= FixPolicy.exactAccuracy,
                let restart = breadcrumbs.add(
                    TrailPoint(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude),
                    at: location.timestamp
-               ) {
+               ), restart.lostMeters > 0 {
                 DriveLog.record(DriveLogEntry(
                     at: .now, kind: .trailRestart, outcome: restart.reason.rawValue, seconds: restart.seconds,
                     trailMiles: restart.lostMeters / Geo.metersPerMile, meters: restart.meters
