@@ -47,8 +47,12 @@ struct PinListView: View {
     /// position, the New Note text, an export or Move Pin sheet, or an alert. While it's true, a pin
     /// saved by a widget waits to appear until it's done.
     private var isBusy: Bool {
-        isSelecting || isScrolledDown || showsMap || addingNote || exportFile != nil || exportError != nil
-            || managingGroups || movingPin != nil || newGroupFor != nil
+        // Separate lines: one long chain of these is too slow for the Swift compiler to check.
+        let inList: Bool = isSelecting || isScrolledDown || showsMap
+        let typing: Bool = addingNote || newGroupFor != nil
+        let sheetOpen: Bool = exportFile != nil || exportError != nil
+        let editing: Bool = managingGroups || movingPin != nil
+        return inList || typing || sheetOpen || editing
     }
 
     var body: some View {
@@ -246,8 +250,9 @@ struct PinListView: View {
             }
         }
         // Scrolled down to older pins, a rebuild would jump back to the top, so it waits.
-        .onScrollGeometryChange(for: Bool.self) { geometry in
-            geometry.contentOffset.y + geometry.contentInsets.top > 40
+        .onScrollGeometryChange(for: Bool.self) { (geometry: ScrollGeometry) -> Bool in
+            let scrolled: CGFloat = geometry.contentOffset.y + geometry.contentInsets.top
+            return scrolled > 40
         } action: { _, scrolledDown in
             isScrolledDown = scrolledDown
         }

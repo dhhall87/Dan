@@ -197,6 +197,7 @@ Later / maybe: native CarPlay app (only if publishing).
 - **Design refresh (option A) is built and waiting for Dan's test run** (README, "Design refresh checklist"). Notes:
   - Checked against WWDC26 "What's new in SwiftUI": iPhone apps can be resized on iOS 27 (so the capture layout stays flexible, and the Simple pin shrinks first), the new Liquid Glass slider changes glass tint (so capture buttons stay solid), and `@State` is now a macro (a default value plus an assignment in `init` is an error; there are none here). `confirmationDialog(_:item:)` and `alert(_:item:)` are iOS 27-only, so the iOS 26 forms stay.
   - `Text + Text` is deprecated in the iOS 26 SDK; use separate `Text` views or interpolation.
+  - Keep boolean expressions short: a 9-term `||` chain with `!= nil` checks hit "unable to type-check this expression in reasonable time" in `PinListView.isBusy`. Split long chains into typed `let`s.
 - Notes from Milestone 7:
   - Listen-after-tap uses `SFSpeechRecognizer` with `requiresOnDeviceRecognition` (not deprecated in iOS 26; simpler than `SpeechAnalyzer`). On iPhone it's on-device only, and the setting stays off if the language isn't supported on device. In the Simulator only, it may fall back to server recognition so the feature can be tried.
   - `CaptureFeedback` owns the whole flow: a `.playAndRecord` session (pausing or ducking other audio per the existing setting), the chime, `SpeechListener.listen()`, then `CaptureService.setLabel`. Only `.app` taps listen. Permission is requested only from Settings.
