@@ -41,6 +41,9 @@ enum SettingsKey {
     static let deleteAfterExport = "deleteAfterExport"
     /// Ask Apple Maps for each pin's town. Off keeps pin locations entirely on the iPhone.
     static let lookUpPlaceNames = "lookUpPlaceNames"
+    /// Keep the capture screen from dimming and locking while Passing is open (for a dash mount).
+    /// Off by default: the screen follows iOS Auto-Lock like any app, and GPS stops when it locks.
+    static let keepScreenOn = "keepScreenOn"
     /// A pin's screen shows its GPS details (coordinates, accuracy, fix, speed, heading, saved from).
     /// Off by default; the choice is remembered for every pin.
     static let showsPinDetails = "showsPinDetails"

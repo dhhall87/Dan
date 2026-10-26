@@ -30,6 +30,7 @@ struct SettingsView: View {
     /// In the App Group's shared settings, so the widget and Control Center follow it too.
     @AppStorage(LocationPrivacy.key, store: AppGroup.defaults) private var preciseLocation = true
     @AppStorage(DriveLog.enabledKey, store: AppGroup.defaults) private var driveLogOn = false
+    @AppStorage(SettingsKey.keepScreenOn) private var keepScreenOn = false
     @State private var confirmingDeleteAll = false
     @State private var deletedCount: Int?
     @State private var listenProblem: SpeechListener.Availability?
@@ -58,6 +59,7 @@ struct SettingsView: View {
                         }
                     }
                     .pickerStyle(.segmented)
+                    Toggle("Keep screen on", isOn: $keepScreenOn)
                 } header: {
                     Text("Capture screen")
                 } footer: {
@@ -66,6 +68,7 @@ struct SettingsView: View {
                              ? "The whole screen is one button."
                              : "Tap the side of the road the thing was on. Inner columns are right by the road, outer columns are farther away. Tap the road in the middle if you're not sure which side.")
                         Text("Passing opens with this one. To switch during a drive, tap the **Passing** title at the top of the capture screen.")
+                        Text("**Keep screen on** stops the capture screen dimming and locking, for a phone in a dash mount. Off, it follows Auto-Lock like any app, and GPS stops when the phone locks. Widgets, Siri and Control Center work either way.")
                     }
                 }
 

@@ -16,6 +16,7 @@ struct CaptureView: View {
     /// The title button: flip between Simple and Four zones for the drive.
     var switchMode: () -> Void = {}
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage(SettingsKey.keepScreenOn) private var keepScreenOn = false
     @State private var isShowing = false
 
     private let location = LocationProvider.shared
@@ -55,14 +56,18 @@ struct CaptureView: View {
         .onChange(of: isCovered) {
             updateActivity()
         }
+        .onChange(of: keepScreenOn) {
+            updateActivity()
+        }
     }
 
     /// GPS runs while this screen is showing and Passing is open, and stops the moment Passing goes
     /// to the background or Settings covers it. (Pulling down Control Center or a Siri request
-    /// doesn't count as leaving.) The screen stays awake while it's mounted on the dash.
+    /// doesn't count as leaving.) The screen follows iOS Auto-Lock unless "Keep screen on" is set,
+    /// and when it locks, Passing goes to the background, so GPS stops too.
     private func updateActivity() {
         let inUse = isShowing && !isCovered
-        UIApplication.shared.isIdleTimerDisabled = inUse
+        UIApplication.shared.isIdleTimerDisabled = inUse && keepScreenOn
         location.setCaptureScreenVisible(inUse && scenePhase != .background)
     }
 }
