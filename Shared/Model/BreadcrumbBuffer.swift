@@ -13,6 +13,11 @@ struct BreadcrumbBuffer {
     /// Faster than this (m/s, about 155 mph) between two fixes means a GPS glitch or a jump, not
     /// driving, so the trail starts again rather than drawing a straight line across the map.
     static let maxPlausibleSpeed: Double = 70
+    /// Two fixes farther apart than this (meters) with nothing between them could have any road
+    /// between them, a turn or a bend, so the trail starts again rather than cutting the corner with
+    /// a straight line. Fixes arrive about once a second, so while driving they're well under 100 m
+    /// apart; this only trips after a gap (a tunnel, poor GPS, or the capture screen closed a while).
+    static let maxJoin: Double = 300
     /// The tap position must be within this many meters of the newest trail point to walk back from it.
     static let maxStartGap: Double = 150
     /// If the trail runs out this close to the requested distance, that still counts.
@@ -28,8 +33,9 @@ struct BreadcrumbBuffer {
         if let lastFix {
             if timestamp < lastFix.time { return }
             let elapsed = timestamp.timeIntervalSince(lastFix.time)
-            let jumped = Geo.distance(lastFix.point, point) > Self.maxPlausibleSpeed * max(elapsed, 1)
-            if elapsed > Self.maxGap || jumped { reset() }
+            let apart = Geo.distance(lastFix.point, point)
+            let jumped = apart > Self.maxPlausibleSpeed * max(elapsed, 1)
+            if elapsed > Self.maxGap || jumped || apart > Self.maxJoin { reset() }
         }
         lastFix = (point, timestamp)
         guard let last = points.last else {

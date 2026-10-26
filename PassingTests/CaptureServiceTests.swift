@@ -234,14 +234,25 @@ struct CaptureServiceTests {
         #expect(pin.isApproximate, "fix came 6 s after the tap at 27 m/s")
     }
 
-    @Test func lateFixWhileParkedIsNotApproximate() async throws {
-        let late = fix(at: tap.addingTimeInterval(6), speed: 0)
+    @Test func lateFixSoonAfterTheTapWhileParkedIsNotApproximate() async throws {
+        let late = fix(at: tap.addingTimeInterval(2), speed: 0)
         let capture = service(currentFix: nil, lateFix: late)
         let pin = try #require(capture.capture(side: .left, distance: .far, source: .app, now: tap))
         await capture.attachLateFix(to: pin)
 
         #expect(pin.hasLocation)
         #expect(!pin.isApproximate, "the car didn't move")
+    }
+
+    @Test func slowLateFixIsApproximateEvenAtAStop() async throws {
+        // 6 s after the tap the car is stopped, but it may have braked after passing the thing.
+        let late = fix(at: tap.addingTimeInterval(6), speed: 0)
+        let capture = service(currentFix: nil, lateFix: late)
+        let pin = try #require(capture.capture(side: .left, distance: .far, source: .app, now: tap))
+        await capture.attachLateFix(to: pin)
+
+        #expect(pin.hasLocation)
+        #expect(pin.isApproximate)
     }
 
     @Test func oldCachedFixIsNeverAttached() async throws {

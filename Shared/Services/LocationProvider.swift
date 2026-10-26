@@ -73,6 +73,12 @@ final class LocationProvider: NSObject, CLLocationManagerDelegate {
     /// Waits for the next usable fix, up to `timeout` seconds. Returns nil rather than an old fix.
     /// If GPS isn't running (a Siri capture, say), it runs a short burst and stops again afterwards.
     func nextUsableFix(timeout: TimeInterval) async -> CLLocation? {
+        // Location off, or Precise Location off (those fixes never pass `FixPolicy`): no usable fix
+        // is coming, so Siri and the widget don't wait the full time for nothing. Not asked yet is
+        // different: the app may be showing the permission prompt right now.
+        if isDenied || (isAuthorized && isPreciseLocationOff) {
+            return nil
+        }
         if isUpdating {
             // Restarting makes Core Location deliver a new fix right away, even if we aren't moving.
             manager.stopUpdatingLocation()

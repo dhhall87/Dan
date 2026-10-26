@@ -43,9 +43,15 @@ enum FixPolicy {
     /// distance the car could have covered between the fix and the tap are separate errors, so they
     /// add up like the two short sides of a right triangle; more than `exactDrift` in total is
     /// approximate. `speed` is in m/s; nil or negative means unknown.
+    ///
+    /// A fix taken after the tap only knows the speed at that later moment: the car may have braked
+    /// to a stop after passing the thing. So a fix more than `exactAge` after the tap is approximate
+    /// whatever its speed. A parked car's fix from before the tap stays exact.
     static func isApproximate(capturedAt: Date, fixTimestamp: Date, horizontalAccuracy: Double, speed: Double?) -> Bool {
         if horizontalAccuracy > exactAccuracy { return true }
-        let secondsApart = abs(fixTimestamp.timeIntervalSince(capturedAt))
+        let offset = fixTimestamp.timeIntervalSince(capturedAt)
+        if offset > exactAge { return true }
+        let secondsApart = abs(offset)
         guard let speed, speed >= 0 else { return secondsApart > exactAge }
         let drift = speed * secondsApart
         return (horizontalAccuracy * horizontalAccuracy + drift * drift).squareRoot() > exactDrift

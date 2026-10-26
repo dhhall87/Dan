@@ -57,7 +57,7 @@ struct RootView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            CaptureView(mode: modeChoice.mode(default: defaultMode)) {
+            CaptureView(mode: modeChoice.mode(default: defaultMode), isCovered: showingSettings) {
                 modeChoice.toggle(default: defaultMode)
                 UISelectionFeedbackGenerator().selectionChanged()
             }

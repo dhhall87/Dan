@@ -20,7 +20,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Notes** show in Pins with a note icon. They expire, can be kept (starred), grouped and deleted like pins, and open to an editable text field. Exports include them (CSV and JSON mark them `isNote`); the KML map file leaves them out, because they have no place.
 - **GPS pill** in the title bar, above the **Passing** title: **GPS ready** (green), **Finding GPS…** (yellow), **Location asked on first pin** (gray), **Location off** (red) or **Precise Location off** (orange). Pins save in every state; the pill just says whether they'll have a position.
 - **Save first:** a tap writes the pin immediately with no label. If GPS has no usable fix yet, the pin is still saved, marked "No location", and picks up the first good fix within 15 seconds. An old position is never used.
-- **Approximate flag:** a pin is marked approximate when its total uncertainty is more than about 50 m: how far the car could have moved between the GPS reading and the tap (speed × time apart), combined with how precise the reading itself was. A parked car's older reading counts as exact.
+- **Approximate flag:** a pin is marked approximate when its total uncertainty is more than about 50 m: how far the car could have moved between the GPS reading and the tap (speed × time apart), combined with how precise the reading itself was. A parked car's older reading counts as exact. A reading that arrives more than 3 seconds after the tap is always approximate, because the car may have braked after passing the thing.
 - **Non-visual confirmation:** a haptic and a short tone. Spoken "Left, far, saved" is optional. Repeat taps within 0.75 s are ignored, and the screen stays awake.
 - **Review:** pins grouped by day. Each pin's detail screen has a map, editable label/side/distance, Reviewed, and Apple Maps / Google Maps links.
 
@@ -86,14 +86,14 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 
 ## Privacy and footprint
 
-**What stays on the iPhone:** everything Passing saves. That means pins (where the car was, when, speed and direction, side and distance, label, town, group), the short stretch of road on miles-back pins, and settings. There's no account, analytics, ads or server. The App Store privacy label would be **Data Not Collected**. The App Store's required privacy declarations are in `Passing/Resources/PrivacyInfo.xcprivacy` and `PassingWidget/PrivacyInfo.xcprivacy`.
+**What stays on the iPhone:** everything Passing saves. That means pins (where the car was, when, speed and direction, side and distance, label, town, group), the short stretch of road on miles-back pins, and settings. There's no account, analytics, ads or server, and Passing doesn't sync anything itself. Like any app's data, though, pins are part of your iPhone's own backups (iCloud Backup, or a backup to a computer). The App Store privacy label would be **Data Not Collected**. The App Store's required privacy declarations are in `Passing/Resources/PrivacyInfo.xcprivacy` and `PassingWidget/PrivacyInfo.xcprivacy`.
 
 **Your controls** (Settings):
-- **Precise location** (on by default). Off keeps only roughly where each pin was (within about half a mile) and its general direction: no speed and no miles-back route. Enough to find the town. It applies to the widgets and Control Center too.
+- **Precise location** (on by default). Off keeps only roughly where each pin was (within about half a mile) and its general direction: no speed and no miles-back route. Enough to find the town. It applies to the widgets and Control Center too. It only changes pins saved from then on: pins already saved keep their exact position (delete them if that matters).
 - **Look up town names** (on by default). Off means pin locations never go to Apple Maps for town names.
 - **Delete pins after exporting** (off by default). After an export is actually shared, the pins in it move to Recently Deleted, except kept ones. Only pins that are in the file move: a KML file leaves out notes and pins without a location, so those stay. Pins still move there after 7 days either way.
-- **Delete All Pins.** Erases every pin for good, including kept ones and Recently Deleted. Groups stay; delete them in Manage Groups (swipe left, Edit, or tap a group → Delete Group).
-- **Exports never include speed.**
+- **Delete All Pins.** Erases every pin for good, including kept ones and Recently Deleted. Groups stay; delete them in Manage Groups (swipe left, Edit, or tap a group → Delete Group). Work and Home for review reminders stay too; remove them in Settings → Review Reminders.
+- **Exports never include speed.** JSON exports do include the stretch of road on miles-back pins (CSV and KML don't).
 
 **What leaves it, and when:**
 - **Town names:** each pin's location goes to Apple Maps to find its town. Settings → Privacy → **Look up town names** turns this off.
@@ -101,9 +101,9 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Siri:** what you say to Siri goes through Siri, under your iPhone's Siri settings. Listen after tap stays on the iPhone.
 - **Exports and map links:** only when you share an export or tap Open in Apple Maps / Google Maps (Google then gets that spot). Passing deletes its own copy of an export once it's shared. A KML file reaches Google only when you upload it yourself.
 
-**How long it's kept:** pins move to Recently Deleted after 7 days unless kept, and Recently Deleted empties after 30. The miles-back trail lives in memory only. Clean-up also runs in the background now and then.
+**How long it's kept:** pins move to Recently Deleted after 7 days unless kept, and Recently Deleted empties after 30. The rolling trail of where you've driven lives in memory only; a miles-back pin keeps just the stretch of road it measured, and goes when the pin does. Clean-up also runs in the background now and then.
 
-**With the iPhone locked:** the pin database uses iOS's standard protection (encrypted until you first unlock after a restart). That's what lets the widgets and CarPlay save pins while the phone is locked.
+**With the iPhone locked:** the pin database uses iOS's standard protection (encrypted until you first unlock after a restart), so it can still be written while the phone is locked. Whether CarPlay widget buttons actually run with the iPhone locked is still to be checked in a car.
 
 **Footprint:**
 - **App size:** no bundled voices, maps or third-party code. The icon and tone are about 100 KB. A pin takes about 1 KB.
@@ -155,7 +155,7 @@ Debug builds (what ⌘R makes) have a **Testing** section at the bottom of Setti
 
 1. Run the app, then click the **location arrow** in Xcode's debug bar and choose **KansasDrive**. Keep the capture screen open for about 4 minutes. In debug builds, Settings → Testing shows **Trail recorded** growing. After about 7.5 minutes the route turns north, so 1–2 miles back from there lands around the corner on the first road.
 2. Tap **+1 mi back** once. In **Pins**, the new pin says "1 mi back". Open it: the map shows the blue car, the orange "About here" about a mile back along the road, and a blue line between them. **Open in Google Maps** goes to the orange spot.
-3. Back on the capture screen, tap **+1 mi back** three times, less than 4 seconds apart. (Leaving the capture screen pauses the trail, so give it a few seconds to pick back up.) You get one new pin, "3 mi back", with a haptic and tone on each tap.
+3. Back on the capture screen, tap **+1 mi back** three times, less than 4 seconds apart. (Leaving the capture screen pauses the trail. If the car moved more than about 300 m meanwhile, which the simulated drive does in about 10 seconds, the trail starts fresh, so stay on the capture screen for about 3 minutes first.) You get one new pin, "3 mi back", with a haptic and tone on each tap.
 4. Wait 5 seconds and tap **+1 mi back** again. That makes a separate new pin, "1 mi back".
 5. Force-quit and reopen, then immediately tap **+1 mi back**. That pin has no orange spot and says "About 1 mile back the way you came…" instead, because the trail starts empty.
 6. Settings → turn on **Spoken confirmation** → **Voice**. Tap ▶︎ on a few voices, then tap one to choose it. The Simulator has fewer voices than a real iPhone.
@@ -188,7 +188,7 @@ Before you start: in Xcode, choose **Integrate → Pull** (or **Source Control �
 6. **List refresh:** open Passing's Pins list, go to the home screen, tap a widget, then switch back to Passing. The new pin is in the list.
 7. **Control Center:** swipe down from the top-right corner of the Simulator screen. Click and hold an empty spot (or tap **+**) → **Add a Control** → search **Passing** → **Pin That**. Close the editor and tap the control. Open Passing → Pins: a new pin, and **Saved from** says **Control Center**. **Does it have a location?** Tell me either way. Apple doesn't document whether Control Center counts as "in use" for location.
 8. **CarPlay:** in the Simulator's menu bar choose **I/O → External Displays → CarPlay**. In the CarPlay window, go to the **Widgets** screen, click and hold to edit, and add Passing's **Pin** or **Pin by Side**. Tap a button in the CarPlay window. **Tell me:** does the button respond, does the tick appear, and does the pin in Pins have a location? Apple's docs say buttons work on touchscreen cars, but CarPlay's handling of widget location isn't documented.
-9. **No location:** iOS Settings → Privacy & Security → Location Services → Passing → choose **While Using the App** (not "…or Widgets"). Tap the Pin widget. After about 15 seconds it shows **No location**, and the pin is saved anyway with no position. Set it back to **While Using the App or Widgets**.
+9. **No location:** iOS Settings → Privacy & Security → Location Services → Passing → choose **While Using the App** (not "…or Widgets"). Tap the Pin widget. It shows **No location** (straight away if iOS tells the widget location is off, otherwise after about 15 seconds), and the pin is saved anyway with no position. Set it back to **While Using the App or Widgets**.
 10. iOS Settings → Privacy & Security → Location Services → Passing: the purpose text now mentions widgets, Control Center and Siri.
 
 ## Milestone 6 manual test checklist
@@ -294,7 +294,7 @@ If the App Group is set up but its database won't open (rare; it could happen mi
 - **Expired pins are stamped with when they moved, not when they hit 7 days.** Every pin gets its full 30 days in Recently Deleted, even after weeks away from the app, or after turning off "Keep records indefinitely" with old pins.
 - **Recovering a pin that's more than 7 days old also keeps (stars) it.** Otherwise it would expire again on the next clean-up.
 - **Exports include active pins only**, not Recently Deleted.
-- **The trail only records while the capture screen is open** (no background location). Opening the Pins list mid-drive pauses it. A gap of more than 2 minutes, or an impossible jump (faster than ~155 mph, like a GPS glitch), starts a fresh trail. Passing can't know which road joined the two ends.
+- **The trail only records while the capture screen is open** (no background location). Opening the Pins list mid-drive pauses it. A gap that could hide a turn (two readings more than about 300 m apart with none between, as after a tunnel or a few seconds off the capture screen at speed), a gap of more than 2 minutes, or an impossible jump (faster than ~155 mph, like a GPS glitch) starts a fresh trail, rather than drawing a straight line that cuts the corner. Passing can't know which road joined the two ends.
 - **"+1" taps aren't debounced**, because quick taps are how you say "3 miles". Each extra tap measures back from where you first tapped, not from where the car is by then.
 - **Miles-back confirmations say the distance, not your phrase**, so you always know how far back it went.
 - **Two kinds of shortcut:** "Pin That" asks a question through Siri. "Quick Pin" never asks, because outside Siri the question would pop up on screen and need typing.

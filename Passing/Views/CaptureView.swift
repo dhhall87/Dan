@@ -10,6 +10,9 @@ import UIKit
 struct CaptureView: View {
     /// Simple or Four zones. RootView decides: the Settings choice, or the title-button switch.
     let mode: CaptureMode
+    /// True while a sheet (Settings) covers this screen. It then counts as closed: GPS stops and
+    /// the screen may sleep.
+    var isCovered = false
     /// The title button: flip between Simple and Four zones for the drive.
     var switchMode: () -> Void = {}
     @Environment(\.scenePhase) private var scenePhase
@@ -38,26 +41,29 @@ struct CaptureView: View {
         .background(Color.captureBackground.ignoresSafeArea())
         .environment(\.colorScheme, .dark)
         .onAppear {
-            // Keep the screen awake while it's mounted on the dash.
-            UIApplication.shared.isIdleTimerDisabled = true
             isShowing = true
-            updateLocation()
+            updateActivity()
             CaptureFeedback.shared.prepare()
         }
         .onDisappear {
-            UIApplication.shared.isIdleTimerDisabled = false
             isShowing = false
-            updateLocation()
+            updateActivity()
         }
         .onChange(of: scenePhase) {
-            updateLocation()
+            updateActivity()
+        }
+        .onChange(of: isCovered) {
+            updateActivity()
         }
     }
 
     /// GPS runs while this screen is showing and Passing is open, and stops the moment Passing goes
-    /// to the background. (Pulling down Control Center or a Siri request doesn't count as leaving.)
-    private func updateLocation() {
-        location.setCaptureScreenVisible(isShowing && scenePhase != .background)
+    /// to the background or Settings covers it. (Pulling down Control Center or a Siri request
+    /// doesn't count as leaving.) The screen stays awake while it's mounted on the dash.
+    private func updateActivity() {
+        let inUse = isShowing && !isCovered
+        UIApplication.shared.isIdleTimerDisabled = inUse
+        location.setCaptureScreenVisible(inUse && scenePhase != .background)
     }
 }
 

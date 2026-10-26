@@ -66,6 +66,27 @@ struct BreadcrumbBufferTests {
         #expect(buffer.length == 0)
     }
 
+    @Test func aGapThatCouldHideATurnStartsANewTrail() {
+        var buffer = BreadcrumbBuffer()
+        let end = TestDrive.north(miles: 1, into: &buffer)
+        // 400 m east in 20 s: plausible speed, but the road between is unknown.
+        let east = 400 / (TestDrive.metersPerDegreeLatitude * cos(40 * .pi / 180))
+        let last = buffer.points.last!
+        buffer.add(TrailPoint(latitude: last.latitude, longitude: last.longitude + east), at: end.addingTimeInterval(20))
+        #expect(buffer.points.count == 1)
+        #expect(buffer.length == 0)
+    }
+
+    @Test func aShortGapKeepsTheTrail() {
+        var buffer = BreadcrumbBuffer()
+        let end = TestDrive.north(miles: 1, into: &buffer)
+        let before = buffer.length
+        let last = buffer.points.last!
+        // 200 m on in 8 s: a missed fix or two.
+        buffer.add(TrailPoint(latitude: last.latitude + 200 / TestDrive.metersPerDegreeLatitude, longitude: last.longitude), at: end.addingTimeInterval(8))
+        #expect(buffer.length > before + 150)
+    }
+
     @Test func highwaySpeedIsNotAJump() {
         var buffer = BreadcrumbBuffer()
         // 145 m every 5 s is 65 mph, the test route's spacing.

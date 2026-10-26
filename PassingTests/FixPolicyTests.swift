@@ -23,7 +23,14 @@ struct FixPolicyTests {
 
     @Test func parkedFixIsExactEvenIfItIsAFewSecondsOld() {
         #expect(!FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(-8), horizontalAccuracy: 5, speed: 0))
-        #expect(!FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(12), horizontalAccuracy: 5, speed: 0))
+        #expect(!FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(2), horizontalAccuracy: 5, speed: 0))
+    }
+
+    @Test func aLateFixAfterBrakingIsNotExact() {
+        // Tapped at speed, then stopped: the fix 8 s later says 0 m/s, but the car moved after the tap.
+        #expect(FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(8), horizontalAccuracy: 5, speed: 0))
+        #expect(FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(FixPolicy.exactAge + 0.5), horizontalAccuracy: 5, speed: 0))
+        #expect(!FixPolicy.isApproximate(capturedAt: tap, fixTimestamp: tap.addingTimeInterval(FixPolicy.exactAge), horizontalAccuracy: 5, speed: 0))
     }
 
     @Test func movingFixIsApproximateOnceTheCarCouldHaveMovedTooFar() {
