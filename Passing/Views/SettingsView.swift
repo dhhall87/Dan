@@ -171,7 +171,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Needs Review")
                 } footer: {
-                    Text("Pins from the widget, CarPlay and Control Center wait in **Needs Review** (in Pins) until you mark them Reviewed. Passing can remind you about them the next morning, or when you get to work or home.")
+                    Text("Pins from the widget, CarPlay, Control Center and Apple Watch wait in **Needs Review** (in Pins) until you mark them Reviewed. Passing can remind you about them the next morning, or when you get to work or home.")
                 }
 
                 Section {
@@ -212,7 +212,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Location")
                 } footer: {
-                    Text("Passing uses your location while the capture screen is open, and for a few seconds when you pin from Siri, a widget or Control Center. It never tracks you in the background. It asks the first time you pin something. Pins stay on this iPhone.")
+                    Text("Passing uses your location while the capture screen is open, and for a few seconds when you pin from Siri, a widget or Control Center. Passing on Apple Watch uses the watch's own location while it's open. It never tracks you in the background. It asks the first time you pin something. Pins stay on this iPhone.")
                 }
 
                 #if DEBUG

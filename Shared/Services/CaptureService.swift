@@ -2,8 +2,8 @@ import CoreLocation
 import Foundation
 import SwiftData
 
-/// The single entry point that saves a pin. The phone screen, Siri, the Action Button, the widget
-/// and Control Center all call it. Never duplicate save logic.
+/// The single entry point that saves a pin. The phone screen, Siri, the Action Button, the widget,
+/// Control Center and pins from Apple Watch all go through it. Never duplicate save logic.
 ///
 /// Save first: the pin is written synchronously before anything else happens. It never waits on
 /// the network, never asks a question, and never substitutes an old coordinate.
@@ -162,12 +162,37 @@ final class CaptureService {
         return pin
     }
 
-    /// How many pins are in Needs Review: active widget and Control Center pins not marked Reviewed.
+    /// A pin made on Apple Watch, arriving through `WatchLink`, often a while after the tap. It keeps
+    /// the watch's own GPS reading, or no location if the watch had none: never the iPhone's position,
+    /// which may be somewhere else by now. A pin that arrives twice is saved once.
+    ///
+    /// - Returns: whether the pin is on disk, so the watch only lets go of pins that are saved here.
+    @discardableResult
+    func saveWatchPin(_ watchPin: WatchPin, now: Date = .now) -> Bool {
+        if let existing = storedPin(id: watchPin.id) {
+            // Sent again before the watch heard back. Already here: just make sure it's written.
+            return saveState(of: existing) != .notSaved || persist()
+        }
+        let pin = Pin(capturedAt: watchPin.capturedAt, side: watchPin.side, distance: watchPin.distance, source: .watch)
+        pin.id = watchPin.id
+        var fix: CLLocation?
+        if let reading = watchPin.fix,
+           reading.horizontalAccuracy >= 0, reading.horizontalAccuracy <= FixPolicy.maxAccuracy,
+           FixPolicy.acceptsLateFix(capturedAt: watchPin.capturedAt, fixTimestamp: reading.timestamp) {
+            fix = CLLocation(reading)
+        }
+        save(newPin: pin, fix: .supplied(fix), arrivedAfter: now.timeIntervalSince(watchPin.capturedAt))
+        return saveState(of: pin) != .notSaved
+    }
+
+    /// How many pins are in Needs Review: active widget, Control Center and Apple Watch pins not
+    /// marked Reviewed.
     func needsReviewCount() -> Int {
         let widget = CaptureSource.widget.rawValue
         let control = CaptureSource.control.rawValue
+        let watch = CaptureSource.watch.rawValue
         let descriptor = FetchDescriptor<Pin>(predicate: #Predicate {
-            $0.deletedAt == nil && !$0.isReviewed && ($0.sourceRaw == widget || $0.sourceRaw == control)
+            $0.deletedAt == nil && !$0.isReviewed && ($0.sourceRaw == widget || $0.sourceRaw == control || $0.sourceRaw == watch)
         })
         return (try? context.fetchCount(descriptor)) ?? 0
     }
@@ -250,10 +275,27 @@ final class CaptureService {
 
     // MARK: Private
 
-    /// Stamps the current fix (if fresh), runs `prepare`, saves, confirms, and waits for a late fix if needed.
-    private func save(newPin pin: Pin, trailMeters: Double? = nil, prepare: (Pin) -> Void = { _ in }) {
-        if let fix = currentFix() {
-            pin.applyFix(fix)
+    /// Where a new pin's position comes from.
+    private enum FixSource {
+        /// The iPhone's GPS: the current fix if it's fresh, otherwise the first usable one to arrive
+        /// within `FixPolicy.lateFixWindow`.
+        case phone
+        /// A reading taken elsewhere (Apple Watch), or none. Never replaced by the iPhone's position.
+        case supplied(CLLocation?)
+    }
+
+    /// Stamps the fix, runs `prepare`, saves, confirms, and waits for a late fix if needed.
+    /// `arrivedAfter` is how long a watch pin took to get here, for the drive log.
+    private func save(newPin pin: Pin, fix fixSource: FixSource = .phone, trailMeters: Double? = nil, arrivedAfter: TimeInterval? = nil, prepare: (Pin) -> Void = { _ in }) {
+        switch fixSource {
+        case .phone:
+            if let fix = currentFix() {
+                pin.applyFix(fix)
+            }
+        case .supplied(let fix):
+            if let fix {
+                pin.applyFix(fix)
+            }
         }
         prepare(pin)
         if !isPrecise() {
@@ -276,8 +318,11 @@ final class CaptureService {
             reviewWaiting(needsReviewCount())
         }
         // After the feedback, so logging never delays it.
-        DriveLog.record(.capture(pin, saved: saved, trailMeters: trailMeters))
+        var entry = DriveLogEntry.capture(pin, saved: saved, trailMeters: trailMeters)
+        entry.seconds = arrivedAfter
+        DriveLog.record(entry)
 
+        guard case .phone = fixSource else { return }
         if !pin.hasLocation {
             // Read now, while the pin is certainly there; the task runs later.
             let id = pin.id
@@ -307,6 +352,13 @@ final class CaptureService {
         }
     }
 
+    /// The pin with this id, wherever it is (Pins or Recently Deleted), including one not yet written.
+    private func storedPin(id: UUID) -> Pin? {
+        var descriptor = FetchDescriptor<Pin>(predicate: #Predicate { $0.id == id })
+        descriptor.fetchLimit = 1
+        return try? context.fetch(descriptor).first
+    }
+
     /// Saves a change to a pin that may already be on disk. If the write fails, the pin is marked as
     /// having a change pending (or stays marked unsaved, if its first save never worked).
     private func persistChange(to pin: Pin) -> Bool {
@@ -330,5 +382,22 @@ final class CaptureService {
             DriveLog.record(DriveLogEntry(at: .now, kind: .saveFailed, outcome: "\(type(of: error))"))
             return false
         }
+    }
+}
+
+private extension CLLocation {
+    /// A reading taken on Apple Watch, so `Pin.applyFix` can stamp it like any other.
+    convenience init(_ fix: WatchFix) {
+        self.init(
+            coordinate: CLLocationCoordinate2D(latitude: fix.latitude, longitude: fix.longitude),
+            altitude: 0,
+            horizontalAccuracy: fix.horizontalAccuracy,
+            verticalAccuracy: -1,
+            course: fix.course,
+            courseAccuracy: fix.courseAccuracy,
+            speed: fix.speed,
+            speedAccuracy: -1,
+            timestamp: fix.timestamp
+        )
     }
 }

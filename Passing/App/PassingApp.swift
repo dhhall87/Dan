@@ -13,6 +13,8 @@ struct PassingApp: App {
         UNUserNotificationCenter.current().delegate = ReviewReminderDelegate.shared
         // Pins saved from a widget or Control Center while Passing is open show up in Pins straight away.
         WidgetActivity.startObserving()
+        // Pins from Apple Watch, including any that queued up while Passing was closed.
+        WatchLink.shared.activate()
     }
 
     var body: some Scene {

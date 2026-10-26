@@ -48,11 +48,13 @@ struct CaptureSourceTests {
         #expect(CaptureSource.control.isTap)
         #expect(!CaptureSource.siri.isTap)
         #expect(!CaptureSource.actionButton.isTap)
+        #expect(!CaptureSource.watch.isTap, "the watch debounces its own buttons")
     }
 
-    @Test func onlyWidgetAndControlCenterPinsNeedReview() {
+    @Test func onlyWidgetControlCenterAndWatchPinsNeedReview() {
         #expect(CaptureSource.widget.needsReviewUntilReviewed)
         #expect(CaptureSource.control.needsReviewUntilReviewed)
+        #expect(CaptureSource.watch.needsReviewUntilReviewed)
         #expect(!CaptureSource.app.needsReviewUntilReviewed)
         #expect(!CaptureSource.siri.needsReviewUntilReviewed)
         #expect(!CaptureSource.actionButton.needsReviewUntilReviewed)

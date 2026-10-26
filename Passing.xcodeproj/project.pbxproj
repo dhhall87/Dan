@@ -61,7 +61,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		37298DDA308FE07700CFA3D2 /* PassingWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PassingWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		37298DDF308FE07700CFA3D2 /* PassingWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "PassingWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A0000000000000000000001 /* Passing.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Passing.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A0000000000000000000006 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -99,6 +98,11 @@
 		7A0000000000000000000043 /* Shared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Shared;
+			sourceTree = "<group>";
+		};
+		7A0000000000000000000070 /* WatchShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WatchShared;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -142,6 +146,7 @@
 				7A0000000000000000000008 /* README.md */,
 				7A0000000000000000000002 /* Passing */,
 				7A0000000000000000000043 /* Shared */,
+				7A0000000000000000000070 /* WatchShared */,
 				7A0000000000000000000042 /* PassingWidget */,
 				7A0000000000000000000038 /* PassingTests */,
 				7A0000000000000000000005 /* Support */,
@@ -157,7 +162,6 @@
 				7A0000000000000000000001 /* Passing.app */,
 				7A0000000000000000000037 /* PassingTests.xctest */,
 				7A0000000000000000000052 /* PassingWidgetExtension.appex */,
-				37298DDA308FE07700CFA3D2 /* PassingWatch.app */,
 				37298DDF308FE07700CFA3D2 /* PassingWatch Watch App.app */,
 			);
 			name = Products;
@@ -185,25 +189,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		37298DD9308FE07700CFA3D2 /* PassingWatch */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 37298DF0308FE07800CFA3D2 /* Build configuration list for PBXNativeTarget "PassingWatch" */;
-			buildPhases = (
-				37298DD8308FE07700CFA3D2 /* Resources */,
-				37298DEC308FE07800CFA3D2 /* Embed Watch Content */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				37298DE2308FE07700CFA3D2 /* PBXTargetDependency */,
-			);
-			name = PassingWatch;
-			packageProductDependencies = (
-			);
-			productName = PassingWatch;
-			productReference = 37298DDA308FE07700CFA3D2 /* PassingWatch.app */;
-			productType = "com.apple.product-type.application.watchapp2-container";
-		};
 		37298DDE308FE07700CFA3D2 /* PassingWatch Watch App */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 37298DEF308FE07800CFA3D2 /* Build configuration list for PBXNativeTarget "PassingWatch Watch App" */;
@@ -218,6 +203,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				37298DE3308FE07700CFA3D2 /* PassingWatch Watch App */,
+				7A0000000000000000000070 /* WatchShared */,
 			);
 			name = "PassingWatch Watch App";
 			packageProductDependencies = (
@@ -234,15 +220,18 @@
 				7A0000000000000000000012 /* Frameworks */,
 				7A0000000000000000000013 /* Resources */,
 				7A0000000000000000000050 /* Embed Foundation Extensions */,
+				37298DEC308FE07800CFA3D2 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				7A0000000000000000000054 /* PBXTargetDependency */,
+				37298DE2308FE07700CFA3D2 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				7A0000000000000000000002 /* Passing */,
 				7A0000000000000000000043 /* Shared */,
+				7A0000000000000000000070 /* WatchShared */,
 			);
 			name = Passing;
 			packageProductDependencies = (
@@ -289,6 +278,7 @@
 			fileSystemSynchronizedGroups = (
 				7A0000000000000000000042 /* PassingWidget */,
 				7A0000000000000000000043 /* Shared */,
+				7A0000000000000000000070 /* WatchShared */,
 			);
 			name = PassingWidgetExtension;
 			packageProductDependencies = (
@@ -307,9 +297,6 @@
 				LastSwiftUpdateCheck = 2710;
 				LastUpgradeCheck = 2710;
 				TargetAttributes = {
-					37298DD9308FE07700CFA3D2 = {
-						CreatedOnToolsVersion = 27.1;
-					};
 					37298DDE308FE07700CFA3D2 = {
 						CreatedOnToolsVersion = 27.1;
 					};
@@ -342,20 +329,12 @@
 				7A0000000000000000000010 /* Passing */,
 				7A0000000000000000000030 /* PassingTests */,
 				7A0000000000000000000060 /* PassingWidgetExtension */,
-				37298DD9308FE07700CFA3D2 /* PassingWatch */,
 				37298DDE308FE07700CFA3D2 /* PassingWatch Watch App */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		37298DD8308FE07700CFA3D2 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		37298DDD308FE07700CFA3D2 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -436,70 +415,32 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		37298DEA308FE07800CFA3D2 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8SS7RZ89R8;
-				INFOPLIST_KEY_CFBundleDisplayName = PassingWatch;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.danhall.PassingWatch;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
-		};
-		37298DEB308FE07800CFA3D2 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8SS7RZ89R8;
-				INFOPLIST_KEY_CFBundleDisplayName = PassingWatch;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.danhall.PassingWatch;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-			};
-			name = Release;
-		};
 		37298DED308FE07800CFA3D2 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8SS7RZ89R8;
+				CURRENT_PROJECT_VERSION = 11;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = PassingWatch;
+				INFOPLIST_KEY_CFBundleDisplayName = Passing;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Passing saves where you are when you tap a button on your Apple Watch, so you can look up what you passed later. Location is only used for those taps.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKWatchOnly = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.danhall.passing;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.danhall.PassingWatch.watchkitapp;
+				MARKETING_VERSION = 1.0.10;
+				PRODUCT_BUNDLE_IDENTIFIER = com.danhall.passing.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 26.6;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Debug;
 		};
@@ -509,30 +450,26 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8SS7RZ89R8;
+				CURRENT_PROJECT_VERSION = 11;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = PassingWatch;
+				INFOPLIST_KEY_CFBundleDisplayName = Passing;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Passing saves where you are when you tap a button on your Apple Watch, so you can look up what you passed later. Location is only used for those taps.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKWatchOnly = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.danhall.passing;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.danhall.PassingWatch.watchkitapp;
+				MARKETING_VERSION = 1.0.10;
+				PRODUCT_BUNDLE_IDENTIFIER = com.danhall.passing.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 26.6;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Release;
 		};
@@ -666,7 +603,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Support/Passing.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Support/Info.plist;
@@ -683,7 +620,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.9;
+				MARKETING_VERSION = 1.0.10;
 				PRODUCT_BUNDLE_IDENTIFIER = com.danhall.passing;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -702,7 +639,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Support/Passing.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Support/Info.plist;
@@ -719,7 +656,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.9;
+				MARKETING_VERSION = 1.0.10;
 				PRODUCT_BUNDLE_IDENTIFIER = com.danhall.passing;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -736,9 +673,9 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0.9;
+				MARKETING_VERSION = 1.0.10;
 				PRODUCT_BUNDLE_IDENTIFIER = com.danhall.passing.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -754,9 +691,9 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0.9;
+				MARKETING_VERSION = 1.0.10;
 				PRODUCT_BUNDLE_IDENTIFIER = com.danhall.passing.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -772,7 +709,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Support/PassingWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Support/PassingWidget-Info.plist";
@@ -783,7 +720,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.9;
+				MARKETING_VERSION = 1.0.10;
 				PRODUCT_BUNDLE_IDENTIFIER = com.danhall.passing.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -800,7 +737,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Support/PassingWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Support/PassingWidget-Info.plist";
@@ -811,7 +748,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.9;
+				MARKETING_VERSION = 1.0.10;
 				PRODUCT_BUNDLE_IDENTIFIER = com.danhall.passing.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -831,15 +768,6 @@
 			buildConfigurations = (
 				37298DED308FE07800CFA3D2 /* Debug */,
 				37298DEE308FE07800CFA3D2 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		37298DF0308FE07800CFA3D2 /* Build configuration list for PBXNativeTarget "PassingWatch" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				37298DEA308FE07800CFA3D2 /* Debug */,
-				37298DEB308FE07800CFA3D2 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

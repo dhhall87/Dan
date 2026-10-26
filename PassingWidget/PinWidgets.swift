@@ -265,16 +265,6 @@ private struct PassingLabel: View {
 
 // MARK: Tap feedback
 
-/// Widget feedback colors. White text reads on both.
-private extension Color {
-    /// Saving, and saved with a location.
-    static let savedGreen = Color(red: 0.12, green: 0.50, blue: 0.26)
-    /// Saved, but no GPS reading arrived in time.
-    static let noLocationAmber = Color(red: 0.62, green: 0.38, blue: 0.02)
-    /// Not saved: the pin couldn't be written, so tap again.
-    static let notSavedRed = Color(red: 0.70, green: 0.12, blue: 0.12)
-}
-
 private extension WidgetSavedNote {
     var symbol: String {
         if !saved { return "xmark" }

@@ -13,7 +13,7 @@ struct ReviewRemindersView: View {
             Section {
                 Toggle("Remind me", isOn: $settings.isOn)
             } footer: {
-                Text("After you save a pin from the widget, CarPlay or Control Center, Passing reminds you to look at Needs Review. It only reminds you while something is waiting there, and reviewing everything cancels the reminder.")
+                Text("After you save a pin from the widget, CarPlay, Control Center or Apple Watch, Passing reminds you to look at Needs Review. It only reminds you while something is waiting there, and reviewing everything cancels the reminder.")
             }
 
             if settings.isOn {

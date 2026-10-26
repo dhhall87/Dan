@@ -3,7 +3,7 @@ import Foundation
 /// Which pins the review list (and its exports) show.
 enum GroupFilter: Hashable {
     case all
-    /// Widget and Control Center pins not yet marked Reviewed (`Pin.needsReview`), in any group.
+    /// Widget, Control Center and Apple Watch pins not yet marked Reviewed (`Pin.needsReview`), in any group.
     /// A smart list rather than a group, so a pin can be in "Road trip" and still need review.
     case needsReview
     /// Pins that aren't in any group.

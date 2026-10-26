@@ -242,7 +242,7 @@ struct PinListView: View {
                         }
                     }
                 } footer: {
-                    Text("Pins from the widget, CarPlay or Control Center that you haven't marked Reviewed yet.")
+                    Text("Pins from the widget, CarPlay, Control Center or Apple Watch that you haven't marked Reviewed yet.")
                 }
             }
             if sections.isEmpty {
@@ -250,7 +250,7 @@ struct PinListView: View {
                     ContentUnavailableView(
                         "All caught up",
                         systemImage: "checkmark.circle",
-                        description: Text("Pins you save from the widget, CarPlay or Control Center wait here until you mark them Reviewed: swipe right on one, or open it and turn on Reviewed.")
+                        description: Text("Pins you save from the widget, CarPlay, Control Center or Apple Watch wait here until you mark them Reviewed: swipe right on one, or open it and turn on Reviewed.")
                     )
                 } else if filter == .all {
                     ContentUnavailableView(
@@ -497,7 +497,7 @@ struct PinListView: View {
         return count == 0 ? "Select Pins" : "\(count) Selected"
     }
 
-    /// Widget, CarPlay and Control Center pins still waiting for review get a faint amber tint, so
+    /// Widget, CarPlay, Control Center and Apple Watch pins still waiting for review get a faint amber tint, so
     /// they stand out in the list. Not in Needs Review itself, where every row is one.
     @ViewBuilder
     private func rowBackground(for pin: Pin) -> some View {

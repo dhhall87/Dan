@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The capture colors, taken from the app icon and shared with the widget so its buttons match the
-/// phone screen. Near and far differ in brightness as well as color, so they stay distinct in
+/// The capture colors, taken from the app icon and shared with the widgets and the watch so their
+/// buttons match the phone screen. Near and far differ in brightness as well as color, so they stay distinct in
 /// peripheral vision and for color-blind drivers.
 extension Color {
     /// Behind the capture screen: near-black with a hint of the icon's night-sky navy.
@@ -12,12 +12,21 @@ extension Color {
     static let asphalt = Color(red: 0.227, green: 0.251, blue: 0.294)
     /// The icon's pin and road markings.
     static let pinYellow = Color(red: 1.0, green: 0.780, blue: 0.0)
+
+    // Tap feedback on the widgets and the watch. White text reads on all three.
+
+    /// Saving, and saved with a location.
+    static let savedGreen = Color(red: 0.12, green: 0.50, blue: 0.26)
+    /// Saved, but no GPS reading arrived in time.
+    static let noLocationAmber = Color(red: 0.62, green: 0.38, blue: 0.02)
+    /// Not saved: the pin couldn't be written, so tap again.
+    static let notSavedRed = Color(red: 0.70, green: 0.12, blue: 0.12)
 }
 
 /// A capture button's fill: the top-to-bottom shading (from Dan's mockup for the zones) with a
 /// subtle smoky variation (a `MeshGradient` through `ZoneShade.grid`), and side edges about 15%
 /// darker so each button looks gently lit from the middle. Fixed, so it costs nothing after it's
-/// drawn. Used by the phone's zones and Pin it button, and the widgets.
+/// drawn. Used by the phone's zones and Pin it button, the widgets, and the watch's buttons.
 struct ZoneFill: View {
     let surface: ZoneShade.Surface
     /// Which button, so each gets its own wisps rather than a copy of its neighbour's.

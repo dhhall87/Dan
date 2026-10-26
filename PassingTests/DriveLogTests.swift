@@ -93,6 +93,17 @@ struct DriveLogTests {
         #expect(AppVersion.text(version: "1.0.1", build: "2") == "1.0.1 (build 2)")
     }
 
+    @Test func watchPinsSayHowLongTheyTookToArrive() {
+        var walk = entry(.capture, source: "watch", outcome: "left-far")
+        walk.seconds = 95
+        var later = entry(.capture, after: 3_600, source: "watch", outcome: "unknown-unknown")
+        later.seconds = 4_000
+        #expect(walk.line(timeZone: utc).hasSuffix("source=watch outcome=left-far arrived=1m 35s"))
+        let lines = DriveLogSummary.lines(for: [walk, later], timeZone: utc)
+        #expect(lines.contains("Pins: 2 (watch 2)"))
+        #expect(lines.contains("  Apple Watch pins reached the iPhone: median 34m 08s, slowest 1h 06m"))
+    }
+
     @Test func emptyLogSaysSo() {
         #expect(DriveLogSummary.lines(for: []) == ["Nothing logged yet."])
     }

@@ -5,7 +5,8 @@ import Foundation
 /// note or a speed. Plain values, so the summary and the text are easy to unit test.
 struct DriveLogEntry: Codable, Equatable {
     enum Kind: String, Codable, CaseIterable {
-        /// A pin saved (any source). `fixAge` is set when a fix was stamped at the tap.
+        /// A pin saved (any source). `fixAge` is set when a fix was stamped at the tap. For Apple Watch
+        /// pins, `seconds` is how long after the tap the pin reached the iPhone.
         case capture
         /// "+1 mi back" tapped again within 4 s, moving the same pin another mile.
         case bump
@@ -66,7 +67,8 @@ struct DriveLogEntry: Codable, Equatable {
         case .gps: return "ran"
         case .trailRestart: return "gap"
         case .opened: return "ready"
-        case .capture, .bump, .noGPS, .saveFailed: return "seconds"
+        case .capture: return "arrived"
+        case .bump, .noGPS, .saveFailed: return "seconds"
         }
     }
 
@@ -167,6 +169,10 @@ enum DriveLogSummary {
             let appTaps = captures.filter { $0.source == "app" }
             if !appTaps.isEmpty {
                 lines.append("  App taps with GPS ready at the tap: \(appTaps.filter { $0.fixAge != nil }.count) of \(appTaps.count)")
+            }
+            let arrivals = captures.filter { $0.source == "watch" }.compactMap(\.seconds)
+            if !arrivals.isEmpty {
+                lines.append("  Apple Watch pins reached the iPhone: \(spread(arrivals))")
             }
         }
 

@@ -1,37 +1,5 @@
 import Foundation
 
-enum Side: String, Codable, CaseIterable, Identifiable, Sendable {
-    case left
-    case right
-    case unknown
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .left: return "Left"
-        case .right: return "Right"
-        case .unknown: return "Unknown"
-        }
-    }
-}
-
-enum Distance: String, Codable, CaseIterable, Identifiable, Sendable {
-    case near
-    case far
-    case unknown
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .near: return "Near"
-        case .far: return "Far"
-        case .unknown: return "Unknown"
-        }
-    }
-}
-
 /// How the pin's target (the thing itself, not the car) was worked out.
 enum TargetSource: String, Codable {
     /// The thing was beside the car when the driver tapped; look around the capture point.
@@ -51,6 +19,8 @@ enum CaptureSource: String, Codable {
     case widget
     case control
     case actionButton
+    /// The Apple Watch app. Its pins arrive on the iPhone when the watch can reach it.
+    case watch
 
     var title: String {
         switch self {
@@ -59,6 +29,7 @@ enum CaptureSource: String, Codable {
         case .widget: return "Widget"
         case .control: return "Control Center"
         case .actionButton: return "Action Button or Shortcut"
+        case .watch: return "Apple Watch"
         }
     }
 
@@ -67,15 +38,16 @@ enum CaptureSource: String, Codable {
     var isTap: Bool {
         switch self {
         case .app, .widget, .control: return true
-        case .siri, .actionButton: return false
+        // The watch debounces its own buttons; on the iPhone its pins arrive one by one, often later.
+        case .siri, .actionButton, .watch: return false
         }
     }
 
-    /// Pins from the widgets (including CarPlay) and Control Center are saved silently with no label,
-    /// so they go into Needs Review until marked Reviewed. Pins from the capture screen and Siri don't.
+    /// Pins from the widgets (including CarPlay), Control Center and Apple Watch are saved silently with
+    /// no label, so they go into Needs Review until marked Reviewed. Pins from the capture screen and Siri don't.
     var needsReviewUntilReviewed: Bool {
         switch self {
-        case .widget, .control: return true
+        case .widget, .control, .watch: return true
         case .app, .siri, .actionButton: return false
         }
     }

@@ -2,7 +2,7 @@
 
 Capture things you pass while driving, then look them up later. One tap saves a pin, and identifying the thing happens afterwards. The full spec is in [CLAUDE.md](CLAUDE.md).
 
-**Status:** Milestones 1–7 are done. The refreshed capture screen (design option A, tuned for iOS 27 on an iPhone 16 Pro) is built and waiting for its test run. See "Design refresh checklist".
+**Status:** Milestones 1–7 are done. Routes (Milestone 8) and the Apple Watch app (Milestone 9) are built and waiting for their test runs, as is the refreshed capture screen (design option A, tuned for iOS 27 on an iPhone 16 Pro). See "Milestone 8 manual test checklist", "Milestone 9 manual test checklist" and "Design refresh checklist".
 
 ## What it does so far
 
@@ -102,6 +102,8 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Siri:** what you say to Siri goes through Siri, under your iPhone's Siri settings. Listen after tap stays on the iPhone.
 - **Exports and map links:** only when you share an export or tap Open in Apple Maps / Google Maps (Google then gets that spot). Passing deletes its own copy of an export once it's shared. A KML file reaches Google only when you upload it yourself.
 
+**Apple Watch:** pins made on the watch stay on the watch until Passing on the iPhone has saved them, then the watch deletes its copy. They go directly between your watch and iPhone, never through a server. The watch uses its own location only while Passing is open on it (and for up to 15 seconds after a tap).
+
 **Drive log** (off unless you turn it on): timings and outcomes only, never locations, labels, notes or speeds. It stays on the iPhone until you share it.
 
 **How long it's kept:** pins move to Recently Deleted after 7 days unless kept, and Recently Deleted empties after 30. The rolling trail of where you've driven lives in memory only; a miles-back pin keeps just the stretch of road it measured, and goes when the pin does. Clean-up also runs in the background now and then.
@@ -113,6 +115,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Battery:**
   - The capture screen is the main cost. It keeps the screen on and GPS running, and only while it's open.
   - Otherwise, GPS runs for a few seconds per Siri, widget or Control Center pin.
+  - On the watch, GPS runs only while Passing is on its screen, plus up to 15 seconds after a tap.
   - Nothing else runs in the background apart from the occasional clean-up.
 - **Listen after tap** (off by default) uses the microphone and speech recognition for a few seconds per tap.
 - **Maps and Look Around** are the heaviest screens for memory and data. Look Around loads only when you tap it.
@@ -125,10 +128,11 @@ Settings → About → **Version**, for example "1.0.1 (build 2)". Each update s
 
 Settings → Feedback → **Drive Log** → turn on **Keep a drive log**. From then on Passing notes how each drive went, on the iPhone only:
 
-- **Every pin:** where it came from (phone, Siri, widget, Control Center), whether GPS was ready at the tap, how long it waited for a reading if not, how accurate the reading was, whether it's approximate, and whether it saved.
+- **Every pin:** where it came from (phone, Siri, widget, Control Center, Apple Watch), whether GPS was ready at the tap, how long it waited for a reading if not, how accurate the reading was, whether it's approximate, and whether it saved.
 - **Siri and widget requests:** how long each took from start to finish, and how Siri's "What did you see?" went (answered, nothing said, cancelled or failed, with the error).
 - **GPS:** how long it ran each time (with the capture screen, or a short burst for Siri and widgets), and when it was skipped because location or Precise Location was off.
 - **Miles back:** whether the pin landed on the trail or fell back to words, and every trail restart with its reason (a gap that could hide a turn, a GPS jump, or a long break).
+- **Apple Watch pins:** how long after the tap each one reached the iPhone.
 - **Speed of the app:** how long Passing took to open and the database to load, save failures, clean-up runs that took a while, and town lookups.
 
 It never records where you were, labels, notes or speeds. The Drive Log screen shows a summary and the newest 100 events (pull down to refresh). **Share** makes a text file with the summary and every event, ready to send or paste. **Clear** deletes it. Each part of the app keeps about its newest 2,500 events. Turning it off stops recording and keeps what's there.
@@ -250,6 +254,37 @@ Plan a trip through pins you saved: Pins → **Select**, then tap pins in the or
 8. Select 12 pins (or 11 plus an address end): Google Maps shows **part 1 of 2** and **part 2 of 2**; part 2 starts where part 1 ends.
 9. Select a note and a "No location" pin with two real pins: the route has the two real pins and says 2 picked items have no location.
 
+## Apple Watch (Milestone 9)
+
+Passing on Apple Watch saves a pin with the watch's own GPS, mostly for walks and sometimes in the car.
+
+- **Four buttons**, laid out like the 2x2 widget: the left and right columns are the sides of the road or path, the top row is far and the bottom row near, in the phone's colors. The pin in the middle saves a pin with no side. **Double tap** (with the watch hand, pinch your index finger and thumb together twice) presses the middle pin, so you don't have to touch the screen at all.
+- **Saved at once, with a tap on the wrist.** The button shows a green tick for a moment, or a red cross if the watch couldn't save it (tap again).
+- **Status line** above the buttons: whether a tap now gets a position (GPS ready, Finding GPS…, Location off, Precise Location off), and how many pins the iPhone doesn't have yet ("2 to send").
+- **Location:** the watch asks the first time Passing opens on it. GPS runs while Passing is on the watch's screen, and for up to 15 seconds after a tap if there was no reading yet. A pin with no reading in that time goes without a location, never with a late or old one. The freshness rules are the same as the iPhone's.
+- **Getting pins to the iPhone:** pins stay on the watch until Passing on the iPhone has saved them, then the watch lets them go. They go straight from the watch to the iPhone (no server), in order, whenever the two are in reach, even with Passing closed on the watch. On the iPhone they're saved when Passing runs. iOS may also start Passing briefly in the background to take them, which is one thing the checklist checks.
+- **On the iPhone:** watch pins say **Saved from: Apple Watch**, wait in **Needs Review**, and set off review reminders, like widget pins. They keep the watch's position, never the iPhone's. A pin that arrives twice is saved once.
+- **Not in this version:** a watch face complication (it needs another Xcode target), "+1 mi back", and voice labels on the watch.
+
+**Installing it:**
+1. In Xcode, **Integrate → Pull**. If Xcode says watchOS isn't installed: **Xcode → Settings → Components**, then **Get** next to watchOS.
+2. Plug in the iPhone, with the watch unlocked and nearby. In **Window → Devices and Simulators** the watch shows under the iPhone. If the watch asks, turn on Developer Mode on it: **Settings → Privacy & Security → Developer Mode**, then restart it.
+3. Run the **Passing** scheme on the iPhone once (the watch app now travels inside the iPhone app). Then pick the **PassingWatch Watch App** scheme and your watch next to the Run button, and press Run.
+
+## Milestone 9 manual test checklist
+
+The Simulator can't send pins between a watch and an iPhone (Apple's docs say so), so this one is on your real watch and iPhone. Turn on the drive log on the iPhone first (Settings → Feedback → Drive Log).
+
+1. Open Passing on the watch: it asks for your location. Choose **Allow While Using App**. Outside or by a window, the status line changes from **Finding GPS…** to **GPS ready**.
+2. Tap each of the four buttons: a tap on the wrist and a green tick on that button each time. The status line counts them ("4 to send") until the iPhone has them.
+3. Raise the watch and double tap: the middle pin ticks.
+4. Tap the same button twice quickly: only one pin.
+5. With Passing open on the iPhone: within a minute or so the pins appear in Pins and in **Needs Review**. Each says **Saved from: Apple Watch** with the right side and distance, and the watch's count drops to zero. If nothing comes, close Passing on the iPhone and open it again, and note how long it took.
+6. Leave the iPhone behind (or turn its Bluetooth and Wi-Fi off) and make 2 pins on the watch: the watch shows "2 to send". Back with the iPhone, wait a few minutes **without opening Passing on it**, then open Passing: note whether the pins were already there (iOS woke Passing in the background) or only arrived when it opened.
+7. Indoors with no GPS, tap a button and lower your wrist at once: the pin still reaches the iPhone, with no location.
+8. On the watch, **Settings → Privacy & Security → Location Services → Passing → Never**: the status line says **Location off**, and a tap still saves a pin (no location). Set it back to **While Using the App**.
+9. Drive Log on the iPhone: the summary has a line "Apple Watch pins reached the iPhone: median …, slowest …".
+
 ## Milestone 7 manual test checklist
 
 The Simulator uses your Mac's microphone. It usually has no on-device speech model, so there (only) recognition may go through Apple's servers. On an iPhone it's on-device only.
@@ -329,7 +364,7 @@ If the App Group is set up but its database won't open (rare; it could happen mi
 
 ## Decisions so far
 
-- **Fix freshness:** a reading up to 10 s old and within 200 m accuracy can be used. The numbers are in `Shared/Model/FixPolicy.swift`.
+- **Fix freshness:** a reading up to 10 s old and within 200 m accuracy can be used. The numbers are in `WatchShared/FixPolicy.swift`, which the watch uses too.
 - **The tone plays even with the ring switch on silent**, because a haptic is easy to miss with the phone in a dash mount. It mixes with music rather than pausing it.
 - **Capture colors come from the app icon** (navy, verge green, deep blue, asphalt, pin yellow). Near and far differ in brightness as well as color, so they're easy to tell apart at a glance and for color-blind drivers, and nothing is glaring at night.
 - **Gradient capture buttons, not Liquid Glass.** Each zone is brightest near the top and darkens toward the bottom while staying green or blue (colors sampled from your mockup), with a subtle smoky variation, slightly darker side edges and a faint border. Each zone has its own fixed smoke pattern, so nothing moves or uses battery. The labels sit in the middle, where white text stands out.
@@ -359,6 +394,9 @@ If the App Group is set up but its database won't open (rare; it could happen mi
 - **The question (or chime) always plays when listening**, even with the tone turned off, because it's the cue to start talking.
 - **The Stop listening button is the one thing that appears on the capture screen after a tap**, at your request. It takes the title's place, at the same height, so it never moves or covers a capture button, and it never has to be pressed.
 - **Microphone and speech permission are asked for in Settings**, when you turn listening on, so no permission prompt can appear on the capture screen.
+- **The watch app is a companion of the iPhone app**, not a watch-only app (the Xcode wizard's default, which can't share pins with the iPhone app). It travels inside the iPhone app, and its ID is `com.danhall.passing.watchkitapp`.
+- **The watch asks for location the first time Passing opens on it**, not on the first tap like the iPhone. A question on screen right after the first tap would cost that pin its location.
+- **The watch keeps every pin until the iPhone says it's saved.** A pin that reached the iPhone but was never confirmed (say, the iPhone couldn't save it) is sent again an hour later, the next time Passing starts on the watch. The iPhone recognizes a pin it already has, so this never makes duplicates.
 - **`SFSpeechRecognizer` rather than iOS 26's new `SpeechAnalyzer`.** It's simpler, still supported, and on-device on iPhone. If the iPhone can't recognize its language on the device, the setting stays off rather than sending audio to a server.
 
 ## Project layout
@@ -366,12 +404,14 @@ If the App Group is set up but its database won't open (rare; it could happen mi
 | Piece | Where |
 | --- | --- |
 | Code used by both the app and the widget | `Shared/` |
-| Capture screen | `Passing/Views/CaptureView.swift`, colors and pin in `Shared/Views/PassingColors.swift` and `PinGlyph.swift` |
+| Code the Apple Watch app uses too (freshness rules, side and distance, colors, the pin, the watch's pins and outbox) | `WatchShared/` |
+| Apple Watch app | `PassingWatch Watch App/` (buttons in `WatchCaptureView.swift`, save path in `WatchCapture.swift`); the iPhone side is `Passing/Services/WatchLink.swift` and `CaptureService.saveWatchPin` |
+| Capture screen | `Passing/Views/CaptureView.swift`, colors and pin in `WatchShared/PassingColors.swift` and `PinGlyph.swift` |
 | Layout switch and GPS pill | `Passing/Model/CaptureModeChoice.swift`, `Passing/Model/GPSStatus.swift`, title button in `Passing/App/PassingApp.swift` |
 | Single save entry point | `Shared/Services/CaptureService.swift`, wired up per target in `Passing/Services/CaptureService+App.swift` and `PassingWidget/CaptureService+Widget.swift` |
 | Siri, Shortcuts, Action Button | `Passing/Intents/CaptureIntents.swift`, `Shared/Services/IntentCapture.swift` |
 | Widgets and Control Center | `PassingWidget/`, `Shared/Intents/WidgetIntents.swift` |
-| GPS and freshness rules | `Shared/Services/LocationProvider.swift`, `Shared/Model/FixPolicy.swift` |
+| GPS and freshness rules | `Shared/Services/LocationProvider.swift`, `WatchShared/FixPolicy.swift` |
 | Pin model and App Group store | `Shared/Model/Pin.swift`, `Shared/Services/SharedStore.swift`, `Shared/Services/AppGroup.swift` |
 | Miles back (trail and estimate) | `Shared/Model/BreadcrumbBuffer.swift`, `Shared/Services/CaptureService.swift` |
 | Voice and phrases | `Shared/Model/SpokenConfirmation.swift`, `Passing/Views/VoicePickerView.swift`, `PhrasesView.swift` |
