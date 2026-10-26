@@ -28,8 +28,14 @@ struct PinDetailView: View {
                 if let coordinate = pin.lookUpCoordinate {
                     Map(initialPosition: mapPosition(around: coordinate)) {
                         if let car = pin.captureCoordinate {
-                            Marker("Your car", systemImage: "car.fill", coordinate: car)
-                                .tint(.blue)
+                            if pin.targetCoordinate == nil, pin.milesBack == 0 {
+                                // Nothing estimated anywhere else, so the pin goes where the car was.
+                                Marker(pin.displayLabel, systemImage: "mappin", coordinate: car)
+                                    .tint(.orange)
+                            } else {
+                                Marker("Your car", systemImage: "car.fill", coordinate: car)
+                                    .tint(.blue)
+                            }
                         }
                         if pin.trailCoordinates.count > 1 {
                             MapPolyline(coordinates: pin.trailCoordinates)

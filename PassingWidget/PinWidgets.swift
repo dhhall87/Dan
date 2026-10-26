@@ -39,6 +39,9 @@ struct PinTimelineProvider: TimelineProvider {
         let listeningUntil = ListeningSignal.listeningUntil(now: now)
         // An entry for now, and one for each moment the tick or the Stop button runs out.
         let changes = Set([now, note?.hidesAt, listeningUntil].compactMap { $0 }).sorted()
+        // CarPlay doesn't switch to a later entry on its own (the "Saved" tick stayed until the
+        // screen was touched), but it does show a reload. So also ask for a reload then.
+        let nextChange = changes.first { $0 > now }
         let entries = changes.map { date in
             PinEntry(
                 date: date,
@@ -47,7 +50,8 @@ struct PinTimelineProvider: TimelineProvider {
                 isListening: listeningUntil.map { date < $0 } ?? false
             )
         }
-        completion(Timeline(entries: entries, policy: .never))
+        let policy: TimelineReloadPolicy = nextChange.map(TimelineReloadPolicy.after) ?? .never
+        completion(Timeline(entries: entries, policy: policy))
     }
 }
 
@@ -322,6 +326,13 @@ private struct SavedFace: View {
                 .font(compact ? .title2.weight(.heavy) : .system(size: 40, weight: .bold))
             Text(note.shortMessage)
                 .font(compact ? .caption2.weight(.bold) : .system(.headline, design: .rounded, weight: .heavy))
+            if !compact {
+                // Counts up by itself, so if a screen keeps showing this (CarPlay can), it's clearly
+                // an earlier save, not a new one.
+                Text("\(Text(note.savedAt, style: .relative)) ago")
+                    .font(.caption.weight(.semibold))
+                    .opacity(0.85)
+            }
         }
         .foregroundStyle(.white)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
