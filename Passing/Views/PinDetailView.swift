@@ -58,11 +58,12 @@ struct PinDetailView: View {
                 } else {
                     Label("No location was recorded for this pin. GPS didn't have a usable fix in time, so Passing saved the time only. You can place it on the map yourself.", systemImage: "location.slash")
                         .foregroundStyle(.orange)
-                }
-                Button {
-                    movingPin = true
-                } label: {
-                    Label(pin.lookUpCoordinate == nil ? "Place on Map" : "Move Pin", systemImage: "hand.point.up.left")
+                    // No map to put the Move button on, so it goes here.
+                    Button {
+                        movingPin = true
+                    } label: {
+                        Label("Place on Map", systemImage: "hand.point.up.left")
+                    }
                 }
                 if let hint = pin.milesBackHint {
                     Text(hint)
