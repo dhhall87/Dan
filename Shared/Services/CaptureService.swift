@@ -183,10 +183,17 @@ final class CaptureService {
     /// For a pin saved before any usable fix: attach the first usable fix that arrives within
     /// `FixPolicy.lateFixWindow`. If none arrives, the pin stays saved with no location.
     func attachLateFix(to pin: Pin) async {
+        await attachLateFix(to: pin, source: pin.source, capturedAt: pin.capturedAt)
+    }
+
+    /// `source` and `capturedAt` are read before the wait, because afterwards the pin may be gone
+    /// (deleted, or in tests its whole store closed), and reading a gone pin crashes. After the wait
+    /// nothing is read from the pin until it's known to still be in the store.
+    private func attachLateFix(to pin: Pin, source: CaptureSource, capturedAt: Date) async {
         let fix = await lateFix()
-        var entry = DriveLogEntry(at: .now, kind: .lateFix, source: pin.source.rawValue)
+        var entry = DriveLogEntry(at: .now, kind: .lateFix, source: source.rawValue)
         // From the tap until the fix arrived, or until the wait gave up.
-        entry.seconds = Date.now.timeIntervalSince(pin.capturedAt)
+        entry.seconds = Date.now.timeIntervalSince(capturedAt)
         defer { DriveLog.record(entry) }
 
         guard let fix else {
@@ -197,7 +204,7 @@ final class CaptureService {
             entry.outcome = "pinChanged"
             return
         }
-        guard FixPolicy.acceptsLateFix(capturedAt: pin.capturedAt, fixTimestamp: fix.timestamp) else {
+        guard FixPolicy.acceptsLateFix(capturedAt: capturedAt, fixTimestamp: fix.timestamp) else {
             entry.outcome = "tooLate"
             return
         }
@@ -241,9 +248,12 @@ final class CaptureService {
         DriveLog.record(.capture(pin, saved: saved, trailMeters: trailMeters))
 
         if !pin.hasLocation {
+            // Read now, while the pin is certainly there; the task runs later.
             let id = pin.id
+            let source = pin.source
+            let capturedAt = pin.capturedAt
             lateFixTasks[id] = Task {
-                await self.attachLateFix(to: pin)
+                await self.attachLateFix(to: pin, source: source, capturedAt: capturedAt)
                 self.lateFixTasks[id] = nil
             }
         }

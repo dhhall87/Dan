@@ -15,7 +15,7 @@ Native iPhone app for capturing things you pass while driving so you can look th
 - Never ship a placeholder or stub as if it were finished. Call it out.
 - Prefer native frameworks. No third-party dependencies without asking.
 - Dan tests while parked, not while driving.
-- **Version numbers (Dan's request, October 2026):** every push that changes the app steps the version: `MARKETING_VERSION` 1.0.1, 1.0.2, … and `CURRENT_PROJECT_VERSION` (the build) up by one, in all six target configurations in `project.pbxproj` (the widget's must match the app's). A bigger batch goes to 1.1 (then 1.1.1, …) when Dan agrees. Tell Dan the new number in the summary. Settings → About shows it (`AppVersion`), and the drive log's `opened` events record it. 1.0 (build 1) was the first install on his iPhone; 1.0.1 (build 2) added the version display.
+- **Version numbers (Dan's request, October 2026):** every push that changes the app steps the version: `MARKETING_VERSION` 1.0.1, 1.0.2, … and `CURRENT_PROJECT_VERSION` (the build) up by one, in all six target configurations in `project.pbxproj` (the widget's must match the app's). A bigger batch goes to 1.1 (then 1.1.1, …) when Dan agrees. Tell Dan the new number in the summary. Settings → About shows it (`AppVersion`), and the drive log's `opened` events record it. 1.0 (build 1) was the first install on his iPhone; 1.0.1 (build 2) added the version display; 1.0.2 (build 3) fixed the late-fix crash in tests.
 
 ## Stack
 
@@ -198,6 +198,7 @@ Later / maybe: native CarPlay app (only if publishing).
 - **Design refresh (option A) is built and waiting for Dan's test run** (README, "Design refresh checklist"). Notes:
   - Checked against WWDC26 "What's new in SwiftUI": iPhone apps can be resized on iOS 27 (so the capture layout stays flexible, and the Simple pin shrinks first), the new Liquid Glass slider changes glass tint (so capture buttons stay solid), and `@State` is now a macro (a default value plus an assignment in `init` is an error; there are none here). `confirmationDialog(_:item:)` and `alert(_:item:)` are iOS 27-only, so the iOS 26 forms stay.
   - `Text + Text` is deprecated in the iOS 26 SDK; use separate `Text` views or interpolation.
+  - Never read a `Pin`'s properties after an `await` until `pin.modelContext != nil` (and `!pin.isDeleted`) has been checked: a pin whose store is gone crashes when read. Read what's needed before the wait. (The drive log's late-fix entry broke this once and crashed the test host, so every SwiftData test showed "Testing was canceled".)
   - Keep expressions small enough for the type checker ("unable to type-check this expression in reasonable time"). It hit twice in `PinListView`: a 9-term `||` chain with `!= nil` checks (split into typed `let`s), then the whole `body` modifier chain (split into `body` → `presented` → `titled` + `@ToolbarContentBuilder toolbarItems`, with longer handlers as named methods). Add new modifiers to the piece they belong in, not all to `body`.
 - Notes from Milestone 7:
   - Listen-after-tap uses `SFSpeechRecognizer` with `requiresOnDeviceRecognition` (not deprecated in iOS 26; simpler than `SpeechAnalyzer`). On iPhone it's on-device only, and the setting stays off if the language isn't supported on device. In the Simulator only, it may fall back to server recognition so the feature can be tried.
