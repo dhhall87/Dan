@@ -1,12 +1,25 @@
 import Foundation
 
-/// The colors down a capture zone, plus a fixed "smoky" variation: a grid of slightly lighter and
-/// darker spots that `ZoneFill` blends into soft wisps. Sampled from Dan's mockup; he chose the
-/// subtle strength. Plain values in 0–255 RGB, so the rules are easy to unit test.
+/// The colors down a capture button, plus a fixed "smoky" variation: a grid of slightly lighter and
+/// darker spots that `ZoneFill` blends into soft wisps. The zones are sampled from Dan's mockup; he
+/// chose the subtle strength. Plain values in 0–255 RGB, so the rules are easy to unit test.
 enum ZoneShade {
     struct Stop {
         var location: Double
         var rgb: SIMD3<Double>
+    }
+
+    /// Which button: a near or far zone, or the Simple screen's big Pin it button.
+    enum Surface: CaseIterable {
+        case near, far, pin
+
+        var stops: [Stop] {
+            switch self {
+            case .near: return ZoneShade.near
+            case .far: return ZoneShade.far
+            case .pin: return ZoneShade.pin
+            }
+        }
     }
 
     /// Green, brightest about a sixth of the way down, staying green to the bottom.
@@ -31,6 +44,15 @@ enum ZoneShade {
         Stop(location: 1, rgb: [10, 27, 51]),
     ]
 
+    /// The icon's navy, shaded as the Pin it button always was: a touch lighter at the top, the plain
+    /// navy through the middle where "Pin it" sits, darker at the bottom.
+    static let pin: [Stop] = [
+        Stop(location: 0, rgb: [40, 49, 69]),
+        Stop(location: 0.35, rgb: [16, 26, 48]),
+        Stop(location: 0.65, rgb: [16, 26, 48]),
+        Stop(location: 1, rgb: [11, 18, 34]),
+    ]
+
     /// The smoke grid: 4 spots across, 7 down.
     static let columns = 4
     static let rows = 7
@@ -39,8 +61,8 @@ enum ZoneShade {
     static let smoke = 0.09
 
     /// The plain color `t` of the way down (0 top, 1 bottom).
-    static func rgb(far isFar: Bool, at t: Double) -> SIMD3<Double> {
-        let stops = isFar ? far : near
+    static func rgb(_ surface: Surface, at t: Double) -> SIMD3<Double> {
+        let stops = surface.stops
         let t = min(max(t, 0), 1)
         for (a, b) in zip(stops, stops.dropFirst()) where t <= b.location {
             let f = (t - a.location) / (b.location - a.location)
@@ -65,10 +87,10 @@ enum ZoneShade {
         return SIMD3(min(max(color.x, 0), 255), min(max(color.y, 0), 255), min(max(color.z, 0), 255))
     }
 
-    /// Every spot's color, row by row from the top, for a zone with this `seed`.
-    static func grid(far isFar: Bool, seed: Int) -> [SIMD3<Double>] {
+    /// Every spot's color, row by row from the top, for a button with this `seed`.
+    static func grid(_ surface: Surface, seed: Int) -> [SIMD3<Double>] {
         (0..<rows).flatMap { row in
-            let base = rgb(far: isFar, at: Double(row) / Double(rows - 1))
+            let base = rgb(surface, at: Double(row) / Double(rows - 1))
             return (0..<columns).map { column in
                 smoky(base, wisp: wisp(column: column, row: row, seed: seed))
             }

@@ -199,7 +199,8 @@ private struct QuickCapture: View {
             .minimumScaleFactor(0.6)
             .padding(16)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.quickSurface.softGradient, in: RoundedRectangle(cornerRadius: 36))
+            // The icon's navy with the zones' subtle smoke (Dan's request).
+            .background(ZoneFill(.pin, seed: 5).clipShape(RoundedRectangle(cornerRadius: 36)))
             .overlay(RoundedRectangle(cornerRadius: 36).strokeBorder(.white.opacity(0.08)))
             .contentShape(RoundedRectangle(cornerRadius: 36))
         }

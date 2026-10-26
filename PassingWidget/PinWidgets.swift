@@ -86,7 +86,9 @@ struct PinWidgetView: View {
             }
         }
         // CarPlay and StandBy remove this background; the yellow pin and white text still read on black.
-        .containerBackground(Color.quickSurface.softGradient, for: .widget)
+        .containerBackground(for: .widget) {
+            ZoneFill(.pin, seed: 5)
+        }
     }
 }
 
@@ -167,10 +169,11 @@ private struct GridButton: View {
 
 // MARK: Left or right (medium)
 
-/// A wide widget for the Home Screen and Smart Stacks: a big left button and a big right button,
-/// with "Passing" in an oval between them, which saves a pin with the side unknown (so a tap in the
-/// middle never opens the app). The buttons save the side only; distance can be set later in Pins.
-/// CarPlay only shows small widgets, so this one is for the iPhone.
+/// A wide widget for the Home Screen and Smart Stacks, split down the middle: tap the left half for
+/// the left side of the road, the right half for the right. "Passing" sits on the seam as a label
+/// only (Dan's request). The two buttons cover the whole widget, edges and seam included, so no tap
+/// opens the app. They save the side only; distance can be set later in Pins. CarPlay only shows
+/// small widgets, so this one is for the iPhone.
 struct PinSidesWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "PinSidesWidget", provider: PinTimelineProvider()) { entry in
@@ -192,12 +195,13 @@ struct PinSidesWidgetView: View {
                 StopListeningButton()
             } else if entry.isSetUp {
                 SavingAware {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 0) {
                         SideButton(side: .left, note: entry.savedNote(side: .left, distance: .unknown))
-                        CenterOvalButton(note: entry.savedNote(side: .unknown, distance: .unknown))
                         SideButton(side: .right, note: entry.savedNote(side: .right, distance: .unknown))
                     }
-                    .padding(6)
+                    .overlay {
+                        PassingLabel()
+                    }
                 }
                 .invalidatableContent()
             } else {
@@ -208,7 +212,8 @@ struct PinSidesWidgetView: View {
     }
 }
 
-/// One big side button: just an arrow pointing to that side of the road, no words.
+/// One half of the widget: just an arrow pointing to that side of the road, no words. The face is
+/// inset so the halves look like two buttons, but the button itself fills its whole half.
 private struct SideButton: View {
     let side: Side
     let note: WidgetSavedNote?
@@ -223,46 +228,34 @@ private struct SideButton: View {
                         .font(.system(size: 44, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color.quickSurface.softGradient)
+                        .background(ZoneFill(.pin, seed: side == .left ? 6 : 7))
                 }
             }
             .clipShape(ContainerRelativeShape())
+            .padding(.vertical, 6)
+            .padding(.leading, side == .left ? 6 : 3)
+            .padding(.trailing, side == .left ? 3 : 6)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(side == .left ? "Save pin, left side" : "Save pin, right side")
     }
 }
 
-/// "Passing" in an oval between the side buttons. Saves a pin with the side unknown.
-private struct CenterOvalButton: View {
-    let note: WidgetSavedNote?
-
+/// "Passing" on the seam between the halves. Only a label: taps go through it to the half underneath.
+private struct PassingLabel: View {
     var body: some View {
-        Button(intent: WidgetPinIntent(side: .unknown, distance: .unknown)) {
-            Group {
-                if let note {
-                    Image(systemName: note.symbol)
-                        .font(.title2.weight(.heavy))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(note.color, in: Capsule())
-                } else {
-                    Text("Passing")
-                        .font(.system(.subheadline, design: .rounded, weight: .heavy))
-                        .foregroundStyle(Color.pinYellow)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                        .padding(.horizontal, 6)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color.asphalt, in: Capsule())
-                }
-            }
-            .frame(width: 76)
-            .padding(.vertical, 24)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Save pin")
+        Text("Passing")
+            .font(.system(.subheadline, design: .rounded, weight: .heavy))
+            .foregroundStyle(Color.pinYellow)
+            .lineLimit(1)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(Color.asphalt, in: Capsule())
+            // A ring in the background color, so the label looks set into the gap between the halves.
+            .overlay(Capsule().strokeBorder(Color.captureBackground, lineWidth: 3))
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 }
 
@@ -417,7 +410,7 @@ private struct NotSetUpView: View {
 } timeline: {
     PinEntry(date: .now)
     PinEntry(date: .now, note: WidgetSavedNote(savedAt: .now, side: .left, distance: .unknown, hasLocation: true))
-    PinEntry(date: .now, note: WidgetSavedNote(savedAt: .now, side: .unknown, distance: .unknown, hasLocation: false))
+    PinEntry(date: .now, note: WidgetSavedNote(savedAt: .now, side: .right, distance: .unknown, hasLocation: false))
 }
 
 #Preview("Saving (just tapped)") {
