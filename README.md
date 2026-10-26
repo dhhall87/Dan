@@ -98,6 +98,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 **What leaves it, and when:**
 - **Town names:** each pin's location goes to Apple Maps to find its town. Settings → Privacy → **Look up town names** turns this off.
 - **Maps and Look Around:** opening a map, or tapping Show Look Around, asks Apple Maps for imagery of that area.
+- **Routes:** a route's stops go to Apple when you tap Show Road Route or Open in Apple Maps, and to Google when you tap a Google Maps link.
 - **Siri:** what you say to Siri goes through Siri, under your iPhone's Siri settings. Listen after tap stays on the iPhone.
 - **Exports and map links:** only when you share an export or tap Open in Apple Maps / Google Maps (Google then gets that spot). Passing deletes its own copy of an export once it's shared. A KML file reaches Google only when you upload it yourself.
 
@@ -224,6 +225,30 @@ Before you start: in Xcode, choose **Integrate → Pull** (or **Source Control �
 9. **KML:** show **Road trip**, then Export → **KML (Google My Maps)** → **Save to Files**. On your Mac, go to Google My Maps (google.com/mymaps) → **Create a new map** → name it **Passing pins** → **Import** → choose the file. The pin appears with its label, and clicking it shows the time, side, town and group.
 10. Export → **CSV** with All Pins showing. The file has a **group** column.
 11. Tap the Pin widget on the home screen. The new pin shows up in Pins as before.
+
+## Routes (Milestone 8)
+
+Plan a trip through pins you saved: Pins → **Select**, then tap pins in the order you want to visit them. Each shows its number (1, 2, 3…). Tap **Route** in the bottom bar.
+
+- **Stops:** in the order you picked them; tap **Edit** to drag them into another order. Notes and pins with no location are left out, and the screen says how many. A route takes up to 15 pins.
+- **Start and end:** the first and last pin unless you choose otherwise. The start can also be **Where you are**; either end can be **Home** or **Work** (the places set for review reminders) or **An address…** (type it and tap **Find**).
+- **Driving or Walking.**
+- **Map:** the stops numbered, joined by straight dashed lines, with the straight-line distance. **Show Road Route** asks Apple Maps for the real route, leg by leg, and shows the total distance and time.
+- **Open in Apple Maps:** the whole route as one multi-stop trip. **Open in Google Maps:** Google takes up to 9 stops between its start and end, so a longer route opens in parts, each starting where the last ended.
+- **Privacy:** stop locations go to Apple only when you tap Show Road Route or Open in Apple Maps, and to Google only when you tap a Google Maps link. A typed address goes to Apple Maps when you tap Find.
+- Planned as part of a future Passing Pro; for now it's free in your own build.
+
+## Milestone 8 manual test checklist
+
+1. Make 4 pins in different places (in the Simulator: Features → Location → Custom Location between taps, or use the **Move** button on each pin).
+2. Pins → **Select**. Tap three pins in any order: they show 1, 2, 3 in the order you tapped them. Untap the middle one: the numbers close up (1, 2). Tap it again (now 3), then tap **Route**.
+3. The route screen lists the stops in your order and the map numbers them, joined by dashed lines, with a straight-line distance under the map.
+4. **Edit** → drag the last stop to the top → **Done**: the map renumbers.
+5. **Start → Where you are**: the map footer says the Maps apps start from where you are. **End → An address…**: type a town and tap **Find**; it shows a green tick and the map adds an **E** marker.
+6. **Show Road Route**: blue road lines replace the dashes, with Distance and Time. Change **Travel** to Walking: the road route clears (tap again for the walking route).
+7. **Open in Apple Maps**: Maps opens directions through every stop, in order. **Open in Google Maps** (Safari, or the Google Maps app if installed): the same stops.
+8. Select 12 pins (or 11 plus an address end): Google Maps shows **part 1 of 2** and **part 2 of 2**; part 2 starts where part 1 ends.
+9. Select a note and a "No location" pin with two real pins: the route has the two real pins and says 2 picked items have no location.
 
 ## Milestone 7 manual test checklist
 

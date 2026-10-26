@@ -18,7 +18,7 @@ Expand Passing from a personal travel companion into a lightweight field-discove
 - **Avoid duplicate reports:** explore a "since last report" option as an alternative to a rolling time window.
 - **Multi-stop route from selected pins (Dan, October 2026; possible Pro feature):** in Select mode, tap pins in the order to visit them; choose a start and end (the first and last selected pin by default, or Current Location, the saved Home/Work places, or a typed address); see the route on a map in Passing; then open it in Apple Maps or Google Maps.
 
-## Multi-stop route: what's possible (checked October 2026, not built)
+## Multi-stop route (built in Milestone 8, October 2026; not gated yet)
 
 - **Ordered selection:** Select mode keeps a `Set` today; the route needs the tap order (an array), shown as 1, 2, 3 on the rows and map. Notes and pins without a location are left out. A miles-back pin with no estimate uses where the car was.
 - **Map in Passing:** two levels. Straight lines between the pins in order: instant, free and offline. A road route: MapKit `MKDirections`, one request per leg (A→B, B→C, …), drawn with `MapPolyline`, with total distance and time. Apple throttles directions requests per device, so cap the number of stops. MapKit doesn't reorder stops for the shortest trip; keep the tap order (a simple "nearest next" ordering could be added on the phone).

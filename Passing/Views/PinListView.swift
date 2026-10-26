@@ -20,7 +20,10 @@ struct PinListView: View {
     @State private var showsMap = false
     @State private var managingGroups = false
     @State private var isSelecting = false
-    @State private var selection = Set<UUID>()
+    /// The picked pins, in the order they were picked (a route visits them in that order).
+    @State private var selection: [UUID] = []
+    /// The route screen, opened from Select mode.
+    @State private var routing: RouteSelection?
     /// What a group made with "New Group…" is for: nothing yet, one pin, or the selected pins.
     @State private var newGroupFor: NewGroupFor?
 
@@ -52,7 +55,7 @@ struct PinListView: View {
         // Separate lines: one long chain of these is too slow for the Swift compiler to check.
         let inList: Bool = isSelecting || isScrolledDown || showsMap
         let typing: Bool = addingNote || noteSaveFailed || newGroupFor != nil
-        let sheetOpen: Bool = exportFile != nil || exportError != nil
+        let sheetOpen: Bool = exportFile != nil || exportError != nil || routing != nil
         let editing: Bool = managingGroups || movingPin != nil
         return inList || typing || sheetOpen || editing
     }
@@ -115,6 +118,9 @@ struct PinListView: View {
             .sheet(isPresented: $managingGroups) {
                 GroupsView()
             }
+            .sheet(item: $routing) { selection in
+                RoutePlannerView(selection: selection)
+            }
             .sheet(item: $movingPin) { pin in
                 MovePinView(pin: pin)
             }
@@ -154,7 +160,7 @@ struct PinListView: View {
         if isSelecting {
             ToolbarItem(placement: .topBarLeading) {
                 Button(allShownSelected ? "Deselect All" : "Select All") {
-                    selection = allShownSelected ? [] : Set(shownPins.map(\.id))
+                    selection = allShownSelected ? [] : shownPins.map(\.id)
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
@@ -304,16 +310,18 @@ struct PinListView: View {
 
     /// In Select mode a tap ticks the pin instead of opening it.
     private func selectableRow(for pin: Pin) -> some View {
-        let isSelected = selection.contains(pin.id)
+        let order = selection.firstIndex(of: pin.id)
+        let isSelected = order != nil
         return Button {
             if isSelected {
-                selection.remove(pin.id)
+                selection.removeAll { $0 == pin.id }
             } else {
-                selection.insert(pin.id)
+                selection.append(pin.id)
             }
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                // The pick order, for routes: 1, 2, 3…
+                Image(systemName: order.map { $0 < 50 ? "\($0 + 1).circle.fill" : "checkmark.circle.fill" } ?? "circle")
                     .font(.title2)
                     .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
                 PinRow(pin: pin, keepIndefinitely: keepIndefinitely, showsGroup: showsGroups)
@@ -415,6 +423,13 @@ struct PinListView: View {
         }
         .disabled(selected.isEmpty)
         Spacer()
+        Button {
+            routing = routeSelection()
+        } label: {
+            Label("Route", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+        }
+        .disabled(!selected.contains { !$0.isNote && $0.lookUpCoordinate != nil })
+        Spacer()
         Button(role: .destructive) {
             RetentionService.shared.moveToRecentlyDeleted(selected)
             selection = []
@@ -422,6 +437,25 @@ struct PinListView: View {
             Label("Delete", systemImage: "trash")
         }
         .disabled(selected.isEmpty)
+    }
+
+    /// The picked pins in pick order, as route stops: where the thing is if known (a chosen place, a
+    /// moved pin, a miles-back estimate), otherwise where the car was.
+    private func routeSelection() -> RouteSelection {
+        let byID = Dictionary(shownPins.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let picked = selection.compactMap { byID[$0] }
+        var stops: [RouteStop] = []
+        for pin in picked where !pin.isNote {
+            guard let spot = pin.lookUpCoordinate else { continue }
+            let time = pin.capturedAt.formatted(date: .omitted, time: .shortened)
+            let name = (pin.label?.isEmpty ?? true) ? "Unlabeled, \(time)" : pin.displayLabel
+            stops.append(RouteStop(name: name, latitude: spot.latitude, longitude: spot.longitude))
+        }
+        return RouteSelection(
+            stops: Array(stops.prefix(RoutePlan.maxPins)),
+            withoutLocation: picked.count - stops.count,
+            overLimit: max(0, stops.count - RoutePlan.maxPins)
+        )
     }
 
     private var newGroupShown: Binding<Bool> {
@@ -449,11 +483,13 @@ struct PinListView: View {
     }
 
     private var selectedPins: [Pin] {
-        shownPins.filter { selection.contains($0.id) }
+        let picked = Set(selection)
+        return shownPins.filter { picked.contains($0.id) }
     }
 
     private var allShownSelected: Bool {
-        !shownPins.isEmpty && shownPins.allSatisfy { selection.contains($0.id) }
+        let picked = Set(selection)
+        return !shownPins.isEmpty && shownPins.allSatisfy { picked.contains($0.id) }
     }
 
     private var selectionTitle: String {
