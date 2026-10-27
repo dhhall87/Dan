@@ -23,7 +23,8 @@ struct DriveLogEntry: Codable, Equatable {
         case noGPS
         /// The miles-back trail started again (`outcome` gap, jump or longBreak).
         case trailRestart
-        /// Listen after tap (or a spoken note) finished: `outcome` heard, nothing or stopped.
+        /// Listen after tap (or a spoken note) finished: `outcome` heard, nothing, stopped, or
+        /// replaced (a newer tap took over); `seconds` from that listen's own start.
         case listen
         /// The pin database opened (`outcome` shared, appOnly or unavailable).
         case storeOpened
@@ -249,7 +250,12 @@ enum DriveLogSummary {
             let heard = listens.filter { $0.outcome == "heard" }.count
             let nothing = listens.filter { $0.outcome == "nothing" }.count
             let stopped = listens.filter { $0.outcome == "stopped" }.count
-            lines.append("Listening: heard \(heard) · nothing \(nothing) · stopped \(stopped)")
+            let replaced = listens.filter { $0.outcome == "replaced" }.count
+            var text = "Listening: heard \(heard) · nothing \(nothing) · stopped \(stopped)"
+            if replaced > 0 {
+                text += " · cut short by a newer tap \(replaced)"
+            }
+            lines.append(text)
         }
 
         let opens = of(.storeOpened)

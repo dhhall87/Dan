@@ -24,8 +24,6 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
     /// Set by the Stop button, so a session still asking its question doesn't go on to listen.
     @ObservationIgnored private var sessionStopped = false
     @ObservationIgnored private var listenTask: Task<Void, Never>?
-    /// When the current listen started, for the drive log.
-    @ObservationIgnored private var listenStartedAt = Date.distantPast
     @ObservationIgnored private var deactivateTask: Task<Void, Never>?
     @ObservationIgnored private var stopObserver: (any NSObjectProtocol)?
     @ObservationIgnored private var voicesObserver: (any NSObjectProtocol)?
@@ -236,14 +234,13 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         interruptSpeech()
         sessionStopped = false
         listeningPin = pin
-        listenStartedAt = .now
         ListeningSignal.setListening(true)
         WidgetCenter.shared.reloadAllTimelines()
 
         let mode = AudioWorker.Mode.listening(pausingOthers: AppSettings.pauseAudioWhileSpeaking)
         let ask = AppSettings.askBeforeListening
         // Read now, while the pin is certainly there: by the end it may have been deleted for good.
-        let about = ListenTarget(pin: pin, isNote: pin.isNote, source: pin.source)
+        let about = ListenTarget(pin: pin, isNote: pin.isNote, source: pin.source, startedAt: .now)
         listenTask = Task { @MainActor in
             await previous?.value
             guard self.listeningPin === pin else { return }
@@ -251,6 +248,12 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
                 self.audio.activateAndPlay(tone: !ask, mode: mode) {
                     continuation.resume()
                 }
+            }
+            // Starting the audio can take about a second when it pauses music. If a newer tap took
+            // over meanwhile, this one ends quietly instead of asking its question after all.
+            guard self.listeningPin === pin, !self.sessionStopped else {
+                self.finishListening(about, heard: nil)
+                return
             }
             if ask {
                 await self.say(question)
@@ -271,6 +274,8 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         let pin: Pin
         let isNote: Bool
         let source: CaptureSource
+        /// When this listen began, so its own length is logged even when a newer tap overlaps it.
+        let startedAt: Date
     }
 
     /// Ends a listen: always turns the Stop button off and puts the audio back, then labels the pin
@@ -281,8 +286,8 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         let stillCurrent = listeningPin === pin
         DriveLog.record(DriveLogEntry(
             at: .now, kind: .listen, source: target.isNote ? "note" : target.source.rawValue,
-            outcome: label != nil ? "heard" : sessionStopped ? "stopped" : "nothing",
-            seconds: Date.now.timeIntervalSince(listenStartedAt)
+            outcome: label != nil ? "heard" : !stillCurrent ? "replaced" : sessionStopped ? "stopped" : "nothing",
+            seconds: Date.now.timeIntervalSince(target.startedAt)
         ))
         if stillCurrent {
             listeningPin = nil

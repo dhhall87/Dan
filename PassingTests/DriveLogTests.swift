@@ -119,6 +119,14 @@ struct DriveLogTests {
         #expect(lines.contains("  Tapped after the pin: median 8s, slowest 10s"))
     }
 
+    @Test func listensCutShortByANewerTapAreCounted() {
+        let lines = DriveLogSummary.lines(for: [
+            entry(.listen, source: "app", outcome: "replaced"),
+            entry(.listen, after: 9, source: "app", outcome: "heard"),
+        ], timeZone: utc)
+        #expect(lines.contains("Listening: heard 1 · nothing 0 · stopped 0 · cut short by a newer tap 1"))
+    }
+
     @Test func emptyLogSaysSo() {
         #expect(DriveLogSummary.lines(for: []) == ["Nothing logged yet."])
     }
