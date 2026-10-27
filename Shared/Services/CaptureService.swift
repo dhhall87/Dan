@@ -12,9 +12,6 @@ import SwiftData
 /// wire it up differently: see `CaptureService+App.swift` and `CaptureService+Widget.swift`.
 @MainActor
 final class CaptureService {
-    /// Tapping "+1 mi back" again within this many seconds bumps the same pin another mile back.
-    static let bumpWindow: TimeInterval = 4
-
     private let context: ModelContext
     private let currentFix: @MainActor () -> CLLocation?
     private let lateFix: @MainActor () async -> CLLocation?
@@ -33,9 +30,9 @@ final class CaptureService {
     /// Pins that are on disk, but whose later change (a label, a late GPS fix, a bump) isn't yet.
     private var unsavedChangeIDs: Set<UUID> = []
     private var debouncer = TapDebouncer<String>(interval: 0.75)
-    /// The miles-back pin that further "+1" taps will bump, with the trail and the car's exact
-    /// position as they were at the first tap (in memory only, even with precise location off).
-    private var bump: (pin: Pin, trail: BreadcrumbBuffer, lastTap: Date, start: TrailPoint?)?
+    /// The pin just dropped on the capture screen, which "+1 mi back" moves, with the trail and the
+    /// car's exact position as they were at that tap (in memory only, even with precise location off).
+    private var recent: (pin: Pin, trail: BreadcrumbBuffer, start: TrailPoint?, window: MilesBackWindow)?
     /// Pins still waiting for their first usable fix, so Siri can wait for them before finishing.
     private var lateFixTasks: [UUID: Task<Void, Never>] = [:]
 
@@ -110,54 +107,76 @@ final class CaptureService {
                 return nil
             }
         }
-        if source == .app {
-            bump = nil
-        }
-
         let pin = Pin(capturedAt: now, side: side, distance: distance, source: source)
         pin.label = label
-        save(newPin: pin)
+        guard source == .app else {
+            save(newPin: pin)
+            return pin
+        }
+        // Snapshot the trail now, so "+1" measures back from where this pin was dropped, not from
+        // wherever the car is by then.
+        let snapshot = trail()
+        var start: TrailPoint?
+        save(newPin: pin) { start = $0.captureTrailPoint }
+        recent = (pin, snapshot, start, MilesBackWindow(pinnedAt: now))
         return pin
     }
 
-    /// "+1 mi back": saves a pin `miles` back along the road just driven. In the app, tapping again
-    /// within `bumpWindow` seconds moves that same pin to 2 miles, 3 miles, and so on, and every tap
+    /// When "+1 mi back" stops applying to the pin just dropped on the capture screen, or nil if
+    /// there's no such pin (none yet, too long ago, or deleted). The button is dimmed meanwhile.
+    func milesBackClosesAt(now: Date = .now) -> Date? {
+        guard let current = recent, current.window.isOpen(at: now),
+              current.pin.modelContext != nil, !current.pin.isDeleted, current.pin.deletedAt == nil
+        else { return nil }
+        return current.window.closesAt
+    }
+
+    /// The capture screen's "+1 mi back": moves the pin just dropped a mile further back along the
+    /// road driven, measured from where it was dropped (`MilesBackWindow`: within about 10 s of the
+    /// pin, then within about 5 s of each "+1"). It keeps its side and distance, and every tap
     /// confirms with the haptic and tone (and "2 miles back" if spoken confirmation is on).
+    ///
+    /// - Returns: the pin, or nil when there's no pin just dropped to move, so the caller can say so
+    ///   with a different haptic. It never makes a pin of its own.
+    @discardableResult
+    func milesBackTap(now: Date = .now) -> Pin? {
+        guard milesBackClosesAt(now: now) != nil, let current = recent else {
+            var entry = DriveLogEntry(at: .now, kind: .bump, source: CaptureSource.app.rawValue, outcome: "noPin")
+            // How long after the last pin, to tune the window (nothing is read from the pin itself).
+            entry.seconds = recent.map { now.timeIntervalSince($0.window.pinnedAt) }
+            DriveLog.record(entry)
+            return nil
+        }
+        let pin = current.pin
+        pin.milesBack += 1
+        // A pin dropped before GPS was ready may have its position by now.
+        estimateTarget(for: pin, from: current.start ?? pin.captureTrailPoint, along: current.trail)
+        if !isPrecise() {
+            pin.coarsenLocation()
+        }
+        recent?.window.bumped(at: now)
+        let saved = persistChange(to: pin)
+        if saved {
+            confirm(pin)
+        } else {
+            failed(pin)
+        }
+        var entry = DriveLogEntry(at: .now, kind: .bump, source: pin.source.rawValue, outcome: pin.targetSource.rawValue, saved: saved, miles: pin.milesBack)
+        entry.trailMiles = current.trail.length / Geo.metersPerMile
+        entry.seconds = now.timeIntervalSince(current.window.pinnedAt)
+        DriveLog.record(entry)
+        return pin
+    }
+
+    /// Siri and Shortcuts ("pin that 2 miles back"): saves a new pin `miles` back along the road
+    /// just driven. The capture screen's "+1 mi back" moves a pin instead (`milesBackTap`).
     @discardableResult
     func captureMilesBack(source: CaptureSource, miles: Double = 1, now: Date = .now) -> Pin {
-        if source == .app, let current = bump,
-           now.timeIntervalSince(current.lastTap) <= Self.bumpWindow,
-           current.pin.modelContext != nil, !current.pin.isDeleted, current.pin.deletedAt == nil {
-            let pin = current.pin
-            pin.milesBack += 1
-            estimateTarget(for: pin, from: current.start ?? pin.captureTrailPoint, along: current.trail)
-            if !isPrecise() {
-                pin.coarsenLocation()
-            }
-            bump?.lastTap = now
-            let saved = persistChange(to: pin)
-            if saved {
-                confirm(pin)
-            } else {
-                failed(pin)
-            }
-            var entry = DriveLogEntry(at: .now, kind: .bump, source: pin.source.rawValue, outcome: pin.targetSource.rawValue, saved: saved, miles: pin.milesBack)
-            entry.trailMiles = current.trail.length / Geo.metersPerMile
-            DriveLog.record(entry)
-            return pin
-        }
-
         let pin = Pin(capturedAt: now, side: .unknown, distance: .unknown, source: source)
         pin.milesBack = max(miles, 1)
-        // Snapshot the trail now, so later bumps measure back from this tap, not from wherever the car is by then.
         let snapshot = trail()
-        var start: TrailPoint?
         save(newPin: pin, trailMeters: snapshot.length) { pin in
-            start = pin.captureTrailPoint
-            self.estimateTarget(for: pin, from: start, along: snapshot)
-        }
-        if source == .app {
-            bump = (pin, snapshot, now, start)
+            self.estimateTarget(for: pin, from: pin.captureTrailPoint, along: snapshot)
         }
         return pin
     }

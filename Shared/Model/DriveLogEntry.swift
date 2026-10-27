@@ -8,7 +8,9 @@ struct DriveLogEntry: Codable, Equatable {
         /// A pin saved (any source). `fixAge` is set when a fix was stamped at the tap. For Apple Watch
         /// pins, `seconds` is how long after the tap the pin reached the iPhone.
         case capture
-        /// "+1 mi back" tapped again within 4 s, moving the same pin another mile.
+        /// "+1 mi back" on the capture screen: `outcome` is how the pin just dropped was placed
+        /// (breadcrumb or textOnly), or noPin when there was none to move; `seconds` is how long after
+        /// that pin was dropped.
         case bump
         /// A pin saved before any fix: what happened next (`outcome` attached, none, tooLate, pinChanged).
         case lateFix
@@ -68,7 +70,8 @@ struct DriveLogEntry: Codable, Equatable {
         case .trailRestart: return "gap"
         case .opened: return "ready"
         case .capture: return "arrived"
-        case .bump, .noGPS, .saveFailed: return "seconds"
+        case .bump: return "afterPin"
+        case .noGPS, .saveFailed: return "seconds"
         }
     }
 
@@ -207,10 +210,21 @@ enum DriveLogSummary {
             }
         }
 
+        // Pins saved miles back: from Siri, or the capture screen before 1.1.1.
         let milesBack = captures.filter { ($0.miles ?? 0) > 0 }
         if !milesBack.isEmpty {
             let estimated = milesBack.filter { $0.outcome == "milesBack-breadcrumb" }.count
-            lines.append("Miles back: \(milesBack.count) (on the trail \(estimated), in words only \(milesBack.count - estimated)) · bumps \(of(.bump).count)")
+            lines.append("Pins saved miles back: \(milesBack.count) (on the trail \(estimated), in words only \(milesBack.count - estimated))")
+        }
+        let bumps = of(.bump)
+        if !bumps.isEmpty {
+            let moved = bumps.filter { $0.outcome != "noPin" }
+            let onTrail = moved.filter { $0.outcome == TargetSource.breadcrumb.rawValue }.count
+            lines.append("+1 mi back taps: \(bumps.count) · moved a pin \(moved.count) (on the trail \(onTrail), in words only \(moved.count - onTrail)) · no pin just before \(bumps.count - moved.count)")
+            let after = moved.compactMap(\.seconds)
+            if !after.isEmpty {
+                lines.append("  Tapped after the pin: \(spread(after))")
+            }
         }
 
         let restarts = of(.trailRestart)

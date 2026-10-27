@@ -58,7 +58,10 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         haptics.notificationOccurred(.success)
         haptics.prepare()
 
-        if AppSettings.listenAfterTap, SpeechListener.availability == .ready {
+        // A "+1 mi back" on a pin that already has its label just confirms; one still being listened
+        // for (or still unlabeled) listens again.
+        let unlabeled = pin.label?.isEmpty ?? true
+        if AppSettings.listenAfterTap, SpeechListener.availability == .ready, listeningPin === pin || unlabeled {
             listenForLabel(on: pin)
             return
         }
@@ -91,6 +94,16 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         haptics.prepare()
         if AppSettings.spokenConfirmation {
             preview("Pin not saved.")
+        }
+    }
+
+    /// "+1 mi back" with no pin just dropped to move: the warning haptic, no tone, and "Pin something
+    /// first." if spoken confirmation is on, so the driver knows nothing was saved or moved.
+    func milesBackUnavailable() {
+        haptics.notificationOccurred(.warning)
+        haptics.prepare()
+        if AppSettings.spokenConfirmation {
+            preview("Pin something first.")
         }
     }
 

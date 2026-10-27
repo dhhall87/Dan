@@ -1,3 +1,4 @@
+import Observation
 import SwiftUI
 import UIKit
 
@@ -45,6 +46,7 @@ struct CaptureView: View {
             isShowing = true
             updateActivity()
             CaptureFeedback.shared.prepare()
+            CaptureScreenState.shared.appeared()
         }
         .onDisappear {
             isShowing = false
@@ -52,6 +54,11 @@ struct CaptureView: View {
         }
         .onChange(of: scenePhase) {
             updateActivity()
+            switch scenePhase {
+            case .active: CaptureScreenState.shared.cameToFront()
+            case .background: CaptureScreenState.shared.wentToBackground()
+            default: break
+            }
         }
         .onChange(of: isCovered) {
             updateActivity()
@@ -187,7 +194,7 @@ private extension GPSStatus {
 private struct QuickCapture: View {
     var body: some View {
         Button {
-            CaptureService.shared.capture(side: .unknown, distance: .unknown, source: .app)
+            CaptureScreenState.shared.pin(side: .unknown, distance: .unknown)
         } label: {
             VStack(spacing: 10) {
                 // Shrinks first when the window is short (landscape, or a resized window on iOS 27).
@@ -252,7 +259,7 @@ private struct ZoneColumn: View {
 
     var body: some View {
         Button {
-            CaptureService.shared.capture(side: zone.side, distance: zone.distance, source: .app)
+            CaptureScreenState.shared.pin(side: zone.side, distance: zone.distance)
         } label: {
             VStack(spacing: 6) {
                 Image(systemName: isLeft ? "arrow.up.left" : "arrow.up.right")
@@ -283,7 +290,7 @@ private struct ZoneColumn: View {
 private struct RoadDivider: View {
     var body: some View {
         Button {
-            CaptureService.shared.capture(side: .unknown, distance: .unknown, source: .app)
+            CaptureScreenState.shared.pin(side: .unknown, distance: .unknown)
         } label: {
             ZStack(alignment: .bottom) {
                 RoadMarkings()
@@ -327,8 +334,6 @@ private struct RoadMarkings: View {
 
 // MARK: +1 mi back
 
-/// One tap saves a pin 1 mile back along the road just driven; each extra tap within 4 seconds
-/// pushes that same pin another mile back. Confirmed by haptic and tone on every tap, never by reading.
 /// "+1 mi back" and "Add a note", side by side under the capture area.
 private struct BottomButtons: View {
     var body: some View {
@@ -341,10 +346,16 @@ private struct BottomButtons: View {
     }
 }
 
+/// Moves the pin just dropped a mile back along the road driven; each extra tap within about 5
+/// seconds moves it another mile. It works for about 10 seconds after a pin and is dimmed the rest
+/// of the time; a tap then gets the warning haptic, so it's clear nothing happened. Confirmed by
+/// haptic and tone on every tap, never by reading.
 private struct MilesBackButton: View {
+    private let state = CaptureScreenState.shared
+
     var body: some View {
         Button {
-            CaptureService.shared.captureMilesBack(source: .app)
+            state.milesBack()
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "arrow.uturn.backward")
@@ -355,15 +366,21 @@ private struct MilesBackButton: View {
                     .foregroundStyle(.white.opacity(0.9))
             }
             .bottomButtonShape()
+            .opacity(state.isMilesBackOpen ? 1 : 0.4)
         }
         .buttonStyle(PressHighlightStyle(cornerRadius: 27))
-        .accessibilityLabel("Save a pin one mile back. Tap again to move it further back.")
+        .accessibilityLabel("Move the pin you just saved one mile back")
+        .accessibilityHint(state.isMilesBackOpen ? "Tap again to move it further back" : "Save a pin first")
     }
 }
 
 /// Asks "What's your note?" and saves what's said as a note in Pins, with no pin or location.
-/// Voice only: typing a note happens in Pins, never on this screen.
+/// Voice only: typing a note happens in Pins, never on this screen. It stays off (dimmed) for the
+/// first few seconds after Passing opens, so a stray touch while picking up the phone doesn't start
+/// a note (Dan's request).
 private struct AddNoteButton: View {
+    private let state = CaptureScreenState.shared
+
     var body: some View {
         Button {
             CaptureFeedback.shared.addSpokenNote()
@@ -377,10 +394,93 @@ private struct AddNoteButton: View {
                     .foregroundStyle(.white.opacity(0.9))
             }
             .bottomButtonShape()
+            .opacity(state.notesReady ? 1 : 0.4)
         }
         .buttonStyle(PressHighlightStyle(cornerRadius: 27))
+        .disabled(!state.notesReady)
         .accessibilityLabel("Add a note by voice")
         .accessibilityHint("Asks for your note, then listens")
+    }
+}
+
+/// What the capture screen's buttons need to know between taps: whether "+1 mi back" has a pin to
+/// move right now, and whether "Add a note" is ready. Every capture button goes through `pin`, so
+/// "+1" always follows the pin just dropped.
+@MainActor
+@Observable
+final class CaptureScreenState {
+    static let shared = CaptureScreenState()
+
+    /// "Add a note" waits this long after Passing opens or comes back to the front.
+    static let noteDelay: TimeInterval = 5
+
+    /// True while "+1 mi back" would move the pin just dropped.
+    private(set) var isMilesBackOpen = false
+    private(set) var notesReady = false
+
+    @ObservationIgnored private var milesBackTask: Task<Void, Never>?
+    @ObservationIgnored private var notesTask: Task<Void, Never>?
+    @ObservationIgnored private var hasAppeared = false
+    @ObservationIgnored private var wasInBackground = false
+
+    func pin(side: Side, distance: Distance) {
+        CaptureService.shared.capture(side: side, distance: distance, source: .app)
+        refreshMilesBack()
+    }
+
+    func milesBack() {
+        if CaptureService.shared.milesBackTap() == nil {
+            CaptureFeedback.shared.milesBackUnavailable()
+        }
+        refreshMilesBack()
+    }
+
+    /// The capture screen came on screen. The first time is Passing opening.
+    func appeared() {
+        if !hasAppeared {
+            hasAppeared = true
+            holdNotes()
+        }
+        refreshMilesBack()
+    }
+
+    func wentToBackground() {
+        wasInBackground = true
+    }
+
+    /// Passing is active again. Back from the background or the lock screen counts as opening it;
+    /// pulling down Control Center or a notification doesn't.
+    func cameToFront() {
+        if wasInBackground {
+            wasInBackground = false
+            holdNotes()
+        }
+        refreshMilesBack()
+    }
+
+    private func holdNotes() {
+        notesReady = false
+        notesTask?.cancel()
+        notesTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.noteDelay))
+            guard !Task.isCancelled else { return }
+            self?.notesReady = true
+        }
+    }
+
+    /// Lights "+1 mi back" while it applies, and dims it again the moment it stops.
+    private func refreshMilesBack() {
+        milesBackTask?.cancel()
+        guard let closesAt = CaptureService.shared.milesBackClosesAt() else {
+            isMilesBackOpen = false
+            return
+        }
+        isMilesBackOpen = true
+        milesBackTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(max(0, closesAt.timeIntervalSinceNow) + 0.05))
+            guard !Task.isCancelled else { return }
+            self?.refreshMilesBack()
+        }
     }
 }
 

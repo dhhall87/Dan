@@ -10,7 +10,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Simple (default):** the whole screen is one capture button, with the app icon's yellow pin.
 - **Four zones:** `| Far left | Near left | road | Near right | Far right |` as full-height columns. Near zones are green, far zones blue. The narrow road in the middle, with your car on it, saves a pin with the side unknown.
 - **Switching layouts:** Settings → Capture screen picks the one Passing opens with. To switch during a drive, tap the **Passing** title at the top (the line under it says **Simple** or **Four zones**). After more than 30 minutes away, Passing comes back on the Settings layout.
-- **Add a note** (next to "+1 mi back"): Passing asks **"What's your note?"** and listens. What you say is saved as a note in Pins, under today, with no pin or location. Saying nothing saves nothing. It's voice only, because a text box can't appear on the driving screen. It needs speech permission, which Passing asks for only in Settings: turn on **Listen after tap** once (you can turn it off again afterwards). Until then the button just says how to turn it on.
+- **Add a note** (next to "+1 mi back") is dimmed for the first 5 seconds after Passing opens or comes back from the background, so a stray touch while picking up the phone doesn't start one. Then Passing asks **"What's your note?"** and listens. What you say is saved as a note in Pins, under today, with no pin or location. Saying nothing saves nothing. It's voice only, because a text box can't appear on the driving screen. It needs speech permission, which Passing asks for only in Settings: turn on **Listen after tap** once (you can turn it off again afterwards). Until then the button just says how to turn it on.
 - **New Note** (bottom of the Pins list): type a note, or tap the microphone on the keyboard to dictate it. With a group showing, the note goes into that group.
 - **Needs Review** (top of Pins, and in the folder button's menu): pins you saved from the widget, CarPlay or Control Center, which have no label, until you mark them Reviewed, give them a label, or file them in a group (labelling or filing one marks it Reviewed). Pins from the capture screen and Siri don't go in. It's a smart list, not a group, so a pin can be in "Road trip" and still need review. In the rest of the list those pins have a faint amber background and a tray icon, so they're easy to spot. In Needs Review, swipe right to mark a pin Reviewed and it leaves the list. Elsewhere, swipe right shows Keep (full swipe) and Reviewed.
 - **Review reminders** (Settings → Needs Review → Review Reminders, off by default): after a widget pin, Passing reminds you to look at Needs Review the next morning at 8:00 (change the time), and/or when you arrive at work or home. Set a place with **Use My Current Location** while you're there, or search for its address. Reminders are only set while something is waiting, and reviewing everything cancels them. Tapping one opens Needs Review. iOS watches for your arrival itself, so Passing doesn't track you or run in the background, and it needs no extra location permission. If a reminder arrives while Passing is open, it goes quietly into Notification Center with no banner over the capture screen.
@@ -34,7 +34,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **When the clean-up runs:** on launch, whenever the app comes back to the front, when you open the Pins list, and in the background when iOS allows. It never runs in the middle of an export.
 
 **Miles back and voice (Milestone 3)**
-- **+1 mi back** (the wide button at the bottom of the capture screen): one tap saves a pin 1 mile back along the road you just drove. Tap again within 4 seconds and the same pin moves to 2 miles, 3 miles, and so on, with a haptic and tone each time.
+- **+1 mi back** (the wide button at the bottom of the capture screen) moves the pin you just dropped a mile back along the road you drove, measured from where you dropped it. It keeps the side and distance you tapped. It works for about 10 seconds after a pin, and each extra tap within about 5 seconds of the last moves it another mile, with a haptic and tone each time. Drop a pin, wait 6 seconds, tap +1, wait 4 seconds, tap +1 again: that pin is 2 miles back. The rest of the time the button is dimmed and never makes a pin of its own; a tap then gives a warning buzz (and "Pin something first." with spoken confirmation on).
 - **How it knows the road:** while the capture screen is open, Passing keeps a trail of the last ~25 miles in memory, a point every ~50 m. It's never saved and never recorded in the background.
 - **On the map:** the pin's detail screen shows your car (blue), the estimate (orange "About here") and the road between them. Apple and Google Maps links go to the estimate.
 - **Not enough trail yet** (app just opened): no estimate goes on the map. Instead the pin says "About 2 miles back the way you came. You were heading southwest, so look northeast of this spot."
@@ -186,14 +186,14 @@ Debug builds (what ⌘R makes) have a **Testing** section at the bottom of Setti
 ## Milestone 3 manual test checklist
 
 1. Run the app, then click the **location arrow** in Xcode's debug bar and choose **KansasDrive**. Keep the capture screen open for about 4 minutes. In debug builds, Settings → Testing shows **Trail recorded** growing. After about 7.5 minutes the route turns north, so 1–2 miles back from there lands around the corner on the first road.
-2. Tap **+1 mi back** once. In **Pins**, the new pin says "1 mi back". Open it: the map shows the blue car, the orange "About here" about a mile back along the road, and a blue line between them. **Open in Google Maps** goes to the orange spot.
-3. Back on the capture screen, tap **+1 mi back** three times, less than 4 seconds apart. (Leaving the capture screen pauses the trail. If the car moved more than about 300 m meanwhile, which the simulated drive does in about 10 seconds, the trail starts fresh, so stay on the capture screen for about 3 minutes first.) You get one new pin, "3 mi back", with a haptic and tone on each tap.
-4. Wait 5 seconds and tap **+1 mi back** again. That makes a separate new pin, "1 mi back".
-5. Force-quit and reopen, then immediately tap **+1 mi back**. That pin has no orange spot and says "About 1 mile back the way you came…" instead, because the trail starts empty.
+2. Tap **Pin it**, then **+1 mi back** within 10 seconds. In **Pins**, that one pin says "1 mi back". Open it: the map shows the blue car, the orange "About here" about a mile back along the road, and a blue line between them. **Open in Google Maps** goes to the orange spot.
+3. Back on the capture screen, tap **Pin it**, then **+1 mi back** three times, less than 5 seconds apart. (Leaving the capture screen pauses the trail. If the car moved more than about 300 m meanwhile, which the simulated drive does in about 10 seconds, the trail starts fresh, so stay on the capture screen for about 3 minutes first.) You get one pin, "3 mi back", with a haptic and tone on each tap.
+4. Wait 15 seconds: **+1 mi back** dims. Tap it: a warning buzz, and no new pin.
+5. Force-quit and reopen, then tap **Pin it** and **+1 mi back** at once. That pin has no orange spot and says "About 1 mile back the way you came…" instead, because the trail starts empty.
 6. Settings → turn on **Spoken confirmation** → **Voice**. Tap ▶︎ on a few voices, then tap one to choose it. The Simulator has fewer voices than a real iPhone.
 7. **Phrases:** add "Got it boss" and "I'll look this up later", and swipe left to remove "Saved". Tap ▶︎ to hear each one. Back in Settings, tap **Preview**.
 8. On the capture screen in Four zones, tap a few zones. You should hear things like "Left, far. Got it boss." Turn off **Say side and distance first** and you just hear the phrase.
-9. Tap **+1 mi back** twice quickly. You hear "1 mile back", then "2 miles back".
+9. Tap a zone, then **+1 mi back** twice quickly. You hear your phrase, then "1 mile back", then "2 miles back".
 
 ## Milestone 4 manual test checklist
 
@@ -261,6 +261,15 @@ Plan a trip through pins you saved: Pins → **Select**, then tap pins in the or
 8. Select 12 pins (or 11 plus an address end): Google Maps shows **part 1 of 2** and **part 2 of 2**; part 2 starts where part 1 ends.
 9. Select a note and a "No location" pin with two real pins: the route has the two real pins and says 2 picked items have no location.
 
+## Version 1.1.1 checklist (+1 mi back and Add a note)
+
+1. Open Passing: **Add a note** is dimmed for about 5 seconds, and tapping it then does nothing. Then it lights up and works. Go to the Home Screen and back: dimmed again for 5 seconds. Pulling down Control Center doesn't dim it.
+2. **+1 mi back** is dimmed until you pin something. Tap it now: a warning buzz, and no pin appears in Pins.
+3. In Four zones tap **Near left**, wait about 6 seconds, tap **+1 mi back**, wait about 4 seconds, tap it again. In Pins there's one pin: "Left, near", "2 mi back", with the orange estimate 2 miles back from where you tapped.
+4. Tap **Pin it**, wait 12 seconds, tap **+1 mi back**: a warning buzz, and the pin stays where it was.
+5. With **Listen after tap** on: tap a zone, tap **+1 mi back** while it's listening, then say "blue barn". One pin, "1 mi back", labeled "blue barn".
+6. Drive log: the summary has "+1 mi back taps: … · moved a pin … · no pin just before …" and how long after the pin you tapped.
+
 ## Version 1.1 checklist (photos and the Silent switch)
 
 1. **Silent switch:** turn on Silent mode (Action button or Control Center). Tap the capture screen: a haptic, no tone. Turn Silent off: the tone again. With music playing, the tone mixes in without pausing it.
@@ -317,7 +326,7 @@ The Simulator uses your Mac's microphone. It usually has no on-device speech mod
 7. **Stop from CarPlay:** open the CarPlay window (I/O → External Displays → CarPlay) with a Passing widget on its Widgets screen. Tap on the phone's capture screen: within a second or two the CarPlay widget turns into **Stop listening**. Tap it: Passing stops listening, and the widget goes back to normal. **Tell me how quickly the widget changes**, because widget refresh timing isn't something Apple promises.
 8. Settings → turn off **Ask "What are you passing?"**. A tap now gives a short chime instead, then listens.
 9. Turn on **Spoken confirmation**, tap, and say "water tower". Passing says "water tower" back.
-10. **+1 mi back:** tap it twice within 4 seconds, then say "diner". You get one pin, "2 mi back", labeled "diner".
+10. **+1 mi back:** tap a zone, tap **+1 mi back** twice (each within 5 seconds), then say "diner". You get one pin, "2 mi back", labeled "diner".
 11. **Music:** play something in Music. Tap a zone: the music pauses while Passing asks and listens, and comes back after. Turn off **Pause music while speaking or listening** and try again: the music just gets quieter.
 12. Tap one zone, say "barn", then quickly tap another zone and say "silo". The first pin is "barn" and the second "silo".
 13. iOS Settings → Privacy & Security → Microphone → turn Passing off. Open Passing's Settings: an orange note says listening needs access. Taps still save pins with the normal tone. Turn the microphone back on.
@@ -351,7 +360,7 @@ The Simulator uses your Mac's microphone. It usually has no on-device speech mod
 5. **Four zones:** the middle is a gray road with white edge lines, a dashed yellow center line and the car near the bottom. Tap each column and the road, then check side and distance in Pins: far left, near left, unknown, near right, far right.
 6. **Default:** Settings → Capture screen → **Four zones**: the capture screen shows Four zones straight away. Set it back to **Simple**. Switch to Four zones with the title, then quit Passing (swipe it away in the app switcher) and reopen: it's back on Simple. Switch again, go to the Home Screen for a minute and come back: still Four zones.
 7. **Listen after tap** on: tap a zone. The **Passing** title turns into a big red **Stop listening** button and the GPS pill hides. Both come back when listening ends, and the capture buttons don't move.
-8. **+1 mi back:** a rounded button at the bottom left, with a yellow arrow. A tap, then quick extra taps, still give 1, 2, 3 miles back.
+8. **+1 mi back:** a rounded button at the bottom left, with a yellow arrow, dimmed until you drop a pin. After a pin, a tap, then quick extra taps, give 1, 2, 3 miles back.
 9. **Landscape:** rotate the Simulator (⌘→). Everything fits, and the Simple pin shrinks to make room. Rotate back.
 10. **Widgets:** the **Pin** widget shows the yellow pin. If it still shows the old symbol, remove it and add it again. Check both widgets in the CarPlay window too.
 11. **Light mode:** with Settings → Appearance → Light, the capture screen and its title bar stay dark.
@@ -394,7 +403,8 @@ If the App Group is set up but its database won't open (rare; it could happen mi
 - **Recovering a pin that's more than 7 days old also keeps (stars) it.** Otherwise it would expire again on the next clean-up.
 - **Exports include active pins only**, not Recently Deleted.
 - **The trail only records while the capture screen is open** (no background location). Opening the Pins list mid-drive pauses it. A gap that could hide a turn (two readings more than about 300 m apart with none between, as after a tunnel or a few seconds off the capture screen at speed), a gap of more than 2 minutes, or an impossible jump (faster than ~155 mph, like a GPS glitch) starts a fresh trail, rather than drawing a straight line that cuts the corner. Passing can't know which road joined the two ends.
-- **"+1" taps aren't debounced**, because quick taps are how you say "3 miles". Each extra tap measures back from where you first tapped, not from where the car is by then.
+- **"+1 mi back" moves the pin you just dropped** (your call, after the second drive log, where a zone tap and a "+1" a second later made two pins). It only works for about 10 seconds after a pin, and about 5 seconds after each "+1", so it never makes a pin of its own. Siri's "2 miles back" still saves a new pin, since there's no pin to move.
+- **"+1" taps aren't debounced**, because quick taps are how you say "3 miles". Every tap measures back from where you dropped the pin, not from where the car is by then.
 - **Miles-back confirmations say the distance, not your phrase**, so you always know how far back it went.
 - **Two kinds of shortcut:** "Pin That" asks a question through Siri. "Quick Pin" never asks, because outside Siri the question would pop up on screen and need typing.
 - **The Control Center button moved to Milestone 5.** It needs the same widget extension as the CarPlay widget, so it was simpler to add both at once.

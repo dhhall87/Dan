@@ -104,6 +104,21 @@ struct DriveLogTests {
         #expect(lines.contains("  Apple Watch pins reached the iPhone: median 34m 08s, slowest 1h 06m"))
     }
 
+    @Test func plusOneTapsSayWhatTheyDid() {
+        var moved = entry(.bump, source: "app", outcome: "breadcrumb")
+        moved.seconds = 6
+        moved.miles = 1
+        var again = entry(.bump, after: 4, source: "app", outcome: "breadcrumb")
+        again.seconds = 10
+        again.miles = 2
+        var tooLate = entry(.bump, after: 60, source: "app", outcome: "noPin")
+        tooLate.seconds = 64
+        #expect(moved.line(timeZone: utc).contains("afterPin=6s"))
+        let lines = DriveLogSummary.lines(for: [moved, again, tooLate], timeZone: utc)
+        #expect(lines.contains("+1 mi back taps: 3 · moved a pin 2 (on the trail 2, in words only 0) · no pin just before 1"))
+        #expect(lines.contains("  Tapped after the pin: median 8s, slowest 10s"))
+    }
+
     @Test func emptyLogSaysSo() {
         #expect(DriveLogSummary.lines(for: []) == ["Nothing logged yet."])
     }
