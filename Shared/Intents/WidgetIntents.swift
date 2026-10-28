@@ -25,10 +25,14 @@ struct WidgetPinIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult {
         let pin = await IntentCapture.run(service: .shared, source: .widget, side: side, distance: distance, ask: false) { nil }
-        if let pin {
-            WidgetActivity.record(pin, state: CaptureService.shared.saveState(of: pin))
+        guard let pin else { return .result() }
+        let state = CaptureService.shared.saveState(of: pin)
+        let note = WidgetActivity.record(pin, state: state)
+        if note?.isProblem == false {
+            // Keeps the green "Saved" up a moment. Returning makes WidgetKit redraw, and that redraw
+            // always shows (in CarPlay too), so the plain buttons come back without a later reload.
+            try? await Task.sleep(for: .seconds(WidgetSavedNote.successHold))
         }
-        // Returning makes WidgetKit reload the widget, which then shows the "Saved" tick.
         return .result()
     }
 }

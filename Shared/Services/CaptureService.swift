@@ -357,13 +357,15 @@ final class CaptureService {
     /// Walks back `pin.milesBack` miles from where the car was. Keeps the car's position and the
     /// estimate separate, and never claims a target the trail can't support.
     private func estimateTarget(for pin: Pin, from start: TrailPoint?, along trail: BreadcrumbBuffer) {
-        if let start, let walk = trail.walkBack(from: start, meters: pin.milesBack * Geo.metersPerMile) {
-            pin.targetLatitude = walk.target.latitude
-            pin.targetLongitude = walk.target.longitude
-            pin.targetSource = .breadcrumb
-            pin.trail = TrailCoding.encode(walk.segment)
+        // The direction of travel at the tap, for when there's too little trail to follow.
+        let heading = pin.courseReliable ? pin.course : nil
+        if let start, let estimate = trail.estimateBack(from: start, meters: pin.milesBack * Geo.metersPerMile, heading: heading) {
+            pin.targetLatitude = estimate.target.latitude
+            pin.targetLongitude = estimate.target.longitude
+            pin.targetSource = estimate.straightMeters > 0 ? .heading : .breadcrumb
+            pin.trail = estimate.segment.count > 1 ? TrailCoding.encode(estimate.segment) : nil
         } else {
-            // Not enough trail (app just opened, or no location): describe it in words instead.
+            // No location, or no trail and no direction of travel (stopped): describe it in words instead.
             pin.targetLatitude = nil
             pin.targetLongitude = nil
             pin.targetSource = .textOnly

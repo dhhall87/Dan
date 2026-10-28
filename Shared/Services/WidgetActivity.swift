@@ -1,7 +1,8 @@
 import Foundation
 
-/// Notes the widget extension leaves in the App Group's shared settings: the widget's "Saved"
-/// tick, and the time of the last widget or Control Center pin, so the app knows to refresh its list.
+/// Notes the widget extension leaves in the App Group's shared settings: the widget's note after a
+/// tap (shown on the button only when something went wrong), and the time of the last widget or
+/// Control Center pin, so the app knows to refresh its list.
 /// It also sends a system-wide signal after each save, so a Pins list that's open shows the pin at once.
 enum WidgetActivity {
     private static let noteKey = "widgetSavedNote"
@@ -15,22 +16,27 @@ enum WidgetActivity {
     }
 
     /// Called once a widget or Control Center capture has finished (location attached or given up).
-    @MainActor
     /// `state` decides the button's face: "Not saved" if the pin isn't on disk, and "No location"
     /// if its position arrived but couldn't be written.
-    static func record(_ pin: Pin, state: CaptureService.SaveState = .saved, now: Date = .now) {
-        guard let defaults = AppGroup.defaults else { return }
+    /// - Returns: the widget's note for this pin (nil for Control Center).
+    @MainActor
+    @discardableResult
+    static func record(_ pin: Pin, state: CaptureService.SaveState = .saved, now: Date = .now) -> WidgetSavedNote? {
+        guard let defaults = AppGroup.defaults else { return nil }
         defaults.set(now, forKey: lastCaptureKey)
+        var note: WidgetSavedNote?
         if pin.source == .widget {
-            let note = WidgetSavedNote(
+            let made = WidgetSavedNote(
                 savedAt: now, side: pin.side, distance: pin.distance,
                 hasLocation: pin.hasLocation && state == .saved, saved: state != .notSaved
             )
-            if let data = try? JSONEncoder().encode(note) {
+            if let data = try? JSONEncoder().encode(made) {
                 defaults.set(data, forKey: noteKey)
             }
+            note = made
         }
         CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFNotificationName(savedName), nil, nil, true)
+        return note
     }
 
     /// In the app, once: turns the widget's signal into `pinSaved` on the main thread. It only arrives

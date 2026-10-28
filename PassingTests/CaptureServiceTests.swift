@@ -387,14 +387,28 @@ struct CaptureServiceTests {
         #expect(pin.milesBack == 0)
     }
 
-    @Test func shortTrailFallsBackToADescription() throws {
+    @Test func aShortTrailStillGetsARoughPinOnTheMap() throws {
+        // 0.3 mi of road heading north, then nothing: the rest of the mile carries on south.
         let capture = service(currentFix: fix(at: tap), trail: trailEndingAtFix(miles: 0.3))
+        let pin = try #require(capture.capture(side: .unknown, distance: .unknown, source: .app, now: tap))
+        capture.milesBackTap(now: tap.addingTimeInterval(1))
+        #expect(pin.targetSource == .heading)
+        let car = try TrailPoint(latitude: #require(pin.latitude), longitude: #require(pin.longitude))
+        let target = try TrailPoint(latitude: #require(pin.targetLatitude), longitude: #require(pin.targetLongitude))
+        #expect(abs(Geo.distance(car, target) - Geo.metersPerMile) < 30)
+        #expect(target.latitude < car.latitude, "back the way the car came")
+        #expect(TrailCoding.decode(pin.trail).count > 2, "the part of the road that was recorded")
+        #expect(pin.milesBackHint?.contains("rough guess") == true)
+    }
+
+    @Test func noTrailAndNoDirectionStaysInWords() throws {
+        // Parked (too slow for a direction) with nothing recorded yet.
+        let capture = service(currentFix: fix(at: tap, speed: 0), trail: BreadcrumbBuffer())
         let pin = try #require(capture.capture(side: .unknown, distance: .unknown, source: .app, now: tap))
         capture.milesBackTap(now: tap.addingTimeInterval(1))
         #expect(pin.targetSource == .textOnly)
         #expect(pin.targetCoordinate == nil && pin.trail == nil)
         #expect(pin.hasLocation, "the car's own position is still saved")
-        #expect(pin.milesBackHint?.contains("You were heading southwest") == true)
     }
 
     @Test func siriMilesBackSavesANewPinThatFarBack() throws {

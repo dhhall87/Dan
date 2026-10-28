@@ -24,6 +24,15 @@ struct WidgetSavedNoteTests {
         #expect(!note().matches(side: .unknown, distance: .unknown), "the single Pin widget ignores grid taps")
     }
 
+    @Test func onlyProblemsStayOnTheButtonAfterTheTap() {
+        #expect(!note().showsOnButton(at: saved), "a good save showed its green Saved while it ran")
+        #expect(note(hasLocation: false).showsOnButton(at: saved))
+        var unsaved = note()
+        unsaved.saved = false
+        #expect(unsaved.showsOnButton(at: saved.addingTimeInterval(4)))
+        #expect(!unsaved.showsOnButton(at: saved.addingTimeInterval(5)))
+    }
+
     @Test func saysWhenThereWasNoLocation() {
         #expect(note().shortMessage == "Saved")
         #expect(note(hasLocation: false).shortMessage == "No location")

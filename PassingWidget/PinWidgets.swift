@@ -35,7 +35,7 @@ struct PinTimelineProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<PinEntry>) -> Void) {
         let now = Date.now
         let isSetUp = AppGroup.isAvailable
-        let note = WidgetActivity.lastNote.flatMap { $0.isShowing(at: now) ? $0 : nil }
+        let note = WidgetActivity.lastNote.flatMap { $0.showsOnButton(at: now) ? $0 : nil }
         let listeningUntil = ListeningSignal.listeningUntil(now: now)
         // An entry for now, and one for each moment the tick or the Stop button runs out.
         let changes = Set([now, note?.hidesAt, listeningUntil].compactMap { $0 }).sorted()
@@ -278,10 +278,11 @@ private extension WidgetSavedNote {
 }
 
 /// The pin is saved the moment a button is tapped, but WidgetKit only redraws the widget once the
-/// button's work is done, which includes waiting up to 15 seconds for a GPS reading. WidgetKit marks
-/// the content `.invalidated` for that time, so this swaps in a green "Saving…" across the whole
-/// widget straight away. (It can't tell which button was tapped until the redraw.) After the redraw,
-/// the tapped button shows `SavedFace` for 5 seconds.
+/// button's work is done, which includes waiting for a GPS reading (usually none, at most 15 s) and
+/// then holding `WidgetSavedNote.successHold` seconds after a good save. WidgetKit marks the content
+/// `.invalidated` for that time, so this swaps in a green "Saved" across the whole widget straight
+/// away. (It can't tell which button was tapped until the redraw.) The redraw then brings the plain
+/// buttons back, or `SavedFace` on the tapped button if something went wrong.
 private struct SavingAware<Content: View>: View {
     @Environment(\.redactionReasons) private var redactionReasons
     @ViewBuilder let content: () -> Content
@@ -291,7 +292,7 @@ private struct SavingAware<Content: View>: View {
             VStack(spacing: 6) {
                 Image(systemName: "checkmark")
                     .font(.system(size: 40, weight: .bold))
-                Text("Saving…")
+                Text("Saved")
                     .font(.system(.headline, design: .rounded, weight: .heavy))
             }
             .foregroundStyle(.white)

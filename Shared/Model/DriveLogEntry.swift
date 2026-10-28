@@ -215,13 +215,15 @@ enum DriveLogSummary {
         let milesBack = captures.filter { ($0.miles ?? 0) > 0 }
         if !milesBack.isEmpty {
             let estimated = milesBack.filter { $0.outcome == "milesBack-breadcrumb" }.count
-            lines.append("Pins saved miles back: \(milesBack.count) (on the trail \(estimated), in words only \(milesBack.count - estimated))")
+            let rough = milesBack.filter { $0.outcome == "milesBack-heading" }.count
+            lines.append("Pins saved miles back: \(milesBack.count) (on the trail \(estimated), rough guess \(rough), in words only \(milesBack.count - estimated - rough))")
         }
         let bumps = of(.bump)
         if !bumps.isEmpty {
             let moved = bumps.filter { $0.outcome != "noPin" }
             let onTrail = moved.filter { $0.outcome == TargetSource.breadcrumb.rawValue }.count
-            lines.append("+1 mi back taps: \(bumps.count) · moved a pin \(moved.count) (on the trail \(onTrail), in words only \(moved.count - onTrail)) · no pin just before \(bumps.count - moved.count)")
+            let rough = moved.filter { $0.outcome == TargetSource.heading.rawValue }.count
+            lines.append("+1 mi back taps: \(bumps.count) · moved a pin \(moved.count) (on the trail \(onTrail), rough guess \(rough), in words only \(moved.count - onTrail - rough)) · no pin just before \(bumps.count - moved.count)")
             let after = moved.compactMap(\.seconds)
             if !after.isEmpty {
                 lines.append("  Tapped after the pin: \(spread(after))")

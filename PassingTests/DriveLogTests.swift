@@ -115,7 +115,7 @@ struct DriveLogTests {
         tooLate.seconds = 64
         #expect(moved.line(timeZone: utc).contains("afterPin=6s"))
         let lines = DriveLogSummary.lines(for: [moved, again, tooLate], timeZone: utc)
-        #expect(lines.contains("+1 mi back taps: 3 · moved a pin 2 (on the trail 2, in words only 0) · no pin just before 1"))
+        #expect(lines.contains("+1 mi back taps: 3 · moved a pin 2 (on the trail 2, rough guess 0, in words only 0) · no pin just before 1"))
         #expect(lines.contains("  Tapped after the pin: median 8s, slowest 10s"))
     }
 

@@ -190,9 +190,14 @@ enum PinExport {
                 note += note.isEmpty ? "Moved to the spot by hand." : ". Moved to the spot by hand."
             } else if pin.milesBack > 0 {
                 let miles = Geo.milesText(pin.milesBack)
-                note += pin.targetSource == TargetSource.breadcrumb.rawValue
-                    ? ". Estimated spot, \(miles) back along the road driven."
-                    : ". About \(miles) back the way you came; this marks where you were when you pinned it."
+                switch TargetSource(rawValue: pin.targetSource) {
+                case .breadcrumb:
+                    note += ". Estimated spot, \(miles) back along the road driven."
+                case .heading:
+                    note += ". A rough guess, about \(miles) back the way you came."
+                default:
+                    note += ". About \(miles) back the way you came; this marks where you were when you pinned it."
+                }
             }
             lines.append("  <Placemark>")
             lines.append("    <name>\(xml(pin.label.flatMap { $0.isEmpty ? nil : $0 } ?? "Unlabeled"))</name>")

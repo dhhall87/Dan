@@ -41,8 +41,14 @@ struct PinDetailView: View {
                             MapPolyline(coordinates: pin.trailCoordinates)
                                 .stroke(.blue, lineWidth: 4)
                         }
+                        if pin.targetSource == .heading, let target = pin.targetCoordinate,
+                           let from = pin.trailCoordinates.last ?? pin.captureCoordinate {
+                            // The straight-line guess past the end of the recorded road.
+                            MapPolyline(coordinates: [from, target])
+                                .stroke(.orange, style: StrokeStyle(lineWidth: 3, dash: [6, 5]))
+                        }
                         if let target = pin.targetCoordinate {
-                            Marker(pin.milesBack > 0 && pin.targetSource != .manual ? "About here" : pin.displayLabel, systemImage: "scope", coordinate: target)
+                            Marker(targetTitle, systemImage: "scope", coordinate: target)
                                 .tint(.orange)
                         }
                     }
@@ -211,6 +217,16 @@ struct PinDetailView: View {
         .onChange(of: pin.lookUpKey) {
             // Imagery for the old spot is no longer this pin's; ask again for the new one.
             lookAround = .notRequested
+        }
+    }
+
+    /// The orange marker's name: the estimate's kind for miles-back pins, otherwise the label.
+    private var targetTitle: String {
+        guard pin.milesBack > 0 else { return pin.displayLabel }
+        switch pin.targetSource {
+        case .breadcrumb: return "About here"
+        case .heading: return "Rough guess"
+        case .manual, .direct, .textOnly: return pin.displayLabel
         }
     }
 

@@ -157,6 +157,33 @@ struct BreadcrumbBufferTests {
         #expect(buffer.walkBack(from: farAway, meters: Geo.metersPerMile) == nil)
     }
 
+    @Test func aShortTrailIsCarriedOnInAStraightLine() throws {
+        var buffer = BreadcrumbBuffer()
+        _ = TestDrive.north(miles: 0.4, into: &buffer)
+        let car = try #require(buffer.points.last)
+        let estimate = try #require(buffer.estimateBack(from: car, meters: Geo.metersPerMile, heading: 90))
+        #expect(abs(estimate.straightMeters - (Geo.metersPerMile - buffer.length)) < 1)
+        #expect(abs(Geo.distance(car, estimate.target) - Geo.metersPerMile) < 30, "a straight road north, so a mile south")
+        #expect(estimate.target.latitude < buffer.points[0].latitude, "it follows the trail's own direction, not the heading")
+    }
+
+    @Test func withNoTrailTheHeadingIsUsed() throws {
+        let car = TrailPoint(latitude: 40, longitude: -75)
+        let estimate = try #require(BreadcrumbBuffer().estimateBack(from: car, meters: 1_000, heading: 0))
+        #expect(estimate.segment == [car])
+        #expect(abs(Geo.distance(car, estimate.target) - 1_000) < 1)
+        #expect(estimate.target.latitude < car.latitude, "heading north, so back is south")
+        #expect(BreadcrumbBuffer().estimateBack(from: car, meters: 1_000, heading: nil) == nil, "no trail and no direction")
+    }
+
+    @Test func aLongEnoughTrailIsNotARoughGuess() throws {
+        var buffer = BreadcrumbBuffer()
+        _ = TestDrive.north(miles: 3, into: &buffer)
+        let car = try #require(buffer.points.last)
+        let estimate = try #require(buffer.estimateBack(from: car, meters: Geo.metersPerMile, heading: 0))
+        #expect(estimate.straightMeters == 0)
+    }
+
     @Test func trailSegmentsSurviveStorage() {
         let points = [TrailPoint(latitude: 40.1, longitude: -75.2), TrailPoint(latitude: 40.2, longitude: -75.3)]
         #expect(TrailCoding.decode(TrailCoding.encode(points)) == points)
@@ -166,6 +193,16 @@ struct BreadcrumbBufferTests {
 }
 
 struct GeoTests {
+    @Test func bearingsAndDestinations() {
+        let start = TrailPoint(latitude: 40, longitude: -75)
+        let north = Geo.destination(from: start, bearing: 0, meters: 1_000)
+        #expect(abs(Geo.distance(start, north) - 1_000) < 0.5)
+        #expect(abs(Geo.bearing(from: start, to: north)) < 0.01 || abs(Geo.bearing(from: start, to: north) - 360) < 0.01)
+        let southwest = Geo.destination(from: start, bearing: 225, meters: 5_000)
+        #expect(abs(Geo.bearing(from: start, to: southwest) - 225) < 0.1)
+        #expect(abs(Geo.distance(start, southwest) - 5_000) < 1)
+    }
+
     @Test func compassNames() {
         #expect(Geo.compassName(for: 0) == "north")
         #expect(Geo.compassName(for: 225) == "southwest")

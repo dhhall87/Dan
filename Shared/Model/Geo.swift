@@ -29,6 +29,26 @@ enum Geo {
         )
     }
 
+    /// The initial great-circle bearing from `a` to `b`, in degrees (0 = north, clockwise).
+    static func bearing(from a: TrailPoint, to b: TrailPoint) -> Double {
+        let φ1 = a.latitude * .pi / 180, φ2 = b.latitude * .pi / 180
+        let dλ = (b.longitude - a.longitude) * .pi / 180
+        let y = sin(dλ) * cos(φ2)
+        let x = cos(φ1) * sin(φ2) - sin(φ1) * cos(φ2) * cos(dλ)
+        let degrees = atan2(y, x) * 180 / .pi
+        return (degrees + 360).truncatingRemainder(dividingBy: 360)
+    }
+
+    /// The point `meters` from `start` along a straight (great-circle) line at `bearing` degrees.
+    static func destination(from start: TrailPoint, bearing: Double, meters: Double) -> TrailPoint {
+        let δ = meters / earthRadiusMeters
+        let θ = bearing * .pi / 180
+        let φ1 = start.latitude * .pi / 180, λ1 = start.longitude * .pi / 180
+        let φ2 = asin(sin(φ1) * cos(δ) + cos(φ1) * sin(δ) * cos(θ))
+        let λ2 = λ1 + atan2(sin(θ) * sin(δ) * cos(φ1), cos(δ) - sin(φ1) * sin(φ2))
+        return TrailPoint(latitude: φ2 * 180 / .pi, longitude: λ2 * 180 / .pi)
+    }
+
     /// Eight-point compass name for a bearing in degrees (0 = north): "southwest", or "SW" when `short`.
     static func compassName(for bearing: Double, short: Bool = false) -> String {
         let names = short

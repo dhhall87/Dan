@@ -113,6 +113,60 @@ struct BreadcrumbBuffer {
         return WalkBack(target: previous, segment: segment)
     }
 
+    /// At least this much trail (meters) gives a steady enough direction to carry on in.
+    static let minDirectionRun: Double = 100
+
+    /// Where "`meters` back" probably is, even when the trail doesn't reach that far.
+    struct Estimate: Equatable {
+        var target: TrailPoint
+        /// The road driven, from the tap position back as far as the trail goes.
+        var segment: [TrailPoint]
+        /// How much of the way (meters) is a straight line past the end of the trail: 0 when the
+        /// trail covered it all; otherwise the estimate is a rough guess.
+        var straightMeters: Double
+    }
+
+    /// Walks back along the trail like `walkBack`. If the trail runs out first (Passing was opened a
+    /// moment ago, or the phone had locked), it carries on in a straight line for the rest: in the
+    /// direction of the trail's oldest stretch, or, with less than `minDirectionRun` of trail, opposite
+    /// `heading` (the car's direction of travel at the tap, degrees). Nil when neither is known.
+    func estimateBack(from start: TrailPoint, meters: Double, heading: Double?) -> Estimate? {
+        guard meters > 0 else { return nil }
+        if let walk = walkBack(from: start, meters: meters) {
+            return Estimate(target: walk.target, segment: walk.segment, straightMeters: 0)
+        }
+        var segment = [start]
+        var covered = 0.0
+        if let newest = points.last, Geo.distance(start, newest) <= Self.maxStartGap {
+            var previous = start
+            for point in points.reversed() {
+                covered += Geo.distance(previous, point)
+                segment.append(point)
+                previous = point
+            }
+        }
+        let end = segment[segment.count - 1]
+        let backBearing: Double
+        if covered >= Self.minDirectionRun {
+            // The last minDirectionRun meters of trail, continued the same way.
+            var index = segment.count - 2
+            while index > 0, Geo.distance(segment[index], end) < Self.minDirectionRun {
+                index -= 1
+            }
+            backBearing = Geo.bearing(from: segment[index], to: end)
+        } else if let heading {
+            backBearing = (heading + 180).truncatingRemainder(dividingBy: 360)
+        } else {
+            return nil
+        }
+        let straight = meters - covered
+        return Estimate(
+            target: Geo.destination(from: end, bearing: backBearing, meters: straight),
+            segment: segment,
+            straightMeters: straight
+        )
+    }
+
     private mutating func trimToMaxLength() {
         var dropCount = 0
         while points.count - dropCount > 2 {

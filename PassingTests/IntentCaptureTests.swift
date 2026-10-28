@@ -130,7 +130,7 @@ struct IntentCaptureTests {
         let pin = await IntentCapture.run(service: capture, source: .siri, milesBack: 2, ask: true) { "diner" }
         #expect(pin?.milesBack == 2)
         #expect(pin?.label == "diner")
-        #expect(pin?.targetSource == .textOnly, "no trail in this test")
+        #expect(pin?.targetSource == .heading, "no trail in this test, so a straight line back the way the car came")
         #expect(IntentCapture.dialog(for: pin, service: capture) == "Saved, 2 miles back.")
     }
 

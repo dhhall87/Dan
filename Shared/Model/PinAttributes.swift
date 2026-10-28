@@ -6,8 +6,11 @@ enum TargetSource: String, Codable {
     case direct
     /// Estimated by walking back along the breadcrumb trail ("miles back").
     case breadcrumb
-    /// Only a description ("about 2 mi back"), because the trail was too short.
+    /// Only a description ("about 2 mi back"): no trail, and no direction of travel to go on.
     case textOnly
+    /// A rough guess: back along the trail as far as it went, then on in a straight line the way the
+    /// car came (Dan, October 2026: a short trail used to leave the pin off the map entirely).
+    case heading
     /// Moved by hand on a map while reviewing, to where the thing actually is.
     case manual
 }
@@ -100,6 +103,8 @@ enum PinDescription {
             return "You moved this pin to the spot yourself. It was saved about \(miles) back."
         case .breadcrumb:
             return "Placed \(miles) back along the road you drove. The orange pin is the estimate and the blue line is your route."
+        case .heading:
+            return "A rough guess about \(miles) back. Passing hadn't recorded enough of the road to follow it, so the orange pin carries on in a straight line the way you came (dashed). Move it if you know better."
         case .textOnly, .direct:
             var hint = "About \(miles) back the way you came."
             if courseReliable, let course {
