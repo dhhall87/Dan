@@ -266,7 +266,7 @@ Plan a trip through pins you saved: Pins → **Select**, then tap pins in the or
 1. **CarPlay 2x2 and Pin widgets:** tap a button. The whole widget goes green with **Saved**, then the buttons come back by themselves after about a second and a half, without touching the screen again. Same on the iPhone's Home Screen.
 2. **Short trail:** open Passing on the moving drive (or after the phone had locked), wait about 20 seconds, then tap a zone and **+1 mi back**. The pin's map now shows an orange **Rough guess** a mile back: blue for the road recorded, dashed orange for the straight-line rest. The note under the map says it's a rough guess. **Move** still lets you put it right.
 3. Parked with nothing recorded (stand still, open Passing, pin, +1): no direction to go on, so it still says "About 1 mile back the way you came…" with no orange pin.
-4. **Watch:** follow "Installing it" under Apple Watch, then the Milestone 9 checklist. Add the **Passing** complication to a watch face and tap it: Passing opens.
+4. **Watch:** follow "Installing it" under Apple Watch, then the Milestone 9 checklist. Add the **Passing** complication to a watch face and tap it: Passing opens. On a face that tints its complications, the pin takes the face's color (1.1.3).
 5. Pins from before this version keep what they had. For an older "+1" pin without an orange pin (like the haircut one), use **Move** to place it.
 
 ## Version 1.1.1 checklist (+1 mi back and Add a note)
@@ -294,7 +294,7 @@ Plan a trip through pins you saved: Pins → **Select**, then tap pins in the or
 
 Passing on Apple Watch saves a pin with the watch's own GPS, mostly for walks and sometimes in the car.
 
-- **Four buttons**, laid out like the 2x2 widget: the left and right columns are the sides of the road or path, the top row is far and the bottom row near, in the phone's colors. The pin in the middle saves a pin with no side. **Double tap** (with the watch hand, pinch your index finger and thumb together twice) presses the middle pin, so you don't have to touch the screen at all.
+- **Four buttons**, laid out like the 2x2 widget: the left and right columns are the sides of the road or path, the top row is far and the bottom row near, in the phone's colors. The app's pin sits where they meet as a label only (1.1.3): a touch there goes to the button underneath.
 - **Saved at once, with a tap on the wrist.** The button shows a green tick for a moment, or a red cross if the watch couldn't save it (tap again).
 - **Status line** above the buttons: whether a tap now gets a position (GPS ready, Finding GPS…, Location off, Precise Location off), and how many pins the iPhone doesn't have yet ("2 to send").
 - **Location:** the watch asks the first time Passing opens on it. GPS runs while Passing is on the watch's screen, and for up to 15 seconds after a tap if there was no reading yet. A pin with no reading in that time goes without a location, never with a late or old one. The freshness rules are the same as the iPhone's.
@@ -316,7 +316,7 @@ The Simulator can't send pins between a watch and an iPhone (Apple's docs say so
 
 1. Open Passing on the watch: it asks for your location. Choose **Allow While Using App**. Outside or by a window, the status line changes from **Finding GPS…** to **GPS ready**.
 2. Tap each of the four buttons: a tap on the wrist and a green tick on that button each time. The status line counts them ("4 to send") until the iPhone has them.
-3. Raise the watch and double tap: the middle pin ticks.
+3. Tap right on the pin in the middle: it saves for whichever button is under your finger (the pin itself isn't a button).
 4. Tap the same button twice quickly: only one pin.
 5. With Passing open on the iPhone: within a minute or so the pins appear in Pins and in **Needs Review**. Each says **Saved from: Apple Watch** with the right side and distance, and the watch's count drops to zero. If nothing comes, close Passing on the iPhone and open it again, and note how long it took.
 6. Leave the iPhone behind (or turn its Bluetooth and Wi-Fi off) and make 2 pins on the watch: the watch shows "2 to send". Back with the iPhone, wait a few minutes **without opening Passing on it**, then open Passing: note whether the pins were already there (iOS woke Passing in the background) or only arrived when it opened.

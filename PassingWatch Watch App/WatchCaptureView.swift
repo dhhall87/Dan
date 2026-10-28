@@ -1,9 +1,9 @@
 import SwiftUI
 
 /// The watch's one screen: four buttons laid out like the 2x2 widget (the columns are the sides of
-/// the road or path, far on top, near below, in the phone's colors), and the pin in the middle for a
-/// pin with no side, which double tap also presses. Save first, with a wrist tap; nothing asks
-/// anything, and nothing moves after a tap.
+/// the road or path, far on top, near below, in the phone's colors), with the app icon's pin where
+/// they meet, as a label only (Dan, October 2026: a fifth button there was too much). Save first,
+/// with a wrist tap; nothing asks anything, and nothing moves after a tap.
 struct WatchCaptureView: View {
     @Environment(\.scenePhase) private var scenePhase
     private let capture = WatchCapture.shared
@@ -26,9 +26,7 @@ struct WatchCaptureView: View {
                         zone(side: .right, distance: .near)
                     }
                 }
-                CenterPinButton(tick: shownTick(side: .unknown, distance: .unknown)) {
-                    capture.capture(side: .unknown, distance: .unknown)
-                }
+                CenterPin()
             }
         }
         .background(Color.captureBackground)
@@ -93,32 +91,20 @@ private struct ZoneButton: View {
     }
 }
 
-/// The app icon's pin, between the four buttons: a pin with no side or distance. Double tap (pinch
-/// twice with the watch hand) presses it, so a pin needs no tap at all.
-private struct CenterPinButton: View {
-    let tick: WatchCapture.Tap?
-    let action: () -> Void
-
+/// The app icon's pin where the four buttons meet: a label, not a button. Touches pass straight
+/// through to the button underneath.
+private struct CenterPin: View {
     var body: some View {
-        Button(action: action) {
-            ZStack {
-                Circle()
-                    .fill(tick.map { $0.saved ? Color.savedGreen : Color.notSavedRed } ?? Color.quickSurface)
-                if let tick {
-                    Image(systemName: tick.saved ? "checkmark" : "xmark")
-                        .font(.system(size: 18, weight: .heavy))
-                        .foregroundStyle(.white)
-                } else {
-                    PinGlyph()
-                        .frame(width: 24, height: 24)
-                }
-            }
-            .frame(width: 46, height: 46)
-            .overlay(Circle().stroke(Color.captureBackground, lineWidth: 4))
+        ZStack {
+            Circle()
+                .fill(Color.quickSurface)
+            PinGlyph()
+                .frame(width: 24, height: 24)
         }
-        .buttonStyle(.plain)
-        .handGestureShortcut(.primaryAction)
-        .accessibilityLabel("Pin, no side")
+        .frame(width: 46, height: 46)
+        .overlay(Circle().stroke(Color.captureBackground, lineWidth: 4))
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 

@@ -3,6 +3,8 @@ import WidgetKit
 
 /// The watch face complication, also offered in the Smart Stack: the app icon's pin. A tap opens
 /// Passing on the watch, ready to pin. It never changes, so it has one entry and never reloads.
+/// The pin is marked `widgetAccentable`, so on faces that tint their complications it takes the
+/// face's color instead of showing white (Dan, October 2026).
 @main
 struct PassingComplication: Widget {
     var body: some WidgetConfiguration {
@@ -48,11 +50,13 @@ struct ComplicationView: View {
         switch family {
         case .accessoryCorner:
             PinGlyph()
+                .widgetAccentable()
                 .padding(2)
                 .widgetLabel("Passing")
         case .accessoryRectangular:
             HStack(spacing: 8) {
                 PinGlyph()
+                    .widgetAccentable()
                     .frame(width: 34, height: 34)
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Passing")
@@ -70,6 +74,7 @@ struct ComplicationView: View {
             ZStack {
                 AccessoryWidgetBackground()
                 PinGlyph()
+                    .widgetAccentable()
                     .padding(9)
             }
         }
