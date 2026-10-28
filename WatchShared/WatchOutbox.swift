@@ -30,7 +30,13 @@ struct WatchOutbox: Codable, Equatable {
     /// A pin just tapped. With no reading yet, it waits for one (if GPS can give one at all).
     mutating func add(_ pin: WatchPin, waitForFix: Bool) {
         guard !entries.contains(where: { $0.pin.id == pin.id }) else { return }
-        entries.append(Entry(pin: pin, waitingForFix: waitForFix && pin.fix == nil))
+        var pin = pin
+        let waits = waitForFix && pin.fix == nil
+        if !waits {
+            pin.gps = pin.fix != nil ? .atTap : .off
+            pin.gpsWait = 0
+        }
+        entries.append(Entry(pin: pin, waitingForFix: waits))
     }
 
     /// Gives a reading to every pin still waiting that it suits: usable now, and taken no more than
@@ -42,6 +48,8 @@ struct WatchOutbox: Codable, Equatable {
         for index in entries.indices where entries[index].waitingForFix {
             guard FixPolicy.acceptsLateFix(capturedAt: entries[index].pin.capturedAt, fixTimestamp: fix.timestamp) else { continue }
             entries[index].pin.fix = fix
+            entries[index].pin.gps = .afterTap
+            entries[index].pin.gpsWait = now.timeIntervalSince(entries[index].pin.capturedAt)
             entries[index].waitingForFix = false
             attached.append(entries[index].pin.id)
         }
@@ -57,6 +65,8 @@ struct WatchOutbox: Codable, Equatable {
         for index in entries.indices where entries[index].waitingForFix {
             let waited = now.timeIntervalSince(entries[index].pin.capturedAt)
             guard all || waited > FixPolicy.lateFixWindow else { continue }
+            entries[index].pin.gps = waited > FixPolicy.lateFixWindow ? .gaveUp : .closed
+            entries[index].pin.gpsWait = waited
             entries[index].waitingForFix = false
             stopped.append(entries[index].pin.id)
         }
@@ -74,6 +84,19 @@ struct WatchOutbox: Codable, Equatable {
             return now.timeIntervalSince(deliveredAt) > Self.resendAfter
         }
         .map(\.pin)
+    }
+
+    /// The pins are being handed over for the iPhone now: notes when they first went and how many
+    /// times. Returns them as they'll travel, in the same order.
+    mutating func markSent(_ ids: [UUID], at now: Date) -> [WatchPin] {
+        ids.compactMap { id in
+            guard let index = entries.firstIndex(where: { $0.pin.id == id }) else { return nil }
+            if entries[index].pin.sentAt == nil {
+                entries[index].pin.sentAt = now
+            }
+            entries[index].pin.sends = (entries[index].pin.sends ?? 0) + 1
+            return entries[index].pin
+        }
     }
 
     /// The pin reached the iPhone, which will confirm once it's saved.

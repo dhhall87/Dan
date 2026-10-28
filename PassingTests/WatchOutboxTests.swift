@@ -18,7 +18,9 @@ struct WatchOutboxTests {
         let ready = pin(at: tap, fix: fix(at: tap.addingTimeInterval(-2)))
         outbox.add(ready, waitForFix: true)
         #expect(!outbox.isWaitingForFix, "it already has its reading")
-        #expect(outbox.readyToSend(excluding: []) == [ready])
+        #expect(outbox.readyToSend(excluding: []).map(\.id) == [ready.id])
+        #expect(outbox.entries.first?.pin.gps == .atTap)
+        #expect(outbox.entries.first?.pin.gpsWait == 0)
     }
 
     @Test func aPinWaitsForItsReadingBeforeItsSent() throws {
@@ -33,6 +35,8 @@ struct WatchOutboxTests {
         let sent = try #require(outbox.readyToSend(excluding: []).first)
         #expect(sent.fix == reading)
         #expect(sent.capturedAt == tap, "the tap time never changes")
+        #expect(sent.gps == .afterTap)
+        #expect(sent.gpsWait == 3)
     }
 
     @Test func aReadingTooLateTooOldOrTooRoughIsRefused() {
@@ -52,6 +56,8 @@ struct WatchOutboxTests {
         #expect(outbox.stopWaiting(now: tap.addingTimeInterval(16)) == [waiting.id])
         let sent = try #require(outbox.readyToSend(excluding: []).first)
         #expect(sent.fix == nil, "no location rather than a late one")
+        #expect(sent.gps == .gaveUp)
+        #expect(sent.gpsWait == 16)
     }
 
     @Test func goingToTheBackgroundStopsEveryWait() {
@@ -59,6 +65,7 @@ struct WatchOutboxTests {
         outbox.add(pin(at: tap), waitForFix: true)
         outbox.stopWaiting(now: tap.addingTimeInterval(2), all: true)
         #expect(!outbox.isWaitingForFix)
+        #expect(outbox.entries.first?.pin.gps == .closed)
         #expect(outbox.readyToSend(excluding: []).count == 1)
     }
 
@@ -66,6 +73,7 @@ struct WatchOutboxTests {
         var outbox = WatchOutbox()
         outbox.add(pin(at: tap), waitForFix: false)
         #expect(outbox.readyToSend(excluding: []).count == 1)
+        #expect(outbox.entries.first?.pin.gps == .off)
     }
 
     @Test func pinsOnTheirWayAreNotQueuedTwice() {
@@ -74,7 +82,7 @@ struct WatchOutboxTests {
         let second = pin(at: tap.addingTimeInterval(5), fix: fix(at: tap.addingTimeInterval(5)))
         outbox.add(first, waitForFix: true)
         outbox.add(second, waitForFix: true)
-        #expect(outbox.readyToSend(excluding: [first.id]) == [second])
+        #expect(outbox.readyToSend(excluding: [first.id]).map(\.id) == [second.id])
     }
 
     @Test func aPinThatReachedTheiPhoneIsResentOnlyWhenPassingStartsAnHourLater() {
@@ -84,8 +92,21 @@ struct WatchOutboxTests {
         outbox.markDelivered(sent.id, at: tap.addingTimeInterval(10))
         #expect(outbox.readyToSend(excluding: []).isEmpty, "a tap doesn't send it again")
         #expect(outbox.readyToSend(excluding: [], resendingAt: tap.addingTimeInterval(30 * 60)).isEmpty, "too soon")
-        #expect(outbox.readyToSend(excluding: [], resendingAt: tap.addingTimeInterval(2 * 60 * 60)) == [sent])
+        #expect(outbox.readyToSend(excluding: [], resendingAt: tap.addingTimeInterval(2 * 60 * 60)).map(\.id) == [sent.id])
         #expect(outbox.count == 1, "kept until the iPhone says it's saved")
+    }
+
+    @Test func eachSendIsCountedAndTheFirstIsTimed() {
+        var outbox = WatchOutbox()
+        let one = pin(at: tap, fix: fix(at: tap))
+        outbox.add(one, waitForFix: true)
+        let first = outbox.markSent([one.id], at: tap.addingTimeInterval(1))
+        #expect(first.first?.sentAt == tap.addingTimeInterval(1))
+        #expect(first.first?.sends == 1)
+        let again = outbox.markSent([one.id], at: tap.addingTimeInterval(4_000))
+        #expect(again.first?.sentAt == tap.addingTimeInterval(1), "the first send's time is kept")
+        #expect(again.first?.sends == 2)
+        #expect(outbox.markSent([UUID()], at: tap).isEmpty)
     }
 
     @Test func onlyPinsTheiPhoneHasSavedLeave() {
@@ -124,6 +145,8 @@ struct WatchMessageTests {
         let userInfo = try #require(WatchMessage.userInfo(for: pin))
         #expect(userInfo[WatchMessage.pinKey] is Data, "transferUserInfo only takes property-list values")
         #expect(WatchMessage.pin(from: userInfo) == pin)
+        #expect(WatchMessage.pinID(from: userInfo) == pin.id)
+        #expect(WatchMessage.pinID(from: [WatchMessage.pinKey: userInfo[WatchMessage.pinKey] as Any]) == pin.id, "older messages without the id beside them")
     }
 
     @Test func savedAnswersCarryTheirIDs() {

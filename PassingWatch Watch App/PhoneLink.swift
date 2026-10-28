@@ -33,7 +33,7 @@ final class PhoneLink: NSObject, WCSessionDelegate {
     /// Pins already queued for the iPhone, so none is queued twice.
     var inFlight: Set<UUID> {
         guard let session, isActivated else { return [] }
-        return Set(session.outstandingUserInfoTransfers.compactMap { WatchMessage.pin(from: $0.userInfo)?.id })
+        return Set(session.outstandingUserInfoTransfers.compactMap { WatchMessage.pinID(from: $0.userInfo) })
     }
 
     /// Queues pins for the iPhone. Does nothing until the session is activated; `onActivated` then
@@ -70,7 +70,7 @@ final class PhoneLink: NSObject, WCSessionDelegate {
     nonisolated func session(_ session: WCSession, didFinish userInfoTransfer: WCSessionUserInfoTransfer, error: Error?) {
         // A transfer that failed is queued again the next time Passing opens or saves a pin: the pin
         // stays on the watch until the iPhone confirms it.
-        guard error == nil, let id = WatchMessage.pin(from: userInfoTransfer.userInfo)?.id else { return }
+        guard error == nil, let id = WatchMessage.pinID(from: userInfoTransfer.userInfo) else { return }
         Task { @MainActor in self.onDelivered?(id) }
     }
 

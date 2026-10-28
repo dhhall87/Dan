@@ -61,6 +61,12 @@ struct DriveLogEntry: Codable, Equatable {
     /// How far apart the two readings around a trail gap were, in meters.
     var meters: Double?
     var count: Int?
+    /// Apple Watch pins: how the watch's GPS went (`WatchGPS` raw value).
+    var watchGPS: String?
+    /// Apple Watch pins: seconds the watch waited for GPS after the tap.
+    var watchWait: Double?
+    /// Apple Watch pins: seconds from the watch first handing it over to its arrival here.
+    var transfer: Double?
 
     /// What `seconds` means for this kind, in the exported text.
     var secondsName: String {
@@ -82,6 +88,7 @@ struct DriveLogEntry: Codable, Equatable {
         case .gps: return "readings"
         case .storeOpened: return "tries"
         case .cleanUp: return "changed"
+        case .capture: return "sends"
         default: return "count"
         }
     }
@@ -105,6 +112,9 @@ struct DriveLogEntry: Codable, Equatable {
         if let trailMiles { fields.append("trail=\(DriveLogFormat.decimal(trailMiles))mi") }
         if let meters { fields.append("apart=\(Int(meters.rounded()))m") }
         if let count { fields.append("\(countName)=\(count)") }
+        if let watchGPS { fields.append("watchGPS=\(watchGPS)") }
+        if let watchWait { fields.append("watchWait=\(DriveLogFormat.duration(watchWait))") }
+        if let transfer { fields.append("transfer=\(DriveLogFormat.duration(transfer))") }
         return "\(formatter.string(from: at))  \(process)  \(kind.rawValue)  \(fields.joined(separator: " "))"
     }
 }
@@ -141,6 +151,33 @@ enum DriveLogFormat {
 
 /// The few numbers that answer "how did it do on real drives?", worked out from the log.
 enum DriveLogSummary {
+    /// How Apple Watch pins got here, from what each pin carried: the watch's GPS, and the trip.
+    static func watchTrips(_ pins: [DriveLogEntry], spread: ([Double]) -> String) -> [String] {
+        var lines: [String] = []
+        let gps = pins.compactMap(\.watchGPS)
+        if !gps.isEmpty {
+            func count(_ outcome: WatchGPS) -> Int { gps.filter { $0 == outcome.rawValue }.count }
+            var text = "  Watch GPS: ready at the tap \(count(.atTap)) · after the tap \(count(.afterTap))"
+            let waits = pins.filter { $0.watchGPS == WatchGPS.afterTap.rawValue }.compactMap(\.watchWait)
+            if !waits.isEmpty {
+                text += " (\(spread(waits)))"
+            }
+            let none = [(WatchGPS.closed, "wrist down"), (.gaveUp, "none in 15s"), (.off, "location off")]
+                .map { (count($0.0), $0.1) }
+                .filter { $0.0 > 0 }
+            if !none.isEmpty {
+                text += " · no position: " + none.map { "\($0.1) \($0.0)" }.joined(separator: ", ")
+            }
+            lines.append(text)
+        }
+        let transfers = pins.compactMap(\.transfer)
+        if !transfers.isEmpty {
+            let resent = pins.filter { ($0.count ?? 1) > 1 }.count
+            lines.append("  Watch to iPhone: \(spread(transfers)) · sent more than once \(resent)")
+        }
+        return lines
+    }
+
     static func lines(for entries: [DriveLogEntry], timeZone: TimeZone = .current) -> [String] {
         guard let first = entries.first?.at, let last = entries.last?.at else {
             return ["Nothing logged yet."]
@@ -174,10 +211,12 @@ enum DriveLogSummary {
             if !appTaps.isEmpty {
                 lines.append("  App taps with GPS ready at the tap: \(appTaps.filter { $0.fixAge != nil }.count) of \(appTaps.count)")
             }
-            let arrivals = captures.filter { $0.source == "watch" }.compactMap(\.seconds)
+            let watchPins = captures.filter { $0.source == "watch" }
+            let arrivals = watchPins.compactMap(\.seconds)
             if !arrivals.isEmpty {
                 lines.append("  Apple Watch pins reached the iPhone: \(spread(arrivals))")
             }
+            lines += DriveLogSummary.watchTrips(watchPins, spread: spread)
         }
 
         let lateFixes = of(.lateFix)

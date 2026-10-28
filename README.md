@@ -120,9 +120,10 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 **Footprint:**
 - **App size:** no bundled voices, maps or third-party code. The icon and tone are about 100 KB. A pin takes about 1 KB, plus about 0.3–0.5 MB per photo you add.
 - **Battery:**
-  - The capture screen is the main cost. It keeps the screen on and GPS running, and only while it's open.
+  - The capture screen is the main cost. GPS runs only while it's on screen, and the screen follows Auto-Lock unless you turn on **Keep screen on**.
   - Otherwise, GPS runs for a few seconds per Siri, widget or Control Center pin.
-  - On the watch, GPS runs only while Passing is on its screen, plus up to 15 seconds after a tap.
+  - On the watch, GPS runs only while Passing is on its screen with your wrist raised (lowering it stops GPS), plus up to 15 seconds after a tap that had no reading yet. While the wrist is down the status line updates once a minute instead of every second. Pins go to the iPhone with WatchConnectivity's queued transfers, which watchOS sends when it suits the battery; there's no live connection held open. The complication is a fixed picture that never refreshes.
+  - On the iPhone, a watch pin is just a save: no sound, no GPS, no waiting.
   - Nothing else runs in the background apart from the occasional clean-up.
 - **Listen after tap** (off by default) uses the microphone and speech recognition for a few seconds per tap.
 - **Maps and Look Around** are the heaviest screens for memory and data. Look Around loads only when you tap it.
@@ -139,7 +140,7 @@ Settings → Feedback → **Drive Log** → turn on **Keep a drive log**. From t
 - **Siri and widget requests:** how long each took from start to finish, and how Siri's "What did you see?" went (answered, nothing said, cancelled or failed, with the error).
 - **GPS:** how long it ran each time (with the capture screen, or a short burst for Siri and widgets), and when it was skipped because location or Precise Location was off.
 - **Miles back:** whether the pin landed on the trail or fell back to words, and every trail restart with its reason (a gap that could hide a turn, a GPS jump, or a long break).
-- **Apple Watch pins:** how long after the tap each one reached the iPhone.
+- **Apple Watch pins (1.1.5):** how long after the tap each one reached the iPhone, how the watch's GPS went (ready at the tap; found after it, and how long it took; or none, because the wrist went down, nothing came in 15 seconds, or location was off), how long the hop from watch to iPhone took, and whether the watch had to send it more than once. The watch keeps no log of its own: these few numbers ride inside each pin, so they cost the watch no extra sends, files or battery.
 - **Speed of the app:** how long Passing took to open and the database to load, save failures, clean-up runs that took a while, and town lookups.
 
 It never records where you were, labels, notes or speeds. The Drive Log screen shows a summary and the newest 100 events (pull down to refresh). **Share** makes a text file with the summary and every event, ready to send or paste. **Clear** deletes it. Each part of the app keeps about its newest 2,500 events. Turning it off stops recording and keeps what's there.
@@ -261,6 +262,16 @@ Plan a trip through pins you saved: Pins → **Select**, then tap pins in the or
 8. Select 12 pins (or 11 plus an address end): Google Maps shows **part 1 of 2** and **part 2 of 2**; part 2 starts where part 1 ends.
 9. Select a note and a "No location" pin with two real pins: the route has the two real pins and says 2 picked items have no location.
 
+## Version 1.1.5 checklist (watch pins in the drive log)
+
+Turn on the drive log on the iPhone first (Settings → Feedback → Drive Log). Install from Xcode with the iPhone scheme so the watch gets 1.1.5 too.
+
+1. Open Passing on the watch outdoors and wait for **GPS ready**, then tap a button. On the iPhone, the Drive Log summary has "Watch GPS: ready at the tap 1 …" and a "Watch to iPhone: …" line. The event itself ends with `watchGPS=atTap watchWait=0.00s transfer=…`.
+2. Open Passing on the watch indoors (or right after raising your wrist) and tap at once, before **GPS ready**: if a reading comes within 15 seconds, the summary counts it under "after the tap" with how long it took.
+3. Tap, then lower your wrist at once: the pin still arrives, counted as "no position: wrist down".
+4. Pins from a 1.1.4 watch (made before the update) still arrive. They just don't add to these new lines.
+5. With Passing open on the watch, lower your wrist for half a minute, then raise it: the status line shows **Finding GPS…** for a moment, then **GPS ready**. That's GPS having stopped while your wrist was down, as it should.
+
 ## Version 1.1.2 checklist (CarPlay widget, rough +1 pins, watch)
 
 1. **CarPlay 2x2 and Pin widgets:** tap a button. The whole widget goes green with **Saved**, then the buttons come back by themselves after about a second and a half, without touching the screen again. Same on the iPhone's Home Screen.
@@ -322,7 +333,7 @@ The Simulator can't send pins between a watch and an iPhone (Apple's docs say so
 6. Leave the iPhone behind (or turn its Bluetooth and Wi-Fi off) and make 2 pins on the watch: the watch shows "2 to send". Back with the iPhone, wait a few minutes **without opening Passing on it**, then open Passing: note whether the pins were already there (iOS woke Passing in the background) or only arrived when it opened.
 7. Indoors with no GPS, tap a button and lower your wrist at once: the pin still reaches the iPhone, with no location.
 8. On the watch, **Settings → Privacy & Security → Location Services → Passing → Never**: the status line says **Location off**, and a tap still saves a pin (no location). Set it back to **While Using the App**.
-9. Drive Log on the iPhone: the summary has a line "Apple Watch pins reached the iPhone: median …, slowest …".
+9. Drive Log on the iPhone: the summary has a line "Apple Watch pins reached the iPhone: median …, slowest …", and (1.1.5) "Watch GPS: …" and "Watch to iPhone: …" lines.
 
 ## Milestone 7 manual test checklist
 

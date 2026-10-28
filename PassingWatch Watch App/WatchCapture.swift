@@ -111,7 +111,12 @@ final class WatchCapture {
         guard link.isActivated else { return }
         let resendAt: Date? = resentThisLaunch ? nil : .now
         resentThisLaunch = true
-        link.send(outbox.readyToSend(excluding: link.inFlight, resendingAt: resendAt))
+        let ready = outbox.readyToSend(excluding: link.inFlight, resendingAt: resendAt)
+        guard !ready.isEmpty else { return }
+        // Stamped (when, how many times) for the iPhone's drive log, and kept on disk with the pin.
+        let stamped = outbox.markSent(ready.map(\.id), at: .now)
+        WatchOutboxFile.save(outbox)
+        link.send(stamped)
     }
 
     private func delivered(_ id: UUID) {

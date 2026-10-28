@@ -183,6 +183,16 @@ extension DriveLogEntry {
         return entry
     }
 
+    /// An Apple Watch pin's trip, from what the pin carried: how the watch's GPS went, how long from
+    /// the tap and from the watch handing it over until it got here, and how many times it was sent.
+    mutating func add(watchTrip pin: WatchPin, arrivedAt: Date) {
+        seconds = arrivedAt.timeIntervalSince(pin.capturedAt)
+        watchGPS = pin.gps?.rawValue
+        watchWait = pin.gpsWait
+        transfer = pin.sentAt.map { arrivedAt.timeIntervalSince($0) }
+        count = pin.sends
+    }
+
     /// The fix stamped on a pin: when it was taken compared to the tap, how accurate, and whether
     /// the pin counts as approximate. Nothing when it has no position.
     mutating func add(fixOf pin: Pin) {

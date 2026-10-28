@@ -200,7 +200,7 @@ final class CaptureService {
            FixPolicy.acceptsLateFix(capturedAt: watchPin.capturedAt, fixTimestamp: reading.timestamp) {
             fix = CLLocation(reading)
         }
-        save(newPin: pin, fix: .supplied(fix), arrivedAfter: now.timeIntervalSince(watchPin.capturedAt))
+        save(newPin: pin, fix: .supplied(fix), fromWatch: (watchPin, now))
         return saveState(of: pin) != .notSaved
     }
 
@@ -304,8 +304,8 @@ final class CaptureService {
     }
 
     /// Stamps the fix, runs `prepare`, saves, confirms, and waits for a late fix if needed.
-    /// `arrivedAfter` is how long a watch pin took to get here, for the drive log.
-    private func save(newPin pin: Pin, fix fixSource: FixSource = .phone, trailMeters: Double? = nil, arrivedAfter: TimeInterval? = nil, prepare: (Pin) -> Void = { _ in }) {
+    /// `fromWatch` is a watch pin as it arrived, whose trip goes in the drive log.
+    private func save(newPin pin: Pin, fix fixSource: FixSource = .phone, trailMeters: Double? = nil, fromWatch: (pin: WatchPin, arrivedAt: Date)? = nil, prepare: (Pin) -> Void = { _ in }) {
         switch fixSource {
         case .phone:
             if let fix = currentFix() {
@@ -338,7 +338,9 @@ final class CaptureService {
         }
         // After the feedback, so logging never delays it.
         var entry = DriveLogEntry.capture(pin, saved: saved, trailMeters: trailMeters)
-        entry.seconds = arrivedAfter
+        if let fromWatch {
+            entry.add(watchTrip: fromWatch.pin, arrivedAt: fromWatch.arrivedAt)
+        }
         DriveLog.record(entry)
 
         guard case .phone = fixSource else { return }

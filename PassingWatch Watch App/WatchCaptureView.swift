@@ -6,13 +6,17 @@ import SwiftUI
 /// with a wrist tap; nothing asks anything, and nothing moves after a tap.
 struct WatchCaptureView: View {
     @Environment(\.scenePhase) private var scenePhase
+    /// True while the wrist is down and the screen is dimmed (Always On).
+    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
     private let capture = WatchCapture.shared
     /// The button that just saved, ticked for a moment.
     @State private var tick: WatchCapture.Tap?
 
     var body: some View {
         VStack(spacing: 4) {
-            TimelineView(.periodic(from: .now, by: 1)) { context in
+            // Every second while the wrist is up; once a minute while it's down, when GPS is off and
+            // nobody's reading it, to save battery.
+            TimelineView(.periodic(from: .now, by: isLuminanceReduced ? 60 : 1)) { context in
                 WatchStatusLine(location: capture.location, waiting: capture.outbox.count, now: context.date)
             }
             ZStack {

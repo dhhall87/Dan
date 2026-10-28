@@ -127,6 +127,26 @@ struct DriveLogTests {
         #expect(lines.contains("Listening: heard 1 · nothing 0 · stopped 0 · cut short by a newer tap 1"))
     }
 
+    @Test func watchPinsSayHowTheirTripWent() {
+        var ready = entry(.capture, source: "watch", outcome: "left-far")
+        ready.watchGPS = "atTap"
+        ready.watchWait = 0
+        ready.transfer = 4
+        ready.count = 1
+        var late = entry(.capture, after: 60, source: "watch", outcome: "right-near")
+        late.watchGPS = "afterTap"
+        late.watchWait = 3
+        late.transfer = 120
+        late.count = 2
+        var wristDown = entry(.capture, after: 120, source: "watch", outcome: "left-near")
+        wristDown.watchGPS = "closed"
+        wristDown.watchWait = 2
+        #expect(late.line(timeZone: utc).hasSuffix("sends=2 watchGPS=afterTap watchWait=3s transfer=2m 00s"))
+        let lines = DriveLogSummary.lines(for: [ready, late, wristDown], timeZone: utc)
+        #expect(lines.contains("  Watch GPS: ready at the tap 1 · after the tap 1 (median 3s, slowest 3s) · no position: wrist down 1"))
+        #expect(lines.contains("  Watch to iPhone: median 1m 02s, slowest 2m 00s · sent more than once 1"))
+    }
+
     @Test func emptyLogSaysSo() {
         #expect(DriveLogSummary.lines(for: []) == ["Nothing logged yet."])
     }

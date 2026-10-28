@@ -11,6 +11,32 @@ struct WatchPin: Codable, Equatable, Identifiable {
     var distance: Distance
     /// The watch's own GPS reading. Nil if none was usable in time; the iPhone never fills in its own.
     var fix: WatchFix?
+
+    // The trip, for the iPhone's drive log (1.1.5). They ride in the pin's own message, so the log
+    // costs the watch no extra transfers, files or wake-ups. Optional, so older pins still decode.
+
+    /// How the watch's GPS went.
+    var gps: WatchGPS?
+    /// Seconds from the tap until the pin stopped waiting for GPS (0 when a reading was ready).
+    var gpsWait: Double?
+    /// When the watch first handed it over for the iPhone.
+    var sentAt: Date?
+    /// How many times the watch has handed it over (more than 1 after a resend).
+    var sends: Int?
+}
+
+/// How the watch's GPS went for a pin.
+enum WatchGPS: String, Codable {
+    /// A fresh reading was already there at the tap.
+    case atTap
+    /// A reading arrived within 15 s of the tap.
+    case afterTap
+    /// None arrived within 15 s.
+    case gaveUp
+    /// Passing went to the background (wrist down long enough) before a reading came.
+    case closed
+    /// Location was off or not allowed, so it didn't wait.
+    case off
 }
 
 /// A GPS reading taken on the watch, with Core Location's raw values (negative means unknown).
@@ -39,12 +65,22 @@ struct WatchFix: Codable, Equatable {
 enum WatchMessage {
     /// Watch → iPhone: one pin.
     static let pinKey = "pin"
+    /// The pin's id beside it, so the watch can see what's already on its way without decoding.
+    static let pinIDKey = "pinID"
     /// iPhone → watch: pins now saved on the iPhone, so the watch can let them go.
     static let savedKey = "savedPinIDs"
 
     static func userInfo(for pin: WatchPin) -> [String: Any]? {
         guard let data = try? JSONEncoder().encode(pin) else { return nil }
-        return [pinKey: data]
+        return [pinKey: data, pinIDKey: pin.id.uuidString]
+    }
+
+    /// The id of the pin a message carries, read cheaply.
+    static func pinID(from userInfo: [String: Any]) -> UUID? {
+        if let text = userInfo[pinIDKey] as? String, let id = UUID(uuidString: text) {
+            return id
+        }
+        return pin(from: userInfo)?.id
     }
 
     static func pin(from userInfo: [String: Any]) -> WatchPin? {
