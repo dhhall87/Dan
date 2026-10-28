@@ -864,7 +864,7 @@
 				);
 				MARKETING_VERSION = 1.1.2;
 				ONLY_ACTIVE_ARCH = NO;
-				PRODUCT_BUNDLE_IDENTIFIER = com.danhall.passing.watchkitapp.complication;
+				PRODUCT_BUNDLE_IDENTIFIER = com.danhall.passing.watchkitapp.PassingComplication;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -891,7 +891,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.1.2;
-				PRODUCT_BUNDLE_IDENTIFIER = com.danhall.passing.watchkitapp.complication;
+				PRODUCT_BUNDLE_IDENTIFIER = com.danhall.passing.watchkitapp.PassingComplication;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
