@@ -59,4 +59,15 @@ enum WatchMessage {
     static func savedIDs(from userInfo: [String: Any]) -> [UUID] {
         (userInfo[savedKey] as? [String] ?? []).compactMap(UUID.init(uuidString:))
     }
+
+    /// The newest `limit` saved ids, oldest first, with `new` added. The iPhone keeps these in its
+    /// application context as well as answering each pin, because the watch reads that context
+    /// every time Passing starts there, so an answer that's slow or lost still gets through.
+    static func recentlySaved(_ existing: [UUID], adding new: [UUID], limit: Int = 100) -> [UUID] {
+        var ids = existing.filter { !new.contains($0) } + new
+        if ids.count > limit {
+            ids.removeFirst(ids.count - limit)
+        }
+        return ids
+    }
 }

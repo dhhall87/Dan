@@ -120,8 +120,11 @@ final class WatchCapture {
     }
 
     private func confirmSaved(_ ids: [UUID]) {
+        let before = outbox.count
         outbox.confirmSaved(ids)
-        WatchOutboxFile.save(outbox)
+        if outbox.count != before {
+            WatchOutboxFile.save(outbox)
+        }
     }
 }
 

@@ -131,6 +131,16 @@ struct WatchMessageTests {
         #expect(WatchMessage.savedIDs(from: WatchMessage.userInfo(saved: ids)) == ids)
     }
 
+    @Test func theiPhoneKeepsItsNewestSavedIDs() {
+        let old = (0..<100).map { _ in UUID() }
+        let new = UUID()
+        let kept = WatchMessage.recentlySaved(old, adding: [new])
+        #expect(kept.count == 100)
+        #expect(kept.last == new)
+        #expect(kept.first == old[1], "the oldest one makes room")
+        #expect(WatchMessage.recentlySaved([new], adding: [new]) == [new], "no duplicates")
+    }
+
     @Test func otherMessagesAreIgnored() {
         #expect(WatchMessage.pin(from: ["something": "else"]) == nil)
         #expect(WatchMessage.pin(from: [WatchMessage.pinKey: Data("not a pin".utf8)]) == nil)

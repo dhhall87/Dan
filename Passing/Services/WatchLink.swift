@@ -22,8 +22,19 @@ final class WatchLink: NSObject, WCSessionDelegate {
         // Not on disk yet: no answer, so the watch keeps the pin and sends it again later.
         guard CaptureService.shared.saveWatchPin(pin) else { return }
         let session = WCSession.default
-        guard session.activationState == .activated, session.isPaired, session.isWatchAppInstalled else { return }
+        // The pin came from the watch app, so it's installed: no need to ask the session, whose
+        // `isWatchAppInstalled` can read false for an app put on the watch from Xcode.
+        guard session.activationState == .activated else { return }
         session.transferUserInfo(WatchMessage.userInfo(saved: [pin.id]))
+        // Also in the application context, which the watch reads whenever Passing starts there, so
+        // it can clear its list even if the answer above is slow or lost (Dan, October 2026: the
+        // pins arrived, but the watch kept showing them as waiting to send).
+        let recent = WatchMessage.recentlySaved(WatchMessage.savedIDs(from: session.applicationContext), adding: [pin.id])
+        do {
+            try session.updateApplicationContext(WatchMessage.userInfo(saved: recent))
+        } catch {
+            print("Passing: couldn't update the watch's list of saved pins: \(error)")
+        }
     }
 
     // MARK: WCSessionDelegate

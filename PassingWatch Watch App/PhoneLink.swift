@@ -3,7 +3,8 @@ import WatchConnectivity
 
 /// The watch's side of WatchConnectivity. Pins go to the iPhone with `transferUserInfo`, which
 /// queues them, delivers them in order, and keeps going while Passing is closed; the iPhone answers
-/// with the ones it has saved. Apple's docs say the Simulator doesn't deliver these transfers, so
+/// with the ones it has saved, and also keeps its latest saved ones in the application context,
+/// which is read here as the session starts. Apple's docs say the Simulator doesn't deliver these transfers, so
 /// syncing is tested on a real iPhone and Apple Watch.
 @MainActor
 final class PhoneLink: NSObject, WCSessionDelegate {
@@ -50,7 +51,20 @@ final class PhoneLink: NSObject, WCSessionDelegate {
 
     nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
         guard activationState == .activated else { return }
-        Task { @MainActor in self.onActivated?() }
+        // The iPhone's latest list of saved pins, in case an answer was missed while Passing was closed.
+        let saved = WatchMessage.savedIDs(from: session.receivedApplicationContext)
+        Task { @MainActor in
+            if !saved.isEmpty {
+                self.onSaved?(saved)
+            }
+            self.onActivated?()
+        }
+    }
+
+    nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+        let ids = WatchMessage.savedIDs(from: applicationContext)
+        guard !ids.isEmpty else { return }
+        Task { @MainActor in self.onSaved?(ids) }
     }
 
     nonisolated func session(_ session: WCSession, didFinish userInfoTransfer: WCSessionUserInfoTransfer, error: Error?) {
