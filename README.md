@@ -265,7 +265,7 @@ Plan a trip through pins you saved: Pins → **Select**, then tap pins in the or
 
 ## Version 1.1.7 checklist (watch pins wake the iPhone)
 
-1. Install on both, as for 1.1.6: the iPhone scheme onto the iPhone, then the **PassingWatch Watch App** scheme onto the watch.
+1. Install on both, as for 1.1.6: the iPhone scheme onto the iPhone, then the **PassingWatch Watch App** scheme onto the watch. If Xcode can't reach the watch, see "Updating it when Xcode can't reach the watch" under Apple Watch.
 2. On the iPhone, go to the Home Screen (leave Passing in the background), lock the phone, and wait a minute. Keep it nearby.
 3. On the watch, open Passing and tap a button. The "to send" count goes to 1, then back to 0 within a few seconds, without touching the iPhone.
 4. Unlock the iPhone and open Passing: the pin is already in **Needs Review**.
@@ -339,6 +339,11 @@ Passing on Apple Watch saves a pin with the watch's own GPS, mostly for walks an
 3. Pair the watch with Xcode: open the run destination menu (next to the scheme name at the top) → **Manage Devices…** (Device Hub). With the iPhone plugged in and the watch unlocked on your wrist, the watch appears under the iPhone; if it doesn't, click **+** → **Pair Nearby Device…** → Apple Watch and follow the steps. Tap **Trust** on both the iPhone and the watch. The first time, Xcode copies files from the watch for a while; wait until it says the watch is ready.
 4. Pick the **PassingWatch Watch App** scheme and your watch as the destination, and press Run. This registers the watch for signing (so the app is allowed on it) and installs it. If it fails, copy the error from Xcode (the red message, or the Report navigator, ⌘9) and send it to me.
 5. After that, the copy inside the iPhone app (the Watch app's **Available Apps**) installs too.
+
+**Updating it when Xcode can't reach the watch.** If running the watch scheme fails (for example, Xcode's Downloads window shows "Symbols for watchOS … Failed with HTTP status 403: forbidden"), install through the iPhone instead. That 403 is on Apple's side: the debugging symbols for your watch's exact watchOS build aren't posted yet, and it clears by itself once they are. Your watch stays paired, so there's no need to unpair it.
+1. In Xcode, pick the **Passing** scheme and your iPhone, and press Run.
+2. On the iPhone, open the **Watch** app → **My Watch**, and scroll to the bottom. If Passing is under **Available Apps**, tap **Install**. If it's under **Installed on Apple Watch**, the update follows by itself within a few minutes. Keep the watch unlocked and near the iPhone, ideally on its charger.
+3. To check the watch has the new version, make a watch pin with the drive log on. Its event ends with `via=message` (or `via=transfer`) only on 1.1.7 or later.
 
 ## Milestone 9 manual test checklist
 
