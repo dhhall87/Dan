@@ -345,6 +345,8 @@ Passing on Apple Watch saves a pin with the watch's own GPS, mostly for walks an
 2. On the iPhone, open the **Watch** app → **My Watch**, and scroll to the bottom. If Passing is under **Available Apps**, tap **Install**. If it's under **Installed on Apple Watch**, the update follows by itself within a few minutes. Keep the watch unlocked and near the iPhone, ideally on its charger.
 3. To check the watch has the new version, make a watch pin with the drive log on. Its event ends with `via=message` (or `via=transfer`) only on 1.1.7 or later.
 
+Installing from the Watch app also matters for syncing. When Passing went onto the watch straight from Xcode, iOS may not know it's there. Xcode's console then shows "WCSession counterpart app not installed" or "Code=7006 Watch app is not installed", and the iPhone can't send anything to the watch, so the watch's "to send" count never clears. Installing it from the Watch app fixes that. Don't remove Passing from the watch to reinstall it while the watch shows pins to send that aren't in Pins on the iPhone: removing the app deletes them.
+
 ## Milestone 9 manual test checklist
 
 The Simulator can't send pins between a watch and an iPhone (Apple's docs say so), so this one is on your real watch and iPhone. Turn on the drive log on the iPhone first (Settings → Feedback → Drive Log).
