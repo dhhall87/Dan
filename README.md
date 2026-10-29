@@ -21,7 +21,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **GPS pill** in the title bar, above the **Passing** title: **GPS ready** (green), **Finding GPS…** (yellow), **Location asked on first pin** (gray), **Location off** (red) or **Precise Location off** (orange). Pins save in every state; the pill just says whether they'll have a position.
 - **Save first:** a tap writes the pin immediately with no label. If GPS has no usable fix yet, the pin is still saved, marked "No location", and picks up the first good fix within 15 seconds. An old position is never used.
 - **Approximate flag:** a pin is marked approximate when its total uncertainty is more than about 50 m: how far the car could have moved between the GPS reading and the tap (speed × time apart), combined with how precise the reading itself was. A parked car's older reading counts as exact. A reading that arrives more than 3 seconds after the tap is always approximate, because the car may have braked after passing the thing.
-- **Non-visual confirmation:** a haptic and a short tone. Spoken "Left, far, saved" is optional. Repeat taps within 0.75 s are ignored. The screen dims and locks on your usual Auto-Lock schedule (GPS stops when it locks); Settings → **Keep screen on** keeps it lit for a dash mount.
+- **Non-visual confirmation:** a haptic and a short tone. Spoken "Left, far, saved" is optional. On silent, Passing plays no tone and doesn't speak (1.1.8), so a tap is haptic only. Repeat taps within 0.75 s are ignored. The screen dims and locks on your usual Auto-Lock schedule (GPS stops when it locks); Settings → **Keep screen on** keeps it lit for a dash mount.
 - **Review:** pins grouped by day. Each pin's detail screen has a map, editable label/side/distance, a **Notes** field for anything else to remember (exports include it), **Photos**, Reviewed, and Apple Maps / Google Maps links. Coordinates, accuracy, the GPS fix, speed and where it was saved from are under **More Details**; open or close it once and every pin follows.
 
 **Retention and export (Milestone 2)**
@@ -46,7 +46,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **"Hey Siri, I missed something in Passing"**: a pin 1 mile back along the road, then the same question.
 - **Quick Pin**: saves without asking anything. Use it for the Action Button and Back Tap, where a question would appear on screen and need typing.
 - Siri replies with one short line ("Saved “red barn”.") and says so if it couldn't get a location.
-- **Music pauses while Passing speaks** (spoken confirmations and previews), then picks up again. Turn off **Pause music while speaking** in Settings to have it lowered instead. The short tone never interrupts music.
+- **Music pauses while Passing speaks** (spoken confirmations and previews), then picks up again. Turn off **Pause music while speaking** in Settings and Passing speaks over the music instead (since 1.1.8: iOS only lets an app lower other audio in a mode the Silent switch can't mute). The short tone never interrupts music.
 
 **Widgets, CarPlay and Control Center (Milestone 5)**
 - **Pin widget:** a small home-screen widget that's one big button. Tap it to save a pin. Passing doesn't open and nothing is asked.
@@ -87,6 +87,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Stop listening:** while Passing asks or listens, a big red **Stop listening** button takes the place of the **Passing** title (the GPS pill hides meanwhile). It turns the microphone off right away and keeps anything you'd already said. The Passing widgets turn into a big **Stop listening** button at the same time, so you can stop it from CarPlay. It never has to be pressed, and it doesn't move or cover the capture buttons.
 - The pin is saved before Passing listens, so a missed or garbled answer never loses it. You can fix the label later in Pins.
 - With **Spoken confirmation** on, Passing reads the label back ("red barn") instead of saying your phrase.
+- **On silent** (1.1.8), Passing doesn't ask, chime or read back. It still listens: after the tap's buzz, a second buzz says the microphone is on, so talk after the second buzz. With the question on, that second buzz comes after the time the question would have taken (about a second and a half); turn the question off for a shorter wait. When you're not on silent, the second buzz comes right after the question or chime.
 - Music pauses while it listens (or is lowered, with "Pause music while speaking or listening" off), so the microphone hears you rather than the radio.
 - Speech is recognized on the iPhone and the audio never leaves it. iOS shows its orange microphone dot while Passing listens.
 - Only taps on the capture screen listen. The widgets, Control Center and Siri work as before.
@@ -262,6 +263,18 @@ Plan a trip through pins you saved: Pins → **Select**, then tap pins in the or
 7. **Open in Apple Maps**: Maps opens directions through every stop, in order. **Open in Google Maps** (Safari, or the Google Maps app if installed): the same stops.
 8. Select 12 pins (or 11 plus an address end): Google Maps shows **part 1 of 2** and **part 2 of 2**; part 2 starts where part 1 ends.
 9. Select a note and a "No location" pin with two real pins: the route has the two real pins and says 2 picked items have no location.
+
+## Version 1.1.8 checklist (Passing's voice follows the Silent switch)
+
+Turn on **Listen after tap** and **Spoken confirmation** for this.
+
+1. **Silent on:** tap the capture screen. You feel the tap's buzz, then about a second and a half later a second buzz. Passing doesn't ask anything. Say "red barn" after the second buzz: you feel a buzz, and Passing doesn't read it back. In Pins, the pin is labeled "red barn".
+2. **Silent off:** tap. Passing asks "What are you passing?", you feel a buzz, then say "blue door": Passing reads it back.
+3. Settings → turn off **Ask "What are you passing?"**. With Silent on: no chime, just the two buzzes, closer together. With Silent off: the chime, then the buzz.
+4. **Spoken confirmation without listening:** turn off Listen after tap. With Silent on, a tap is a buzz only. With Silent off, the tone, then your phrase.
+5. **Preview** in Settings still speaks with Silent on.
+6. In the car: with Silent off and Bluetooth or CarPlay connected, check whether the question sounds better than before. It now plays like music or directions rather than through the hands-free call channel. Tell me whether the first word of your answer ever gets cut off.
+7. With music playing and **Pause music while speaking or listening** off: Passing's phrase plays over the music, and the music is lowered while it listens.
 
 ## Version 1.1.7 checklist (watch pins wake the iPhone)
 
@@ -441,7 +454,7 @@ If the App Group is set up but its database won't open (rare; it could happen mi
 ## Decisions so far
 
 - **Fix freshness:** a reading up to 10 s old and within 200 m accuracy can be used. The numbers are in `WatchShared/FixPolicy.swift`, which the watch uses too.
-- **The tone follows the Silent switch** (your call): on silent, a tap is haptic only. Spoken confirmation and listen after tap, which you turn on yourself, still speak on silent, like directions in Maps. The tone mixes with music rather than pausing it.
+- **Passing follows the Silent switch** (your calls: the tone in 1.1, everything it says in 1.1.8): on silent, a tap is haptic only, and listen after tap listens without asking. iOS doesn't let apps read the switch, so Passing plays its sounds and speech in a mode iOS mutes on silent. The one exception is **Preview** in Settings, which you tap on purpose. The tone mixes with music rather than pausing it.
 - **Capture colors come from the app icon** (navy, verge green, deep blue, asphalt, pin yellow). Near and far differ in brightness as well as color, so they're easy to tell apart at a glance and for color-blind drivers, and nothing is glaring at night.
 - **Gradient capture buttons, not Liquid Glass.** Each zone is brightest near the top and darkens toward the bottom while staying green or blue (colors sampled from your mockup), with a subtle smoky variation, slightly darker side edges and a faint border. Each zone has its own fixed smoke pattern, so nothing moves or uses battery. The labels sit in the middle, where white text stands out.
 - **Still runs on iOS 26.** It's tuned for iOS 27 and the iPhone 16 Pro, but the minimum stays iOS 26, so iPhones that haven't updated can still install it. Nothing in the app needs iOS 27 yet.

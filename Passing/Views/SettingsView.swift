@@ -115,7 +115,7 @@ struct SettingsView: View {
                     Text("Confirmation")
                 } footer: {
                     Text(spokenConfirmation
-                         ? "Every pin gets a haptic. The tone follows the Silent switch: on silent, a tap is haptic only, but Passing still speaks. After each pin, Passing says one of your phrases, like “Left, far. Got it boss.” “+1 mi back” says the distance instead. Music and podcasts pause while Passing speaks and pick up again after, unless you turn that off (then they're just lowered)."
+                         ? "Every pin gets a haptic. Passing follows the Silent switch: on silent it doesn't play the tone or speak, so a tap is haptic only. After each pin, Passing says one of your phrases, like “Left, far. Got it boss.” “+1 mi back” says the distance instead. Music and podcasts pause while Passing speaks and pick up again after, unless you turn that off (then Passing speaks over them). Preview plays even on silent."
                          : "Every pin gets a haptic. The tone follows the Silent switch: on silent, a tap is haptic only. Turn on spoken confirmation to choose a voice and your own phrases.")
                 }
 
@@ -138,7 +138,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Labels by voice")
                 } footer: {
-                    Text("After a tap on the capture screen, Passing asks “\(ListenPolicy.question)” (or just chimes, if you turn the question off) and listens for a few seconds. Say what you saw, like “red barn”, and it becomes the label. Say nothing, “cancel” or “stop”, and the pin stays unlabeled. **Stop listening** at the top of the capture screen (or on a Passing widget in CarPlay) turns the microphone off right away, keeping anything you'd already said. Speech is recognized on your iPhone and never leaves it. With spoken confirmation on, Passing reads the label back.")
+                    Text("After a tap on the capture screen, Passing asks “\(ListenPolicy.question)” (or just chimes, if you turn the question off) and listens for a few seconds. Say what you saw, like “red barn”, and it becomes the label. Say nothing, “cancel” or “stop”, and the pin stays unlabeled. **Stop listening** at the top of the capture screen (or on a Passing widget in CarPlay) turns the microphone off right away, keeping anything you'd already said. Speech is recognized on your iPhone and never leaves it. With spoken confirmation on, Passing reads the label back. On silent, Passing doesn't ask, chime or read back: it just listens, with a buzz when the microphone comes on, so talk after the second buzz.")
                 }
 
                 Section {

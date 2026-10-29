@@ -6,12 +6,16 @@ import WidgetKit
 /// Non-visual confirmation that a pin was saved: a haptic, a short tone, and (if turned on)
 /// a spoken phrase like "Left, far. Got it boss." The driver never has to look at the screen.
 /// With listen-after-tap on, Passing asks "What are you passing?" (or chimes) and listens for a label.
+/// Everything it plays on the capture screen follows the Silent switch (`CaptureAudio`): on silent
+/// it neither speaks nor chimes, and the haptics carry it.
 @MainActor
 @Observable
 final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
     static let shared = CaptureFeedback()
 
     private let haptics = UINotificationFeedbackGenerator()
+    /// Felt as the microphone opens: the cue to talk, even on silent when there's no question.
+    private let listenCue = UIImpactFeedbackGenerator(style: .medium)
     private let synthesizer = AVSpeechSynthesizer()
     private let audio = AudioWorker()
     private let listener = SpeechListener()
@@ -78,7 +82,7 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
 
         deactivateTask?.cancel()
         if spokenText != nil { speechInProgress = true }
-        audio.activateAndPlay(tone: playTone, mode: spokenText == nil ? .toneOnly : Self.speechMode) {
+        audio.activateAndPlay(tone: playTone, mode: spokenText == nil ? .tone : Self.speechMode) {
             Task { @MainActor in
                 self.audioIsActive(speech: spokenText)
             }
@@ -91,7 +95,7 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         haptics.notificationOccurred(.error)
         haptics.prepare()
         if AppSettings.spokenConfirmation {
-            preview("Pin not saved.")
+            announce("Pin not saved.")
         }
     }
 
@@ -101,7 +105,7 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         haptics.notificationOccurred(.warning)
         haptics.prepare()
         if AppSettings.spokenConfirmation {
-            preview("Pin something first.")
+            announce("Pin something first.")
         }
     }
 
@@ -112,7 +116,7 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         guard SpeechListener.availability == .ready else {
             haptics.notificationOccurred(.warning)
             haptics.prepare()
-            preview("Voice notes are off. Turn on Listen after tap in Settings once to allow them.")
+            announce("Voice notes are off. Turn on Listen after tap in Settings once to allow them.")
             return
         }
         // Saved first, like every capture, so a note can't be lost mid-sentence; removed if empty.
@@ -128,23 +132,33 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
     }
 
     /// Settings preview: speaks `text` in the given voice (or the chosen one), whatever the
-    /// spoken-confirmation switch says.
+    /// spoken-confirmation switch says. Tapped on purpose, so it plays even on silent.
     func preview(_ text: String, voiceIdentifier: String? = nil) {
+        speakAlone(text, voiceIdentifier: voiceIdentifier ?? AppSettings.voiceIdentifier, mode: .preview)
+    }
+
+    /// A spoken message on the capture screen ("Pin not saved.", a read-back). Silent on silent.
+    private func announce(_ text: String) {
+        speakAlone(text, voiceIdentifier: AppSettings.voiceIdentifier, mode: Self.speechMode)
+    }
+
+    /// Switches the session to `mode`, then speaks. The session goes off again once speech ends.
+    private func speakAlone(_ text: String, voiceIdentifier: String, mode: CaptureAudio.Mode) {
         deactivateTask?.cancel()
         speechInProgress = true
-        let voice = voiceIdentifier ?? AppSettings.voiceIdentifier
-        audio.activateAndPlay(tone: false, mode: Self.speechMode) {
+        audio.activateAndPlay(tone: false, mode: mode) {
             Task { @MainActor in
                 // `_ =` so the task doesn't return the utterance (which can't cross actors).
-                _ = self.speak(text, voiceIdentifier: voice)
+                _ = self.speak(text, voiceIdentifier: voiceIdentifier)
             }
         }
     }
 
-    /// Speech pauses whatever else is playing (and lets it resume after) unless the driver chose
-    /// to have it lowered instead.
-    private static var speechMode: AudioWorker.Mode {
-        AppSettings.pauseAudioWhileSpeaking ? .speechPausingOthers : .speechLoweringOthers
+    /// Speech follows the Silent switch, and pauses whatever else is playing (letting it resume
+    /// after) unless the driver turned that off, when it plays over it: lowering other audio is only
+    /// possible in a session the Silent switch can't mute.
+    private static var speechMode: CaptureAudio.Mode {
+        .speech(pausingOthers: AppSettings.pauseAudioWhileSpeaking)
     }
 
     /// The voice for an identifier from settings. Empty means "Best available": the most natural
@@ -219,10 +233,13 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
     /// Passing asks "What are you passing?" (or chimes, if the driver turned the question off), then
     /// listens for a few seconds. Whatever the driver says becomes the pin's label; saying nothing
     /// leaves it unlabeled, silently. The pin is already saved, so none of this can lose it.
+    /// The question and the chime play before the microphone comes on, in a session the Silent
+    /// switch mutes, so on silent Passing just listens; a buzz marks when.
     private func listenForLabel(on pin: Pin, question: String = ListenPolicy.question) {
         if let listeningPin, listeningPin === pin {
-            // Another "+1 mi back" tap on the same pin: chime again and start the waiting time over.
-            audio.playTone()
+            // Another "+1 mi back" tap on the same pin: start the waiting time over. Its haptic has
+            // already played; a chime now would play in the microphone session, which the Silent
+            // switch can't mute, and the recognizer would hear it.
             listener.restartClock()
             return
         }
@@ -237,35 +254,49 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         ListeningSignal.setListening(true)
         WidgetCenter.shared.reloadAllTimelines()
 
-        let mode = AudioWorker.Mode.listening(pausingOthers: AppSettings.pauseAudioWhileSpeaking)
+        let pausingOthers = AppSettings.pauseAudioWhileSpeaking
         let ask = AppSettings.askBeforeListening
+        listenCue.prepare()
         // Read now, while the pin is certainly there: by the end it may have been deleted for good.
         let about = ListenTarget(pin: pin, isNote: pin.isNote, source: pin.source, startedAt: .now)
         listenTask = Task { @MainActor in
             await previous?.value
             guard self.listeningPin === pin else { return }
-            await withCheckedContinuation { continuation in
-                self.audio.activateAndPlay(tone: !ask, mode: mode) {
-                    continuation.resume()
+            if ask {
+                await self.activate(.speech(pausingOthers: pausingOthers))
+                // Starting the audio can take about a second when it pauses music. If a newer tap
+                // took over meanwhile, this one ends quietly instead of asking its question after all.
+                guard self.listeningPin === pin, !self.sessionStopped else {
+                    self.finishListening(about, heard: nil)
+                    return
+                }
+                await self.say(question)
+                // A short gap, so switching to the microphone doesn't clip the end of the question.
+                try? await Task.sleep(for: .seconds(0.15))
+                // Stopped (or replaced) during the question: don't switch the microphone on at all.
+                guard self.listeningPin === pin, !self.sessionStopped else {
+                    self.finishListening(about, heard: nil)
+                    return
                 }
             }
-            // Starting the audio can take about a second when it pauses music. If a newer tap took
-            // over meanwhile, this one ends quietly instead of asking its question after all.
+            // Without the question, the chime plays first, where the Silent switch can mute it.
+            await self.activate(.listening(pausingOthers: pausingOthers), chime: !ask)
             guard self.listeningPin === pin, !self.sessionStopped else {
                 self.finishListening(about, heard: nil)
                 return
             }
-            if ask {
-                await self.say(question)
-            }
-            // A short gap, so the microphone doesn't catch the end of the question or chime.
-            try? await Task.sleep(for: .seconds(ask ? 0.15 : self.audio.toneDuration + 0.1))
-            guard self.listeningPin === pin, !self.sessionStopped else {
-                self.finishListening(about, heard: nil)
-                return
-            }
+            self.listenCue.impactOccurred()
             let label = await self.listener.listen()
             self.finishListening(about, heard: label)
+        }
+    }
+
+    /// Turns the session to `mode` (after the tone, with `chime`) and returns once it's on.
+    private func activate(_ mode: CaptureAudio.Mode, chime: Bool = false) async {
+        await withCheckedContinuation { continuation in
+            audio.activateAndPlay(tone: chime, mode: mode) {
+                continuation.resume()
+            }
         }
     }
 
@@ -303,9 +334,9 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
             let saved = CaptureService.shared.setLabel(label, on: pin)
             haptics.notificationOccurred(saved ? .success : .error)
             if stillCurrent, AppSettings.spokenConfirmation {
-                // Read it back, so the driver knows what was heard without looking.
-                speechInProgress = true
-                speak(saved ? label : "Label not saved.", voiceIdentifier: AppSettings.voiceIdentifier)
+                // Read it back, so the driver knows what was heard without looking (on silent, the
+                // haptic above says it).
+                announce(saved ? label : "Label not saved.")
                 return
             }
         }
@@ -362,61 +393,24 @@ private final class AudioWorker: @unchecked Sendable {
         queue.async { self.tonePlayer?.prepareToPlay() }
     }
 
-    /// Turns the session on, plays the tone if asked, then calls `activated` (on the queue).
-    enum Mode {
-        /// Just the tone: mixes with music without interrupting it, and is silenced by the Silent switch.
-        case toneOnly
-        /// Speech: other audio pauses, then resumes when Passing deactivates its session.
-        case speechPausingOthers
-        /// Speech: other audio is lowered while Passing talks.
-        case speechLoweringOthers
-        /// Listen after tap: the microphone is on, and other audio pauses (or is lowered) so the
-        /// recognizer hears the driver rather than the music.
-        case listening(pausingOthers: Bool)
-
-        var isToneOnly: Bool {
-            if case .toneOnly = self { return true }
-            return false
-        }
-
-        var isListening: Bool {
-            if case .listening = self { return true }
-            return false
-        }
-    }
-
-    func activateAndPlay(tone: Bool, mode: Mode, activated: @escaping @Sendable () -> Void) {
+    /// Plays the tone if asked, then turns the session to `mode` and calls `activated` (on the queue).
+    func activateAndPlay(tone: Bool, mode: CaptureAudio.Mode, activated: @escaping @Sendable () -> Void) {
         queue.async {
-            if tone, !mode.isListening, let tonePlayer = self.tonePlayer {
-                // The confirmation tone always plays in a session the Silent switch silences, so on
-                // silent a tap is haptic only (Dan's request). Speech, if any, starts once the tone
-                // has finished, in its own session.
-                Self.activateSession(.toneOnly)
+            if tone, let tonePlayer = self.tonePlayer {
+                // The tone (and listen after tap's chime) always plays in a session the Silent
+                // switch mutes, so on silent a tap is haptic only (Dan's request). Whatever comes
+                // next (speech, the microphone) starts once it has finished, in its own session.
+                Self.activateSession(.tone)
                 tonePlayer.currentTime = 0
                 tonePlayer.play()
-                if mode.isToneOnly {
+                if mode == .tone {
                     activated()
                     return
                 }
                 Thread.sleep(forTimeInterval: self.toneDuration)
             }
             Self.activateSession(mode)
-            if tone, mode.isListening, let tonePlayer = self.tonePlayer {
-                // Listen after tap's chime is the cue to start talking, so it plays with the
-                // microphone session, like the question would.
-                tonePlayer.currentTime = 0
-                tonePlayer.play()
-            }
             activated()
-        }
-    }
-
-    /// Plays the tone again in the session that's already on.
-    func playTone() {
-        queue.async {
-            guard let tonePlayer = self.tonePlayer else { return }
-            tonePlayer.currentTime = 0
-            tonePlayer.play()
         }
     }
 
@@ -427,30 +421,31 @@ private final class AudioWorker: @unchecked Sendable {
         }
     }
 
-    /// The tone mixes with whatever is playing, and the Silent switch silences it (`.ambient`), so on
-    /// silent a tap is haptic only. Spoken confirmation, which the driver turns on deliberately,
-    /// still speaks on silent, like directions in Maps. Speech either pauses other audio (a
-    /// non-mixing session interrupts it; deactivating with `notifyOthersOnDeactivation` tells it to
-    /// resume) or lowers it, depending on the driver's setting.
-    private static func activateSession(_ mode: Mode) {
+    /// The session for each kind of sound (`CaptureAudio`). The tone and everything Passing says on
+    /// the capture screen play in `ambient` or `soloAmbient`, which the Silent switch mutes, since
+    /// iOS doesn't let apps read the switch. A non-mixing session (`soloAmbient`, `playback`,
+    /// `playAndRecord` without ducking) pauses other audio; deactivating with
+    /// `notifyOthersOnDeactivation` tells it to resume.
+    private static func activateSession(_ mode: CaptureAudio.Mode) {
         let session = AVAudioSession.sharedInstance()
+        let plan = CaptureAudio.session(for: mode)
         do {
-            switch mode {
-            case .toneOnly:
+            switch plan.category {
+            case .ambient:
                 try session.setCategory(.ambient, mode: .default, options: [])
-            case .speechPausingOthers:
+            case .soloAmbient:
+                try session.setCategory(.soloAmbient, mode: .default, options: [])
+            case .playback:
                 try session.setCategory(.playback, mode: .voicePrompt, options: [])
-            case .speechLoweringOthers:
-                try session.setCategory(.playback, mode: .voicePrompt, options: [.duckOthers, .interruptSpokenAudioAndMixWithOthers])
-            case .listening(let pausingOthers):
-                // `defaultToSpeaker` keeps the chime and read-back on the loudspeaker instead of the
-                // earpiece; Bluetooth HFP lets a car or headset microphone be used.
+            case .playAndRecord:
+                // `defaultToSpeaker` keeps the loudspeaker in use instead of the earpiece; Bluetooth
+                // HFP lets a car or headset microphone be used.
                 var options: AVAudioSession.CategoryOptions = [.defaultToSpeaker, .allowBluetoothHFP]
-                if !pausingOthers {
+                if plan.lowersOthers {
                     options.insert(.duckOthers)
                 }
                 try session.setCategory(.playAndRecord, mode: .default, options: options)
-                // Recording normally silences haptics; the "got it" haptic should still play.
+                // Recording normally silences haptics; the cue to talk and "got it" should still play.
                 try session.setAllowHapticsAndSystemSoundsDuringRecording(true)
             }
             try session.setActive(true)
