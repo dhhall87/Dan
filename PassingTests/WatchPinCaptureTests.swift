@@ -103,6 +103,28 @@ struct WatchPinCaptureTests {
         #expect(try savedPins().count == 1)
     }
 
+    @Test func theWatchIsToldAboutEveryWatchPinOnDisk() throws {
+        let store = Store()
+        let capture = service(store)
+        let first = watchPin(fix: nil)
+        var second = watchPin(fix: nil)
+        second.capturedAt = tap.addingTimeInterval(60)
+        capture.saveWatchPin(second)
+        capture.saveWatchPin(first)
+        capture.capture(side: .left, distance: .far, source: .widget, now: tap)
+        #expect(capture.savedWatchPinIDs() == [first.id, second.id], "watch pins only, oldest first")
+
+        let pin = try #require(try savedPins().first(where: { $0.id == first.id }))
+        pin.deletedAt = tap
+        #expect(capture.savedWatchPinIDs().contains(first.id), "Recently Deleted still counts: the iPhone has it")
+
+        store.failing = true
+        let notWritten = watchPin(fix: nil)
+        capture.saveWatchPin(notWritten)
+        #expect(!capture.savedWatchPinIDs().contains(notWritten.id), "not on disk yet, so the watch keeps it")
+        #expect(capture.savedWatchPinIDs(limit: 1) == [second.id], "the newest when there are more than fit")
+    }
+
     @Test func watchPinsWaitInNeedsReview() throws {
         let store = Store()
         let capture = service(store)

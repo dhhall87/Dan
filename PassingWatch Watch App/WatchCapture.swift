@@ -27,13 +27,11 @@ final class WatchCapture {
     @ObservationIgnored private let link = PhoneLink()
     @ObservationIgnored private var debouncer = TapDebouncer<String>(interval: 0.75)
     @ObservationIgnored private var giveUpTask: Task<Void, Never>?
-    /// Pins that reached the iPhone but were never confirmed are sent again once per launch.
-    @ObservationIgnored private var resentThisLaunch = false
 
     private init() {
         outbox = WatchOutboxFile.load()
         location.onFix = { [weak self] fix in self?.received(fix) }
-        link.onActivated = { [weak self] in self?.sendReady() }
+        link.onActivated = { [weak self] in self?.sendReady(resending: true) }
         link.onDelivered = { [weak self] id in self?.delivered(id) }
         link.onSaved = { [weak self] ids in self?.confirmSaved(ids) }
         link.activate()
@@ -54,12 +52,13 @@ final class WatchCapture {
         sendReady()
     }
 
-    /// Passing came on screen.
+    /// Passing came on screen. Also when pins the iPhone never confirmed are sent again (at most
+    /// once an hour each, `WatchOutbox.resendAfter`).
     func becameActive() {
         location.requestPermissionIfNeeded()
         location.setOnScreen(true)
         giveUpWaiting(now: .now)
-        sendReady()
+        sendReady(resending: true)
     }
 
     /// The wrist went down: the screen dims, but pins still waiting keep their GPS for now.
@@ -107,11 +106,11 @@ final class WatchCapture {
         location.setPinsWaiting(outbox.isWaitingForFix)
     }
 
-    private func sendReady() {
+    /// Sends pins that are ready. With `resending`, pins that reached the iPhone over an hour ago
+    /// without an answer go again too.
+    private func sendReady(resending: Bool = false) {
         guard link.isActivated else { return }
-        let resendAt: Date? = resentThisLaunch ? nil : .now
-        resentThisLaunch = true
-        let ready = outbox.readyToSend(excluding: link.inFlight, resendingAt: resendAt)
+        let ready = outbox.readyToSend(excluding: link.inFlight, resendingAt: resending ? .now : nil)
         guard !ready.isEmpty else { return }
         // Stamped (when, how many times) for the iPhone's drive log, and kept on disk with the pin.
         let stamped = outbox.markSent(ready.map(\.id), at: .now)

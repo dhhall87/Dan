@@ -147,6 +147,17 @@ struct DriveLogTests {
         #expect(lines.contains("  Watch to iPhone: median 1m 02s, slowest 2m 00s · sent more than once 1"))
     }
 
+    @Test func theWatchLinkSaysWhetherAnswersCanGetBack() {
+        let lines = DriveLogSummary.lines(for: [
+            entry(.watchLink, outcome: "ready"),
+            entry(.watchLink, after: 60, outcome: "notInstalled"),
+            entry(.watchLink, after: 61, outcome: "answerFailed-7006"),
+            entry(.watchLink, after: 62, outcome: "contextFailed-7006"),
+            entry(.watchLink, after: 90, outcome: "answerFailed-7006"),
+        ], timeZone: utc)
+        #expect(lines.contains("Apple Watch link: ready 1 · iPhone says Passing isn't on the watch 1 · answers that couldn't go 3 (answerFailed-7006, contextFailed-7006)"))
+    }
+
     @Test func emptyLogSaysSo() {
         #expect(DriveLogSummary.lines(for: []) == ["Nothing logged yet."])
     }

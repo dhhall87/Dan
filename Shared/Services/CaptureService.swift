@@ -216,6 +216,20 @@ final class CaptureService {
         return (try? context.fetchCount(descriptor)) ?? 0
     }
 
+    /// The newest Apple Watch pins on disk here, oldest first, Recently Deleted included: the ones
+    /// the watch can let go of. Read from the database rather than from answers sent, so pins that
+    /// arrived before an answer could get back to the watch are covered too.
+    func savedWatchPinIDs(limit: Int = WatchMessage.savedLimit) -> [UUID] {
+        let watch = CaptureSource.watch.rawValue
+        var descriptor = FetchDescriptor<Pin>(
+            predicate: #Predicate { $0.sourceRaw == watch },
+            sortBy: [SortDescriptor(\.capturedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit
+        let pins = (try? context.fetch(descriptor)) ?? []
+        return Array(pins.map(\.id).filter { !unsavedPinIDs.contains($0) }.reversed())
+    }
+
     /// Saves a note: text only, no location and no GPS. It shows in Pins by day like a pin, and
     /// expires, can be kept, grouped and deleted the same way.
     @discardableResult

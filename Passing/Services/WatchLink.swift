@@ -26,20 +26,58 @@ final class WatchLink: NSObject, WCSessionDelegate {
         // `isWatchAppInstalled` can read false for an app put on the watch from Xcode.
         guard session.activationState == .activated else { return }
         session.transferUserInfo(WatchMessage.userInfo(saved: [pin.id]))
-        // Also in the application context, which the watch reads whenever Passing starts there, so
-        // it can clear its list even if the answer above is slow or lost (Dan, October 2026: the
-        // pins arrived, but the watch kept showing them as waiting to send).
-        let recent = WatchMessage.recentlySaved(WatchMessage.savedIDs(from: session.applicationContext), adding: [pin.id])
+        publishSaved()
+    }
+
+    /// Puts the watch pins saved here in the application context, which the watch reads whenever
+    /// Passing starts there, so it can clear its list even if an answer was slow or lost (Dan,
+    /// October 2026: the pins arrived, but the watch kept showing them as waiting to send). Taken
+    /// from the pin database, so pins that arrived before any answer could get back are included.
+    /// Sent only when the list changes.
+    private func publishSaved() {
+        let session = WCSession.default
+        guard session.activationState == .activated else { return }
+        let current = WatchMessage.savedIDs(from: session.applicationContext)
+        let saved = WatchMessage.recentlySaved(current, adding: CaptureService.shared.savedWatchPinIDs())
+        guard Set(saved) != Set(current) else { return }
         do {
-            try session.updateApplicationContext(WatchMessage.userInfo(saved: recent))
+            try session.updateApplicationContext(WatchMessage.userInfo(saved: saved))
         } catch {
             print("Passing: couldn't update the watch's list of saved pins: \(error)")
+            DriveLog.record(DriveLogEntry(at: .now, kind: .watchLink, outcome: "contextFailed-\((error as NSError).code)"))
         }
+    }
+
+    /// The link started, or the watch changed (paired, Passing installed or removed there). Logged
+    /// only with a paired watch, so the drive log shows whether iOS thinks Passing is on it.
+    private func linkChanged(paired: Bool, installed: Bool, logsUnpaired: Bool) {
+        if paired {
+            DriveLog.record(DriveLogEntry(at: .now, kind: .watchLink, outcome: installed ? "ready" : "notInstalled"))
+        } else if logsUnpaired {
+            DriveLog.record(DriveLogEntry(at: .now, kind: .watchLink, outcome: "notPaired"))
+        }
+        publishSaved()
     }
 
     // MARK: WCSessionDelegate
 
-    nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {}
+    nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
+        if let error {
+            let code = (error as NSError).code
+            DriveLog.record(DriveLogEntry(at: .now, kind: .watchLink, outcome: "activationFailed-\(code)"))
+            return
+        }
+        guard activationState == .activated else { return }
+        let paired = session.isPaired
+        let installed = session.isWatchAppInstalled
+        Task { @MainActor in self.linkChanged(paired: paired, installed: installed, logsUnpaired: false) }
+    }
+
+    nonisolated func sessionWatchStateDidChange(_ session: WCSession) {
+        let paired = session.isPaired
+        let installed = session.isWatchAppInstalled
+        Task { @MainActor in self.linkChanged(paired: paired, installed: installed, logsUnpaired: true) }
+    }
 
     nonisolated func sessionDidBecomeInactive(_ session: WCSession) {}
 
@@ -51,5 +89,12 @@ final class WatchLink: NSObject, WCSessionDelegate {
     nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
         guard let pin = WatchMessage.pin(from: userInfo) else { return }
         Task { @MainActor in self.received(pin) }
+    }
+
+    nonisolated func session(_ session: WCSession, didFinish userInfoTransfer: WCSessionUserInfoTransfer, error: Error?) {
+        // A "saved" answer that couldn't go. The watch still finds out from the application
+        // context, if that gets through; the drive log says which one failed.
+        guard let error else { return }
+        DriveLog.record(DriveLogEntry(at: .now, kind: .watchLink, outcome: "answerFailed-\((error as NSError).code)"))
     }
 }

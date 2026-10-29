@@ -37,6 +37,12 @@ struct DriveLogEntry: Codable, Equatable {
         /// Passing opened from scratch: `seconds` until it was on screen and active, and `outcome`
         /// the version running, so a log that spans an update shows which drives used which.
         case opened
+        /// The iPhone's link to Apple Watch (1.1.6), only with a paired watch: `outcome` ready or
+        /// notInstalled (what iOS says about Passing on the watch) as the link starts or changes,
+        /// or notPaired after a change; or what failed, with WatchConnectivity's error code:
+        /// answerFailed (the "saved" answer to the watch), contextFailed (the list of saved pins),
+        /// activationFailed.
+        case watchLink
     }
 
     var at: Date
@@ -78,7 +84,7 @@ struct DriveLogEntry: Codable, Equatable {
         case .opened: return "ready"
         case .capture: return "arrived"
         case .bump: return "afterPin"
-        case .noGPS, .saveFailed: return "seconds"
+        case .noGPS, .saveFailed, .watchLink: return "seconds"
         }
     }
 
@@ -306,6 +312,22 @@ enum DriveLogSummary {
             var text = "Database: opened \(DriveLogFormat.times(opens.count))"
             if !opens.isEmpty { text += ", \(spread(opens.compactMap(\.seconds)))" }
             text += " · wouldn't open \(unavailable) · save failures \(failures.count)"
+            lines.append(text)
+        }
+
+        let links = of(.watchLink).compactMap(\.outcome)
+        if !links.isEmpty {
+            let failures = links.filter { $0.contains("Failed") }
+            var text = "Apple Watch link: ready \(links.filter { $0 == "ready" }.count)"
+            text += " · iPhone says Passing isn't on the watch \(links.filter { $0 == "notInstalled" }.count)"
+            text += " · answers that couldn't go \(failures.count)"
+            var kinds: [String] = []
+            for failure in failures where !kinds.contains(failure) {
+                kinds.append(failure)
+            }
+            if !kinds.isEmpty {
+                text += " (\(kinds.joined(separator: ", ")))"
+            }
             lines.append(text)
         }
 

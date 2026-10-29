@@ -141,6 +141,7 @@ Settings → Feedback → **Drive Log** → turn on **Keep a drive log**. From t
 - **GPS:** how long it ran each time (with the capture screen, or a short burst for Siri and widgets), and when it was skipped because location or Precise Location was off.
 - **Miles back:** whether the pin landed on the trail or fell back to words, and every trail restart with its reason (a gap that could hide a turn, a GPS jump, or a long break).
 - **Apple Watch pins (1.1.5):** how long after the tap each one reached the iPhone, how the watch's GPS went (ready at the tap; found after it, and how long it took; or none, because the wrist went down, nothing came in 15 seconds, or location was off), how long the hop from watch to iPhone took, and whether the watch had to send it more than once. The watch keeps no log of its own: these few numbers ride inside each pin, so they cost the watch no extra sends, files or battery.
+- **The link to Apple Watch (1.1.6):** whether iOS says Passing is installed on your watch, and any "saved" answer that couldn't get back to the watch, with its error code.
 - **Speed of the app:** how long Passing took to open and the database to load, save failures, clean-up runs that took a while, and town lookups.
 
 It never records where you were, labels, notes or speeds. The Drive Log screen shows a summary and the newest 100 events (pull down to refresh). **Share** makes a text file with the summary and every event, ready to send or paste. **Clear** deletes it. Each part of the app keeps about its newest 2,500 events. Turning it off stops recording and keeps what's there.
@@ -261,6 +262,14 @@ Plan a trip through pins you saved: Pins → **Select**, then tap pins in the or
 7. **Open in Apple Maps**: Maps opens directions through every stop, in order. **Open in Google Maps** (Safari, or the Google Maps app if installed): the same stops.
 8. Select 12 pins (or 11 plus an address end): Google Maps shows **part 1 of 2** and **part 2 of 2**; part 2 starts where part 1 ends.
 9. Select a note and a "No location" pin with two real pins: the route has the two real pins and says 2 picked items have no location.
+
+## Version 1.1.6 checklist (the watch's "to send" count)
+
+1. Install on both: the iPhone scheme onto the iPhone, then the **PassingWatch Watch App** scheme onto the watch (so the watch surely has 1.1.6 too).
+2. Open Passing on the iPhone and leave it open for a few seconds. Then open Passing on the watch: within a few seconds the "to send" count drops to 0 for every pin already in Pins on the iPhone.
+3. Tap a button on the watch with Passing open on the iPhone: the count goes to 1, then back to 0 within a few seconds.
+4. Drive Log on the iPhone: the summary has "Apple Watch link: ready … · iPhone says Passing isn't on the watch 0 · answers that couldn't go 0".
+5. If the count doesn't drop: on the iPhone, open the **Watch** app → **My Watch**, scroll to the bottom, and check whether Passing is under **Installed on Apple Watch** or **Available Apps**. Then share the drive log with me.
 
 ## Version 1.1.5 checklist (watch pins in the drive log)
 
@@ -447,7 +456,7 @@ If the App Group is set up but its database won't open (rare; it could happen mi
 - **Microphone and speech permission are asked for in Settings**, when you turn listening on, so no permission prompt can appear on the capture screen.
 - **The watch app is a companion of the iPhone app**, not a watch-only app (the Xcode wizard's default, which can't share pins with the iPhone app). It travels inside the iPhone app, and its ID is `com.danhall.passing.watchkitapp`.
 - **The watch asks for location the first time Passing opens on it**, not on the first tap like the iPhone. A question on screen right after the first tap would cost that pin its location.
-- **The watch keeps every pin until the iPhone says it's saved.** A pin that reached the iPhone but was never confirmed (say, the iPhone couldn't save it) is sent again an hour later, the next time Passing starts on the watch. The iPhone recognizes a pin it already has, so this never makes duplicates.
+- **The watch keeps every pin until the iPhone says it's saved.** A pin that reached the iPhone but was never confirmed (say, the iPhone couldn't save it) is sent again an hour later, the next time you open Passing on the watch, and at most once an hour after that (1.1.6). The iPhone recognizes a pin it already has, so this never makes duplicates. Whenever Passing runs on the iPhone, it also tells the watch every watch pin it has saved, so the watch can clear them all at once.
 - **`SFSpeechRecognizer` rather than iOS 26's new `SpeechAnalyzer`.** It's simpler, still supported, and on-device on iPhone. If the iPhone can't recognize its language on the device, the setting stays off rather than sending audio to a server.
 
 ## Project layout

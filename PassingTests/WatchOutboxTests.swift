@@ -96,6 +96,17 @@ struct WatchOutboxTests {
         #expect(outbox.count == 1, "kept until the iPhone says it's saved")
     }
 
+    @Test func aPinStillUnansweredAfterItsResendGoesAgainAnHourLater() {
+        var outbox = WatchOutbox()
+        let sent = pin(at: tap, fix: fix(at: tap))
+        outbox.add(sent, waitForFix: true)
+        outbox.markDelivered(sent.id, at: tap)
+        let resendAt = tap.addingTimeInterval(2 * 60 * 60)
+        _ = outbox.markSent(outbox.readyToSend(excluding: [], resendingAt: resendAt).map(\.id), at: resendAt)
+        #expect(outbox.readyToSend(excluding: [], resendingAt: resendAt.addingTimeInterval(10 * 60)).isEmpty, "not on every visit")
+        #expect(outbox.readyToSend(excluding: [], resendingAt: resendAt.addingTimeInterval(61 * 60)).map(\.id) == [sent.id], "Passing stayed launched, and it still goes again")
+    }
+
     @Test func eachSendIsCountedAndTheFirstIsTimed() {
         var outbox = WatchOutbox()
         let one = pin(at: tap, fix: fix(at: tap))

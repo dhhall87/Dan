@@ -11,13 +11,16 @@ struct WatchOutbox: Codable, Equatable {
         /// Still waiting for a GPS reading, so not sent yet.
         var waitingForFix: Bool
         /// When it reached the iPhone, which hasn't said it's saved yet (Passing there may not have
-        /// run since). Not sent again until `resendAfter` has passed.
+        /// run since), or when it was last sent again after that. Not sent again until
+        /// `resendAfter` has passed.
         var deliveredAt: Date?
     }
 
     /// A pin that reached the iPhone but was never confirmed is sent again after this long, the next
-    /// time Passing starts on the watch. That covers a save that failed on the iPhone, without
-    /// sending every waiting pin again on every tap.
+    /// time Passing comes on screen on the watch, and then at most once an hour. That covers an
+    /// answer that never came (a failed save on the iPhone, or one that couldn't get back), without
+    /// sending every waiting pin again on every tap. Until 1.1.6 it was once per launch, and watchOS
+    /// can keep Passing launched for days.
     static let resendAfter: TimeInterval = 60 * 60
 
     private(set) var entries: [Entry] = []
@@ -75,7 +78,8 @@ struct WatchOutbox: Codable, Equatable {
 
     /// Pins to send to the iPhone, oldest first: those done waiting for GPS that aren't already on
     /// their way. Pins it has received but not confirmed are included only when `resendingAt` is
-    /// given (as Passing starts) and they reached it over `resendAfter` ago.
+    /// given (as Passing comes on screen) and they reached it, or were last sent again, over
+    /// `resendAfter` ago.
     func readyToSend(excluding inFlight: Set<UUID>, resendingAt now: Date? = nil) -> [WatchPin] {
         entries.filter { entry in
             guard !entry.waitingForFix, !inFlight.contains(entry.pin.id) else { return false }
@@ -93,6 +97,10 @@ struct WatchOutbox: Codable, Equatable {
             guard let index = entries.firstIndex(where: { $0.pin.id == id }) else { return nil }
             if entries[index].pin.sentAt == nil {
                 entries[index].pin.sentAt = now
+            }
+            if entries[index].deliveredAt != nil {
+                // Sent again: its hour starts over, so it isn't resent on every visit.
+                entries[index].deliveredAt = now
             }
             entries[index].pin.sends = (entries[index].pin.sends ?? 0) + 1
             return entries[index].pin
