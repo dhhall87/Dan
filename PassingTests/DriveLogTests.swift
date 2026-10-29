@@ -133,18 +133,20 @@ struct DriveLogTests {
         ready.watchWait = 0
         ready.transfer = 4
         ready.count = 1
+        ready.watchVia = "message"
         var late = entry(.capture, after: 60, source: "watch", outcome: "right-near")
         late.watchGPS = "afterTap"
         late.watchWait = 3
         late.transfer = 120
         late.count = 2
+        late.watchVia = "transfer"
         var wristDown = entry(.capture, after: 120, source: "watch", outcome: "left-near")
         wristDown.watchGPS = "closed"
         wristDown.watchWait = 2
-        #expect(late.line(timeZone: utc).hasSuffix("sends=2 watchGPS=afterTap watchWait=3s transfer=2m 00s"))
+        #expect(late.line(timeZone: utc).hasSuffix("sends=2 watchGPS=afterTap watchWait=3s transfer=2m 00s via=transfer"))
         let lines = DriveLogSummary.lines(for: [ready, late, wristDown], timeZone: utc)
         #expect(lines.contains("  Watch GPS: ready at the tap 1 · after the tap 1 (median 3s, slowest 3s) · no position: wrist down 1"))
-        #expect(lines.contains("  Watch to iPhone: median 1m 02s, slowest 2m 00s · sent more than once 1"))
+        #expect(lines.contains("  Watch to iPhone: median 1m 02s, slowest 2m 00s · sent more than once 1 · by message 1 of 2"))
     }
 
     @Test func theWatchLinkSaysWhetherAnswersCanGetBack() {

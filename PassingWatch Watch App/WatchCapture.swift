@@ -128,6 +128,7 @@ final class WatchCapture {
         outbox.confirmSaved(ids)
         if outbox.count != before {
             WatchOutboxFile.save(outbox)
+            link.cancelTransfers(of: ids)
         }
     }
 }

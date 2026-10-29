@@ -185,9 +185,12 @@ final class CaptureService {
     /// the watch's own GPS reading, or no location if the watch had none: never the iPhone's position,
     /// which may be somewhere else by now. A pin that arrives twice is saved once.
     ///
+    /// `byMessage` says it came as a message (sent straight away) rather than a queued transfer,
+    /// for the drive log.
+    ///
     /// - Returns: whether the pin is on disk, so the watch only lets go of pins that are saved here.
     @discardableResult
-    func saveWatchPin(_ watchPin: WatchPin, now: Date = .now) -> Bool {
+    func saveWatchPin(_ watchPin: WatchPin, now: Date = .now, byMessage: Bool = false) -> Bool {
         if let existing = storedPin(id: watchPin.id) {
             // Sent again before the watch heard back. Already here: just make sure it's written.
             return saveState(of: existing) != .notSaved || persist()
@@ -200,7 +203,7 @@ final class CaptureService {
            FixPolicy.acceptsLateFix(capturedAt: watchPin.capturedAt, fixTimestamp: reading.timestamp) {
             fix = CLLocation(reading)
         }
-        save(newPin: pin, fix: .supplied(fix), fromWatch: (watchPin, now))
+        save(newPin: pin, fix: .supplied(fix), fromWatch: (watchPin, now, byMessage))
         return saveState(of: pin) != .notSaved
     }
 
@@ -319,7 +322,7 @@ final class CaptureService {
 
     /// Stamps the fix, runs `prepare`, saves, confirms, and waits for a late fix if needed.
     /// `fromWatch` is a watch pin as it arrived, whose trip goes in the drive log.
-    private func save(newPin pin: Pin, fix fixSource: FixSource = .phone, trailMeters: Double? = nil, fromWatch: (pin: WatchPin, arrivedAt: Date)? = nil, prepare: (Pin) -> Void = { _ in }) {
+    private func save(newPin pin: Pin, fix fixSource: FixSource = .phone, trailMeters: Double? = nil, fromWatch: (pin: WatchPin, arrivedAt: Date, byMessage: Bool)? = nil, prepare: (Pin) -> Void = { _ in }) {
         switch fixSource {
         case .phone:
             if let fix = currentFix() {
@@ -353,7 +356,7 @@ final class CaptureService {
         // After the feedback, so logging never delays it.
         var entry = DriveLogEntry.capture(pin, saved: saved, trailMeters: trailMeters)
         if let fromWatch {
-            entry.add(watchTrip: fromWatch.pin, arrivedAt: fromWatch.arrivedAt)
+            entry.add(watchTrip: fromWatch.pin, arrivedAt: fromWatch.arrivedAt, byMessage: fromWatch.byMessage)
         }
         DriveLog.record(entry)
 

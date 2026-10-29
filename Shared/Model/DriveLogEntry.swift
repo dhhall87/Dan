@@ -73,6 +73,9 @@ struct DriveLogEntry: Codable, Equatable {
     var watchWait: Double?
     /// Apple Watch pins: seconds from the watch first handing it over to its arrival here.
     var transfer: Double?
+    /// Apple Watch pins: how the copy that got here first came: "message" (sent straight away,
+    /// which wakes Passing here; 1.1.7) or "transfer" (queued, delivered when Passing runs here).
+    var watchVia: String?
 
     /// What `seconds` means for this kind, in the exported text.
     var secondsName: String {
@@ -121,6 +124,7 @@ struct DriveLogEntry: Codable, Equatable {
         if let watchGPS { fields.append("watchGPS=\(watchGPS)") }
         if let watchWait { fields.append("watchWait=\(DriveLogFormat.duration(watchWait))") }
         if let transfer { fields.append("transfer=\(DriveLogFormat.duration(transfer))") }
+        if let watchVia { fields.append("via=\(watchVia)") }
         return "\(formatter.string(from: at))  \(process)  \(kind.rawValue)  \(fields.joined(separator: " "))"
     }
 }
@@ -179,7 +183,12 @@ enum DriveLogSummary {
         let transfers = pins.compactMap(\.transfer)
         if !transfers.isEmpty {
             let resent = pins.filter { ($0.count ?? 1) > 1 }.count
-            lines.append("  Watch to iPhone: \(spread(transfers)) · sent more than once \(resent)")
+            var text = "  Watch to iPhone: \(spread(transfers)) · sent more than once \(resent)"
+            let vias = pins.compactMap(\.watchVia)
+            if !vias.isEmpty {
+                text += " · by message \(vias.filter { $0 == "message" }.count) of \(vias.count)"
+            }
+            lines.append(text)
         }
         return lines
     }

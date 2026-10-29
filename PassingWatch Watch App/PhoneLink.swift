@@ -37,14 +37,45 @@ final class PhoneLink: NSObject, WCSessionDelegate {
     }
 
     /// Queues pins for the iPhone. Does nothing until the session is activated; `onActivated` then
-    /// gives the caller another go.
+    /// gives the caller another go. With the iPhone in reach, each pin also goes straight away as
+    /// a message, which Apple's docs say wakes Passing on the iPhone in the background (1.1.7): the
+    /// pin is saved there, and its review reminder set, without waiting for Passing to be opened.
+    /// The queued copy stays the sure way; the iPhone saves a pin once however often it arrives.
     func send(_ pins: [WatchPin]) {
         guard let session, isActivated else { return }
+        let reachable = session.isReachable
         for pin in pins {
             if let userInfo = WatchMessage.userInfo(for: pin) {
                 session.transferUserInfo(userInfo)
             }
+            if reachable {
+                sendNow(pin, on: session)
+            }
         }
+    }
+
+    /// Drops the queued copies of pins the iPhone has saved (when the message got there first), so
+    /// they aren't sent again for nothing.
+    func cancelTransfers(of ids: [UUID]) {
+        guard let session, isActivated else { return }
+        let saved = Set(ids)
+        for transfer in session.outstandingUserInfoTransfers {
+            if let id = WatchMessage.pinID(from: transfer.userInfo), saved.contains(id) {
+                transfer.cancel()
+            }
+        }
+    }
+
+    /// Built outside the main actor, since WatchConnectivity calls the handlers on its own queue.
+    private nonisolated func sendNow(_ pin: WatchPin, on session: WCSession) {
+        guard let message = WatchMessage.userInfo(for: pin) else { return }
+        session.sendMessage(message, replyHandler: { reply in
+            let ids = WatchMessage.savedIDs(from: reply)
+            guard !ids.isEmpty else { return }
+            Task { @MainActor in self.onSaved?(ids) }
+        }, errorHandler: { _ in
+            // Out of reach after all, or no answer in time: the queued copy still goes.
+        })
     }
 
     // MARK: WCSessionDelegate

@@ -122,7 +122,7 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 - **Battery:**
   - The capture screen is the main cost. GPS runs only while it's on screen, and the screen follows Auto-Lock unless you turn on **Keep screen on**.
   - Otherwise, GPS runs for a few seconds per Siri, widget or Control Center pin.
-  - On the watch, GPS runs only while Passing is on its screen with your wrist raised (lowering it stops GPS), plus up to 15 seconds after a tap that had no reading yet. While the wrist is down the status line updates once a minute instead of every second. Pins go to the iPhone with WatchConnectivity's queued transfers, which watchOS sends when it suits the battery; there's no live connection held open. The complication is a fixed picture that never refreshes.
+  - On the watch, GPS runs only while Passing is on its screen with your wrist raised (lowering it stops GPS), plus up to 15 seconds after a tap that had no reading yet. While the wrist is down the status line updates once a minute instead of every second. Pins go to the iPhone with WatchConnectivity's queued transfers, which watchOS sends when it suits the battery, plus one small message per pin while Passing is on the watch's screen and the iPhone is in reach (1.1.7); there's no live connection held open. On the iPhone, that message wakes Passing in the background for a fraction of a second, about like a widget tap. The complication is a fixed picture that never refreshes.
   - On the iPhone, a watch pin is just a save: no sound, no GPS, no waiting.
   - Nothing else runs in the background apart from the occasional clean-up.
 - **Listen after tap** (off by default) uses the microphone and speech recognition for a few seconds per tap.
@@ -141,7 +141,7 @@ Settings → Feedback → **Drive Log** → turn on **Keep a drive log**. From t
 - **GPS:** how long it ran each time (with the capture screen, or a short burst for Siri and widgets), and when it was skipped because location or Precise Location was off.
 - **Miles back:** whether the pin landed on the trail or fell back to words, and every trail restart with its reason (a gap that could hide a turn, a GPS jump, or a long break).
 - **Apple Watch pins (1.1.5):** how long after the tap each one reached the iPhone, how the watch's GPS went (ready at the tap; found after it, and how long it took; or none, because the wrist went down, nothing came in 15 seconds, or location was off), how long the hop from watch to iPhone took, and whether the watch had to send it more than once. The watch keeps no log of its own: these few numbers ride inside each pin, so they cost the watch no extra sends, files or battery.
-- **The link to Apple Watch (1.1.6):** whether iOS says Passing is installed on your watch, and any "saved" answer that couldn't get back to the watch, with its error code.
+- **The link to Apple Watch (1.1.6):** whether iOS says Passing is installed on your watch, and any "saved" answer that couldn't get back to the watch, with its error code. Since 1.1.7, each watch pin also says whether it came as a message (straight away) or from the queue.
 - **Speed of the app:** how long Passing took to open and the database to load, save failures, clean-up runs that took a while, and town lookups.
 
 It never records where you were, labels, notes or speeds. The Drive Log screen shows a summary and the newest 100 events (pull down to refresh). **Share** makes a text file with the summary and every event, ready to send or paste. **Clear** deletes it. Each part of the app keeps about its newest 2,500 events. Turning it off stops recording and keeps what's there.
@@ -263,6 +263,16 @@ Plan a trip through pins you saved: Pins → **Select**, then tap pins in the or
 8. Select 12 pins (or 11 plus an address end): Google Maps shows **part 1 of 2** and **part 2 of 2**; part 2 starts where part 1 ends.
 9. Select a note and a "No location" pin with two real pins: the route has the two real pins and says 2 picked items have no location.
 
+## Version 1.1.7 checklist (watch pins wake the iPhone)
+
+1. Install on both, as for 1.1.6: the iPhone scheme onto the iPhone, then the **PassingWatch Watch App** scheme onto the watch.
+2. On the iPhone, go to the Home Screen (leave Passing in the background), lock the phone, and wait a minute. Keep it nearby.
+3. On the watch, open Passing and tap a button. The "to send" count goes to 1, then back to 0 within a few seconds, without touching the iPhone.
+4. Unlock the iPhone and open Passing: the pin is already in **Needs Review**.
+5. Drive Log: that pin's event ends with `via=message`, and the summary's "Watch to iPhone" line says "by message 1 of 1".
+6. Now swipe Passing away in the iPhone's app switcher and repeat steps 3–4. iOS doesn't relaunch a swiped-away app for some background events, and Apple's docs don't say whether this is one, so tell me which happened.
+7. Leave the iPhone in another room (out of Bluetooth range) and tap on the watch: the count stays at 1. Back in range, it goes to 0 the next time Passing runs on the iPhone (`via=transfer`).
+
 ## Version 1.1.6 checklist (the watch's "to send" count)
 
 1. Install on both: the iPhone scheme onto the iPhone, then the **PassingWatch Watch App** scheme onto the watch (so the watch surely has 1.1.6 too).
@@ -318,7 +328,7 @@ Passing on Apple Watch saves a pin with the watch's own GPS, mostly for walks an
 - **Saved at once, with a tap on the wrist.** The button shows a green tick for a moment, or a red cross if the watch couldn't save it (tap again).
 - **Status line** above the buttons: whether a tap now gets a position (GPS ready, Finding GPS…, Location off, Precise Location off), and how many pins the iPhone doesn't have yet ("2 to send").
 - **Location:** the watch asks the first time Passing opens on it. GPS runs while Passing is on the watch's screen, and for up to 15 seconds after a tap if there was no reading yet. A pin with no reading in that time goes without a location, never with a late or old one. The freshness rules are the same as the iPhone's.
-- **Getting pins to the iPhone:** pins stay on the watch until Passing on the iPhone has saved them, then the watch lets them go. They go straight from the watch to the iPhone (no server), in order, whenever the two are in reach, even with Passing closed on the watch. On the iPhone they're saved when Passing runs. iOS may also start Passing briefly in the background to take them, which is one thing the checklist checks.
+- **Getting pins to the iPhone:** pins stay on the watch until Passing on the iPhone has saved them, then the watch lets them go. They go straight from the watch to the iPhone (no server), in order, whenever the two are in reach, even with Passing closed on the watch. With the iPhone nearby and Passing open on the watch, each pin also goes straight away as a message, which wakes Passing on the iPhone in the background for a moment to save it (1.1.7), so it's in Needs Review, and its review reminder is set, without opening Passing on the iPhone. Otherwise it waits in the queue and is saved the next time Passing runs on the iPhone (iOS doesn't wake Passing for the queue).
 - **On the iPhone:** watch pins say **Saved from: Apple Watch**, wait in **Needs Review**, and set off review reminders, like widget pins. They keep the watch's position, never the iPhone's. A pin that arrives twice is saved once.
 - **Complication (1.1.2):** the app icon's pin, for a watch face (circular, corner, rectangular or inline) or the Smart Stack. Tap it to open Passing. To add it: press and hold the watch face, tap **Edit**, swipe to the complications, tap a spot and choose **Passing**.
 - **Not in this version:** "+1 mi back" and voice labels on the watch.
