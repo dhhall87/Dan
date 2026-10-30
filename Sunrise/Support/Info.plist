@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSHomeKitUsageDescription</key>
+	<string>Sunrise finds your lights in Apple Home and adds your sunrise to it as scenes and automations, so your home hub can fade the lights in on schedule.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Sunrise uses your rough location once, when you ask, to show when the sun rises where you are. It isn't tracked or shared.</string>
+	<key>UIUserInterfaceStyle</key>
+	<string>Dark</string>
+</dict>
+</plist>

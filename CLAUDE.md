@@ -4,6 +4,8 @@ Native iPhone app for capturing things you pass while driving so you can look th
 
 **Safety is the core requirement.** A capture must never depend on typing, reading, answering a question, or looking at a confirmation.
 
+**Second app in this repo (October 2026):** `Sunrise/` holds Sunrise, a separate app with its own `Sunrise/Sunrise.xcodeproj`, which fades Dan's lights in through Apple Home before he wakes. Its notes are in `Sunrise/CLAUDE.md`. Everything else in this file is about Passing, and a Sunrise-only push doesn't step Passing's version.
+
 ---
 
 ## How to work in this repo
