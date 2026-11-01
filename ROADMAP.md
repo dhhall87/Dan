@@ -49,7 +49,7 @@ Expand Passing from a personal travel companion into a lightweight field-discove
 
 ## Notes against the current app (for planning later)
 
-- **Already built or planned:** pins already have a `label`; notes and business name would be new fields. Groups (Milestone 6) are the natural base for named collections. JSON and CSV export have existed since Milestone 2, and KML export is planned for Milestone 6.
+- **Already built (status as of November 1, 2026; the plan above is unchanged):** pins have a `label` and a separate free-text **Notes** field; choosing a business in "What's here?" makes its name the label (with its Apple Maps place ID). Groups (Milestone 6) are the natural base for named collections; there are no tags yet. JSON, CSV and KML export are all built and free. Review reminders are built (at a set time and/or on arriving at Work or Home, while Needs Review has pins), but per-pin follow-up reminders ("Remind me tomorrow") and a follow-up status aren't. Multi-stop routes are built (Milestone 8) and not gated. Shortcuts reports and the Pro purchase haven't been started.
 - **Decide before gating:** export is free today, and "access to users' own data stays free" suggests basic export stays free, with Pro covering the extras (reports, reminders, tags, bulk tools).
 - **Retention:** pins expire after 7 days unless kept. A pin with a follow-up status or reminder probably needs to be kept automatically.
 - **Publishing:** StoreKit purchases need the paid Apple Developer Program and App Store or TestFlight distribution, so Pro is the same "publish or not" decision as the native CarPlay app.
