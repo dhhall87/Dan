@@ -12,6 +12,8 @@ final class RetentionService {
     struct Summary: Equatable {
         var expired = 0
         var purged = 0
+        /// Pins with photos or notes that reached 7 days and were kept (starred) instead.
+        var kept = 0
         /// True when the run was put off because an export was in progress.
         var deferred = false
     }
@@ -52,6 +54,11 @@ final class RetentionService {
             })
             for pin in (try? context.fetch(dueExpiry)) ?? [] {
                 if RetentionPolicy.shouldExpire(capturedAt: pin.capturedAt, isKept: pin.isKept, keepIndefinitely: keepIndefinitely, now: now) {
+                    if RetentionPolicy.keepsItself(photoCount: pin.photoCount, notes: pin.notes) {
+                        pin.isKept = true
+                        summary.kept += 1
+                        continue
+                    }
                     // Stamped with when it moved, not when it hit 7 days, so every pin gets its full
                     // 30 days in Recently Deleted, even after a long break or after turning off
                     // "Keep records indefinitely".
@@ -61,7 +68,7 @@ final class RetentionService {
             }
         }
 
-        if summary.expired > 0 || summary.purged > 0 {
+        if summary.expired > 0 || summary.purged > 0 || summary.kept > 0 {
             save()
         }
         // Only runs that did something or took a while, since it runs every time Passing opens.

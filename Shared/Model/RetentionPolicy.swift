@@ -29,6 +29,12 @@ enum RetentionPolicy {
         now >= purgeDate(deletedAt: deletedAt)
     }
 
+    /// A pin someone has added photos or notes to is kept (starred) when its 7 days are up, instead
+    /// of moving to Recently Deleted: that work shouldn't vanish on a timer (2.0).
+    static func keepsItself(photoCount: Int, notes: String?) -> Bool {
+        photoCount > 0 || !(notes ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     /// Recovering a pin that's already past its 7 days would just expire it again on the next
     /// clean-up, so it's kept (starred) instead.
     static func keepOnRecover(capturedAt: Date, now: Date) -> Bool {

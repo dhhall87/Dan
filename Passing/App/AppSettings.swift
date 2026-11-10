@@ -47,6 +47,8 @@ enum SettingsKey {
     /// A pin's screen shows its GPS details (coordinates, accuracy, fix, speed, heading, saved from).
     /// Off by default; the choice is remembered for every pin.
     static let showsPinDetails = "showsPinDetails"
+    /// The welcome pages have been shown (or weren't needed: Passing was already set up).
+    static let hasSeenWelcome = "hasSeenWelcome"
     /// Debug builds only: pushes the retention clock forward this many days for testing.
     static let debugDayOffset = "debugDayOffset"
 }

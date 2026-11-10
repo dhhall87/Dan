@@ -54,6 +54,8 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var path = NavigationPath()
     @State private var showingSettings = false
+    @State private var showingWelcome = false
+    @AppStorage(SettingsKey.hasSeenWelcome) private var hasSeenWelcome = false
     @AppStorage(SettingsKey.appearance) private var appearance: Appearance = .system
     /// The layout Passing opens with. The title button switches away from it for the drive.
     @AppStorage(SettingsKey.captureMode) private var defaultMode: CaptureMode = .quick
@@ -72,7 +74,7 @@ struct RootView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            CaptureView(mode: modeChoice.mode(default: defaultMode), isCovered: showingSettings) {
+            CaptureView(mode: modeChoice.mode(default: defaultMode), isCovered: showingSettings || showingWelcome) {
                 modeChoice.toggle(default: defaultMode)
                 UISelectionFeedbackGenerator().selectionChanged()
             }
@@ -122,6 +124,22 @@ struct RootView: View {
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
+        .fullScreenCover(isPresented: $showingWelcome) {
+            WelcomeView {
+                hasSeenWelcome = true
+                showingWelcome = false
+            }
+        }
+        .onAppear {
+            // Only for a new install. Someone who has already answered the location question has
+            // set Passing up, and must never find the welcome over the capture screen in the car.
+            guard !hasSeenWelcome else { return }
+            if LocationProvider.shared.authorization == .notDetermined {
+                showingWelcome = true
+            } else {
+                hasSeenWelcome = true
+            }
+        }
         .onChange(of: appearance, initial: true) {
             appearance.apply()
         }
@@ -165,6 +183,8 @@ struct RootView: View {
                 DriveLog.flush()
                 RetentionScheduler.schedule()
                 updateReviewReminders()
+                // The number on the icon: pins still without a name, as Passing is left.
+                AppBadge.update(count: CaptureService.shared.unnamedCount())
             default:
                 break
             }

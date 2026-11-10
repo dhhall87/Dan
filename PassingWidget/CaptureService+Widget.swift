@@ -18,6 +18,9 @@ extension CaptureService {
         confirm: { _ in },
         isPrecise: { LocationPrivacy.isPrecise },
         reviewWaiting: { ReviewReminders.arm(waiting: $0) },
+        // Unverified: whether iOS lets a widget change the app's badge. If not, the app sets it
+        // the next time it opens or goes to the background.
+        unnamedChanged: { AppBadge.update(count: $0) },
         // Only the App Group store: a pin saved anywhere else would never show up in the app.
         persist: { try SharedStore.save($0, sharedOnly: true) }
     )

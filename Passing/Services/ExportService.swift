@@ -54,7 +54,8 @@ extension ExportService {
             let name = file.lastPathComponent
             let isPinExport = name.hasPrefix("Passing pins") && extensions.contains(file.pathExtension)
             let isDriveLog = name.hasPrefix(DriveLog.exportPrefix) && file.pathExtension == "txt"
-            if isPinExport || isDriveLog {
+            let isBackup = name.hasPrefix(PinBackup.filePrefix) && file.pathExtension == "json"
+            if isPinExport || isDriveLog || isBackup {
                 try? FileManager.default.removeItem(at: file)
             }
         }

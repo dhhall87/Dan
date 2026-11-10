@@ -25,6 +25,8 @@ struct NearbyPlacesSection: View {
         let id: Int
         let item: MKMapItem
         let meters: Double
+        /// Which side of the road it's on, when the car's direction at the tap is known.
+        let side: Side
     }
 
     var body: some View {
@@ -58,7 +60,7 @@ struct NearbyPlacesSection: View {
         } header: {
             Text("What's here?")
         } footer: {
-            Text("Places from Apple Maps near the pin, closest first. Tap the one you passed: the pin takes its name and **Open in Apple Maps** shows that place, ready for **Add to Guide**. The pin's location is sent to Apple only when you tap Find.")
+            Text("Places from Apple Maps near the pin, closest first. If you tapped a side of the road, places on that side are listed first. Tap the one you passed: the pin takes its name and **Open in Apple Maps** shows that place, ready for **Add to Guide**. The pin's location is sent to Apple only when you tap Find.")
         }
         .onChange(of: pin.lookUpKey) {
             // Moved by hand: these places were near the old spot.
@@ -102,7 +104,8 @@ struct NearbyPlacesSection: View {
 
     private func details(for place: Found) -> String {
         let category = place.item.pointOfInterestCategory.flatMap { NearbyPlaces.categoryTitle(fromRawValue: $0.rawValue) }
-        return ([category, NearbyPlaces.distanceText(meters: place.meters)].compactMap { $0 }).joined(separator: " · ")
+        let side: String? = place.side == .unknown ? nil : "on the \(place.side.title.lowercased())"
+        return ([category, NearbyPlaces.distanceText(meters: place.meters), side].compactMap { $0 }).joined(separator: " · ")
     }
 
     private func search(radius: Double) async {
@@ -116,15 +119,21 @@ struct NearbyPlacesSection: View {
             // Deleted for good, or moved, while searching: these results aren't for this pin any more.
             guard isStill(at: key) else { return }
             let here = TrailPoint(latitude: center.latitude, longitude: center.longitude)
-            let places = response.mapItems
-                .map { item in
+            // The car's direction only says which side a place is on when the search is around
+            // where the car was (not around a miles-back estimate or a spot moved by hand).
+            let course: Double? = pin.courseReliable && pin.targetCoordinate == nil ? pin.course : nil
+            let closest = response.mapItems
+                .map { item -> Found in
                     let spot = item.location.coordinate
-                    return (item, Geo.distance(here, TrailPoint(latitude: spot.latitude, longitude: spot.longitude)))
+                    let point = TrailPoint(latitude: spot.latitude, longitude: spot.longitude)
+                    let side = course.map { NearbyPlaces.side(course: $0, bearingToPlace: Geo.bearing(from: here, to: point)) } ?? .unknown
+                    return Found(id: 0, item: item, meters: Geo.distance(here, point), side: side)
                 }
-                .sorted { $0.1 < $1.1 }
+                .sorted { $0.meters < $1.meters }
                 .prefix(NearbyPlaces.maxShown(radius: radius))
+            let places = NearbyPlaces.tappedSideFirst(Array(closest), sides: closest.map(\.side), tapped: pin.side)
                 .enumerated()
-                .map { Found(id: $0.offset, item: $0.element.0, meters: $0.element.1) }
+                .map { Found(id: $0.offset, item: $0.element.item, meters: $0.element.meters, side: $0.element.side) }
             state = places.isEmpty ? .nothing : .found(places)
         } catch {
             guard isStill(at: key) else { return }

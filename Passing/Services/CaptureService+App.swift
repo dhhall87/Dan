@@ -16,6 +16,7 @@ extension CaptureService {
         isPrecise: { LocationPrivacy.isPrecise },
         reviewWaiting: { ReviewReminders.arm(waiting: $0) },
         failed: { _ in CaptureFeedback.shared.captureFailed() },
+        unnamedChanged: { AppBadge.update(count: $0) },
         persist: { try SharedStore.save($0) }
     )
 }

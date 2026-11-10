@@ -24,6 +24,30 @@ enum NearbyPlaces {
         radius >= widerRadius ? maxShownFarther : maxShown
     }
 
+    /// A place this close to dead ahead or dead behind (degrees) isn't called left or right.
+    static let sideDeadZone: Double = 15
+
+    /// Which side of the road a place is on, from the car's direction of travel (`course`, degrees)
+    /// and the compass bearing from the car to the place. Unknown when it's nearly straight ahead
+    /// or behind.
+    static func side(course: Double, bearingToPlace: Double) -> Side {
+        let relative = ((bearingToPlace - course).truncatingRemainder(dividingBy: 360) + 360)
+            .truncatingRemainder(dividingBy: 360)
+        if relative < sideDeadZone || relative > 360 - sideDeadZone { return .unknown }
+        if abs(relative - 180) < sideDeadZone { return .unknown }
+        return relative < 180 ? .right : .left
+    }
+
+    /// The listed places with those on the side the driver tapped first, each part still closest
+    /// first. `sides` holds each place's side, in the same order. Nothing moves when the tap had no
+    /// side. The list is cut to length before this, so it never hides a closer place.
+    static func tappedSideFirst<Place>(_ places: [Place], sides: [Side], tapped: Side) -> [Place] {
+        guard tapped != .unknown, places.count == sides.count else { return places }
+        let matching = zip(places, sides).filter { $0.1 == tapped }.map(\.0)
+        let others = zip(places, sides).filter { $0.1 != tapped }.map(\.0)
+        return matching + others
+    }
+
     /// "Gas Station" from Apple's "MKPOICategoryGasStation"; nil for an unknown format.
     static func categoryTitle(fromRawValue raw: String) -> String? {
         let prefix = "MKPOICategory"

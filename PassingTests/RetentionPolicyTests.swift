@@ -226,4 +226,11 @@ struct PinExportTests {
         #expect(PinExport.fileName(format: .kml, exportedAt: Date(timeIntervalSince1970: 1_793_000_000), groupName: "Trip 1/2", timeZone: utc)
                 == "Passing pins - Trip 1-2 2026-10-26.kml")
     }
+
+    @Test func pinsWithPhotosOrNotesKeepThemselves() {
+        #expect(RetentionPolicy.keepsItself(photoCount: 1, notes: nil))
+        #expect(RetentionPolicy.keepsItself(photoCount: 0, notes: "for sale"))
+        #expect(!RetentionPolicy.keepsItself(photoCount: 0, notes: "  \n"))
+        #expect(!RetentionPolicy.keepsItself(photoCount: 0, notes: nil), "a name alone doesn't keep a pin")
+    }
 }

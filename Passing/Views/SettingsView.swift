@@ -8,14 +8,18 @@ enum SettingsRoute: Hashable {
     case voice
     case phrases
     case reviewReminders
+    case backup
+    case advanced
     case driveLog
+    case welcome
 }
 
+/// Settings, tidied for 2.0: the switches used most are on this screen, each with a short note,
+/// and the rest (appearance, exports, location access, the drive log) are under Advanced.
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @AppStorage(SettingsKey.captureMode) private var mode: CaptureMode = .quick
-    @AppStorage(SettingsKey.appearance) private var appearance: Appearance = .system
     @AppStorage(SettingsKey.confirmationTone) private var confirmationTone = true
     @AppStorage(SettingsKey.spokenConfirmation) private var spokenConfirmation = false
     @AppStorage(SettingsKey.keepIndefinitely) private var keepIndefinitely = false
@@ -26,19 +30,12 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.listenAfterTap) private var listenAfterTap = false
     @AppStorage(SettingsKey.askBeforeListening) private var askBeforeListening = true
     @AppStorage(SettingsKey.lookUpPlaceNames) private var lookUpPlaceNames = true
-    @AppStorage(SettingsKey.deleteAfterExport) private var deleteAfterExport = false
     /// In the App Group's shared settings, so the widget and Control Center follow it too.
     @AppStorage(LocationPrivacy.key, store: AppGroup.defaults) private var preciseLocation = true
-    @AppStorage(DriveLog.enabledKey, store: AppGroup.defaults) private var driveLogOn = false
     @AppStorage(SettingsKey.keepScreenOn) private var keepScreenOn = false
     @State private var confirmingDeleteAll = false
     @State private var deletedCount: Int?
     @State private var listenProblem: SpeechListener.Availability?
-    #if DEBUG
-    @AppStorage(SettingsKey.debugDayOffset) private var debugDayOffset = 0
-    #endif
-
-    private let location = LocationProvider.shared
 
     var body: some View {
         NavigationStack {
@@ -51,193 +48,13 @@ struct SettingsView: View {
                         Text("Storage")
                     }
                 }
-
-                Section {
-                    Picker("Capture screen", selection: $mode) {
-                        ForEach(CaptureMode.allCases) { mode in
-                            Text(mode.title).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    Toggle("Keep screen on", isOn: $keepScreenOn)
-                } header: {
-                    Text("Capture screen")
-                } footer: {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(mode == .quick
-                             ? "The whole screen is one button."
-                             : "Tap the side of the road the thing was on. Inner columns are right by the road, outer columns are farther away. Tap the road in the middle if you're not sure which side.")
-                        Text("Passing opens with this one. To switch during a drive, tap the **Passing** title at the top of the capture screen.")
-                        Text("**Keep screen on** stops the capture screen dimming and locking, for a phone in a dash mount. Off, it follows Auto-Lock like any app, and GPS stops when the phone locks. Widgets, Siri and Control Center work either way.")
-                    }
-                }
-
-                Section {
-                    Picker("Appearance", selection: $appearance) {
-                        ForEach(Appearance.allCases) { option in
-                            Text(option.title).tag(option)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                } header: {
-                    Text("Appearance")
-                } footer: {
-                    Text("System follows your iPhone's Light or Dark setting. The capture screen always stays dark, so it's never bright on the dash at night.")
-                }
-
-                Section {
-                    Toggle("Confirmation tone", isOn: $confirmationTone)
-                    Toggle("Spoken confirmation", isOn: $spokenConfirmation)
-                    if spokenConfirmation {
-                        NavigationLink(value: SettingsRoute.voice) {
-                            LabeledContent("Voice", value: VoiceOption.displayName(for: voiceIdentifier))
-                        }
-                        NavigationLink(value: SettingsRoute.phrases) {
-                            LabeledContent("Phrases", value: phrasesSummary)
-                        }
-                        Toggle("Say side and distance first", isOn: $sayClueFirst)
-                    }
-                    if spokenConfirmation || listenAfterTap {
-                        Toggle(listenAfterTap ? "Pause music while speaking or listening" : "Pause music while speaking", isOn: $pauseAudioWhileSpeaking)
-                    }
-                    if spokenConfirmation {
-                        Button("Preview") {
-                            CaptureFeedback.shared.preview(SpokenConfirmation.text(
-                                side: .left,
-                                distance: .far,
-                                milesBack: 0,
-                                phrases: SpokenConfirmation.phrases(from: storedPhrases),
-                                sayClueFirst: sayClueFirst
-                            ))
-                        }
-                    }
-                } header: {
-                    Text("Confirmation")
-                } footer: {
-                    Text(spokenConfirmation
-                         ? "Every pin gets a haptic. Passing follows the Silent switch: on silent it doesn't play the tone or speak, so a tap is haptic only. After each pin, Passing says one of your phrases, like “Left, far. Got it boss.” “+1 mi back” says the distance instead. Music and podcasts pause while Passing speaks and pick up again after, unless you turn that off (then Passing speaks over them). Preview plays even on silent."
-                         : "Every pin gets a haptic. The tone follows the Silent switch: on silent, a tap is haptic only. Turn on spoken confirmation to choose a voice and your own phrases.")
-                }
-
-                Section {
-                    Toggle("Listen after tap", isOn: listenBinding)
-                    if listenAfterTap {
-                        Toggle("Ask “\(ListenPolicy.question)”", isOn: $askBeforeListening)
-                    }
-                    if let listenProblem {
-                        Text(listenProblemText(listenProblem))
-                            .foregroundStyle(.orange)
-                        if listenProblem == .needsPermission {
-                            Button("Open iOS Settings") {
-                                if let url = URL(string: UIApplication.openSettingsURLString) {
-                                    openURL(url)
-                                }
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Labels by voice")
-                } footer: {
-                    Text("After a tap on the capture screen, Passing asks “\(ListenPolicy.question)” (or just chimes, if you turn the question off) and listens for a few seconds. Say what you saw, like “red barn”, and it becomes the label. Say nothing, “cancel” or “stop”, and the pin stays unlabeled. **Stop listening** at the top of the capture screen (or on a Passing widget in CarPlay) turns the microphone off right away, keeping anything you'd already said. Speech is recognized on your iPhone and never leaves it. With spoken confirmation on, Passing reads the label back. On silent, Passing doesn't ask, chime or read back: it just listens for about 5 seconds, with a buzz when the microphone comes on, so talk after the second buzz. While Passing is open on the iPhone, a tap on a Passing widget (in CarPlay, say) chimes and listens too, and never asks the question.")
-                }
-
-                Section {
-                    SiriTipView(intent: CapturePinIntent())
-                    ShortcutsLink()
-                } header: {
-                    Text("Siri and the Action Button")
-                } footer: {
-                    Text("Say “Pin that in Passing” or “I missed something in Passing.” Siri asks what you saw, but the pin is already saved, so you can ignore the question. For the Action Button, use **Quick Pin**, which never asks anything.")
-                }
-
-                Section {
-                    Toggle("Keep records indefinitely", isOn: $keepIndefinitely)
-                    Toggle("Delete pins after exporting", isOn: $deleteAfterExport)
-                } header: {
-                    Text("Keeping pins")
-                } footer: {
-                    Text((keepIndefinitely
-                          ? "Pins stay until you delete them. Recently Deleted still empties itself after 30 days."
-                          : "Pins move to Recently Deleted 7 days after you pin them, unless you keep (star) them. Recently Deleted empties itself after 30 days.")
-                         + (deleteAfterExport
-                            ? " After you share an export, the pins in it move to Recently Deleted too, except kept ones. Cancelling the share keeps them."
-                            : ""))
-                }
-
-                Section {
-                    NavigationLink(value: SettingsRoute.reviewReminders) {
-                        Label("Review Reminders", systemImage: "bell")
-                    }
-                } header: {
-                    Text("Needs Review")
-                } footer: {
-                    Text("Pins from the widget, CarPlay, Control Center and Apple Watch wait in **Needs Review** (in Pins) until you mark them Reviewed. Passing can remind you about them the next morning, or when you get to work or home.")
-                }
-
-                Section {
-                    Toggle("Precise location", isOn: $preciseLocation)
-                    Toggle("Look up town names", isOn: $lookUpPlaceNames)
-                    Button("Delete All Pins…", role: .destructive) {
-                        confirmingDeleteAll = true
-                    }
-                    if let deletedCount {
-                        Text(deletedCount == 1 ? "Deleted 1 pin." : "Deleted \(deletedCount) pins.")
-                            .foregroundStyle(.secondary)
-                    }
-                } header: {
-                    Text("Privacy")
-                } footer: {
-                    Text("Pins, labels, photos and groups stay on this iPhone. Passing has no account, no analytics and no server, and syncs nothing itself; pins are included in the iPhone's own backups, like any app's data.\n\n**Precise location** off keeps only roughly where each pin was (within about half a mile) and its general direction, with no speed and no route. Enough to find the town, not the exact spot. It applies to new pins; pins already saved keep their exact position.\n\n**Town names** are looked up by sending a pin's location to Apple Maps. Turn this off and pin locations never leave the iPhone, except for map pictures and Look Around when you open them.\n\nExports leave only when you share them. They never include speed (JSON does include the stretch of road on miles-back pins), and Passing deletes its copy afterwards. **Delete All Pins** erases every pin for good, including kept ones and Recently Deleted. Groups and your Work and Home places stay; delete those in Manage Groups and Review Reminders.")
-                }
-
-                Section {
-                    NavigationLink(value: SettingsRoute.driveLog) {
-                        LabeledContent("Drive Log", value: driveLogOn ? "On" : "Off")
-                    }
-                } header: {
-                    Text("Feedback")
-                } footer: {
-                    Text("A record of how Passing does on real drives: how long GPS takes, how accurate pins are, whether they saved. No locations, labels, notes or speeds. Stays on this iPhone until you share it.")
-                }
-
-                Section {
-                    LabeledContent("Location access", value: locationStatus)
-                    if location.authorization != .notDetermined {
-                        Button("Open iOS Settings") {
-                            if let url = URL(string: UIApplication.openSettingsURLString) {
-                                openURL(url)
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Location")
-                } footer: {
-                    Text("Passing uses your location while the capture screen is open, and for a few seconds when you pin from Siri, a widget or Control Center. Passing on Apple Watch uses the watch's own location while it's open. It never tracks you in the background. It asks the first time you pin something. Pins stay on this iPhone.")
-                }
-
-                #if DEBUG
-                Section {
-                    Stepper("Clock: +\(debugDayOffset) \(debugDayOffset == 1 ? "day" : "days")", value: $debugDayOffset, in: 0...60)
-                    LabeledContent("Trail recorded", value: Geo.milesText(location.breadcrumbs.length / Geo.metersPerMile))
-                    LabeledContent("Pretend it's", value: AppClock.now.formatted(date: .abbreviated, time: .shortened))
-                    Button("Run clean-up now") {
-                        RetentionService.shared.run()
-                    }
-                } header: {
-                    Text("Testing (debug builds only)")
-                } footer: {
-                    Text("Moves the clock that expiry and Recently Deleted use, so you can test the 7- and 30-day rules without waiting. Set it back to 0 when you're done. This section isn't in App Store builds.")
-                }
-                #endif
-
-                Section {
-                    LabeledContent("Version", value: AppVersion.current)
-                } header: {
-                    Text("About")
-                } footer: {
-                    Text("Goes up with every update (1.0.1, 1.0.2, …), so you can tell which one is installed. The drive log notes it each time Passing opens.")
-                }
-
+                captureSection
+                soundSection
+                listenSection
+                siriSection
+                pinsSection
+                privacySection
+                moreSection
                 if SharedStore.state == .appOnly {
                     Section {
                         Label("The App Group isn't set up, so pins are stored in the app's own space. The widgets and Control Center can't save pins here. See “Set up the App Group” in the README.", systemImage: "exclamationmark.triangle")
@@ -254,7 +71,10 @@ struct SettingsView: View {
                 case .voice: VoicePickerView()
                 case .phrases: PhrasesView()
                 case .reviewReminders: ReviewRemindersView()
+                case .backup: BackupView()
+                case .advanced: AdvancedSettingsView()
                 case .driveLog: DriveLogView()
+                case .welcome: WelcomeAgainView()
                 }
             }
             .toolbar {
@@ -265,6 +85,7 @@ struct SettingsView: View {
             .confirmationDialog("Delete all pins?", isPresented: $confirmingDeleteAll, titleVisibility: .visible) {
                 Button("Delete All Pins", role: .destructive) {
                     deletedCount = RetentionService.shared.deleteAllPins()
+                    AppBadge.update(count: CaptureService.shared.unnamedCount())
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
@@ -276,6 +97,152 @@ struct SettingsView: View {
                     listenProblem = SpeechListener.availability
                 }
             }
+        }
+    }
+
+    // MARK: Sections
+
+    private var captureSection: some View {
+        Section {
+            Picker("Capture screen", selection: $mode) {
+                ForEach(CaptureMode.allCases) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            Toggle("Keep screen on", isOn: $keepScreenOn)
+        } header: {
+            Text("Capture screen")
+        } footer: {
+            // Built as a key so the bold parts show as bold.
+            Text(LocalizedStringKey((mode == .quick
+                  ? "The whole screen is one button."
+                  : "Tap the side of the road the thing was on: inner columns are close to the road, outer ones farther away.")
+                 + " Tap the **Passing** title on the capture screen to switch during a drive. **Keep screen on** is for a phone in a dash mount; off, the screen follows Auto-Lock."))
+        }
+    }
+
+    private var soundSection: some View {
+        Section {
+            Toggle("Confirmation tone", isOn: $confirmationTone)
+            Toggle("Spoken confirmation", isOn: $spokenConfirmation)
+            if spokenConfirmation {
+                NavigationLink(value: SettingsRoute.voice) {
+                    LabeledContent("Voice", value: VoiceOption.displayName(for: voiceIdentifier))
+                }
+                NavigationLink(value: SettingsRoute.phrases) {
+                    LabeledContent("Phrases", value: phrasesSummary)
+                }
+                Toggle("Say side and distance first", isOn: $sayClueFirst)
+            }
+            if spokenConfirmation || listenAfterTap {
+                Toggle(listenAfterTap ? "Pause music while speaking or listening" : "Pause music while speaking", isOn: $pauseAudioWhileSpeaking)
+            }
+            if spokenConfirmation {
+                Button("Preview") {
+                    CaptureFeedback.shared.preview(SpokenConfirmation.text(
+                        side: .left,
+                        distance: .far,
+                        milesBack: 0,
+                        phrases: SpokenConfirmation.phrases(from: storedPhrases),
+                        sayClueFirst: sayClueFirst
+                    ))
+                }
+            }
+        } header: {
+            Text("Sound")
+        } footer: {
+            Text(spokenConfirmation
+                 ? "Every pin gets a buzz. After each pin, Passing says one of your phrases, like “Left, far. Got it boss.” On silent it plays no tone and doesn't speak. Preview plays even on silent."
+                 : "Every pin gets a buzz. On silent there's no tone. Turn on spoken confirmation to choose a voice and your own phrases.")
+        }
+    }
+
+    private var listenSection: some View {
+        Section {
+            Toggle("Listen after tap", isOn: listenBinding)
+            if listenAfterTap {
+                Toggle("Ask “\(ListenPolicy.question)”", isOn: $askBeforeListening)
+            }
+            if let listenProblem {
+                Text(listenProblemText(listenProblem))
+                    .foregroundStyle(.orange)
+                if listenProblem == .needsPermission {
+                    Button("Open iOS Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            openURL(url)
+                        }
+                    }
+                }
+            }
+        } header: {
+            Text("Labels by voice")
+        } footer: {
+            Text("After a tap on the capture screen, Passing asks “\(ListenPolicy.question)” (or chimes) and listens for a few seconds. Say what you saw, like “red barn”, and it becomes the pin's name. Say nothing, “cancel” or “stop”, and the pin stays unnamed. **Stop listening** on the capture screen turns the microphone off right away. Speech is recognized on your iPhone and never leaves it. On silent, Passing doesn't ask or chime: it just listens, so talk after the second buzz. While Passing is open, a tap on a Passing widget chimes and listens too.")
+        }
+    }
+
+    private var siriSection: some View {
+        Section {
+            SiriTipView(intent: CapturePinIntent())
+            ShortcutsLink()
+        } header: {
+            Text("Siri and the Action Button")
+        } footer: {
+            Text("Say “Pin that in Passing” or “I missed something in Passing.” Siri asks what you saw, but the pin is already saved, so you can ignore the question. For the Action Button, use **Quick Pin**, which never asks anything.")
+        }
+    }
+
+    private var pinsSection: some View {
+        Section {
+            Toggle("Keep records indefinitely", isOn: $keepIndefinitely)
+            NavigationLink(value: SettingsRoute.reviewReminders) {
+                Label("Review Reminders", systemImage: "bell")
+            }
+            NavigationLink(value: SettingsRoute.backup) {
+                Label("Back Up and Restore", systemImage: "externaldrive")
+            }
+        } header: {
+            Text("Your pins")
+        } footer: {
+            Text(LocalizedStringKey((keepIndefinitely
+                  ? "Pins stay until you delete them."
+                  : "Pins move to Recently Deleted after 7 days, unless you keep (star) them. Pins you've added photos or notes to are kept for you.")
+                 + " Recently Deleted empties itself after 30 days. **Review Reminders** has reminders for pins waiting in Needs Review, and the number on Passing's icon."))
+        }
+    }
+
+    private var privacySection: some View {
+        Section {
+            Toggle("Precise location", isOn: $preciseLocation)
+            Toggle("Look up town names", isOn: $lookUpPlaceNames)
+            Button("Delete All Pins…", role: .destructive) {
+                confirmingDeleteAll = true
+            }
+            if let deletedCount {
+                Text(deletedCount == 1 ? "Deleted 1 pin." : "Deleted \(deletedCount) pins.")
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Privacy")
+        } footer: {
+            Text("Pins, names, photos and groups stay on this iPhone. Passing has no account, no analytics and no server.\n\n**Precise location** off keeps only roughly where each new pin was (within about half a mile), with no speed and no route.\n\n**Town names** are looked up by sending a pin's location to Apple Maps. Off, pin locations leave the iPhone only for map pictures, Look Around and What's here? when you open them.\n\n**Delete All Pins** erases every pin for good, including kept ones and Recently Deleted. Groups and your Work and Home places stay.")
+        }
+    }
+
+    private var moreSection: some View {
+        Section {
+            NavigationLink(value: SettingsRoute.advanced) {
+                Label("Advanced", systemImage: "slider.horizontal.3")
+            }
+            NavigationLink(value: SettingsRoute.welcome) {
+                Label("How Passing Works", systemImage: "questionmark.circle")
+            }
+            LabeledContent("Version", value: AppVersion.current)
+        } header: {
+            Text("More")
+        } footer: {
+            Text("**Advanced** has appearance, exports, location access and the drive log.")
         }
     }
 
@@ -318,14 +285,14 @@ struct SettingsView: View {
         default: return "\(count) phrases"
         }
     }
+}
 
-    private var locationStatus: String {
-        switch location.authorization {
-        case .authorizedAlways, .authorizedWhenInUse:
-            return location.isPreciseLocationOff ? "While using Passing (not precise)" : "While using Passing"
-        case .denied, .restricted: return "Off"
-        case .notDetermined: return "Not asked yet"
-        @unknown default: return "Unknown"
-        }
+/// The welcome pages again, from Settings → How Passing Works.
+private struct WelcomeAgainView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        WelcomeView(done: { dismiss() })
+            .navigationBarTitleDisplayMode(.inline)
     }
 }

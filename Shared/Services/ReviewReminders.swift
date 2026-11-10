@@ -49,7 +49,7 @@ enum ReviewReminders {
 
     /// Asks for notification permission (only from Settings). True if Passing may notify.
     static func requestPermission() async -> Bool {
-        (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])) ?? false
+        (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])) ?? false
     }
 
     private static func trigger(for trigger: ReviewReminderSettings.Trigger) -> UNNotificationTrigger {

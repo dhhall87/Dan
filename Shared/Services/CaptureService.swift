@@ -23,6 +23,8 @@ final class CaptureService {
     private let reviewWaiting: @MainActor (Int) -> Void
     /// A tap in the app whose save failed: a different haptic, never the success tone.
     private let failed: @MainActor (Pin) -> Void
+    /// Called with how many pins have no name yet, after a save that may have changed it.
+    private let unnamedChanged: @MainActor (Int) -> Void
     /// Writes the context to disk. Injectable so tests can make it fail.
     private let persistStore: @MainActor (ModelContext) throws -> Void
     /// Pins whose first save hasn't succeeded yet. Any later successful save writes them too.
@@ -46,6 +48,7 @@ final class CaptureService {
         isPrecise: @escaping @MainActor () -> Bool = { true },
         reviewWaiting: @escaping @MainActor (Int) -> Void = { _ in },
         failed: @escaping @MainActor (Pin) -> Void = { _ in },
+        unnamedChanged: @escaping @MainActor (Int) -> Void = { _ in },
         persist: @escaping @MainActor (ModelContext) throws -> Void = { try $0.save() }
     ) {
         self.context = context
@@ -56,6 +59,7 @@ final class CaptureService {
         self.isPrecise = isPrecise
         self.reviewWaiting = reviewWaiting
         self.failed = failed
+        self.unnamedChanged = unnamedChanged
         self.persistStore = persist
     }
 
@@ -219,6 +223,15 @@ final class CaptureService {
         return (try? context.fetchCount(descriptor)) ?? 0
     }
 
+    /// How many active pins still have no name and aren't marked Reviewed (notes don't count): the
+    /// number on Passing's icon.
+    func unnamedCount() -> Int {
+        let descriptor = FetchDescriptor<Pin>(predicate: #Predicate {
+            $0.deletedAt == nil && !$0.isNote && !$0.isReviewed && ($0.label == nil || $0.label == "")
+        })
+        return (try? context.fetchCount(descriptor)) ?? 0
+    }
+
     /// The newest Apple Watch pins on disk here, oldest first, Recently Deleted included: the ones
     /// the watch can let go of. Read from the database rather than from answers sent, so pins that
     /// arrived before an answer could get back to the watch are covered too.
@@ -263,7 +276,9 @@ final class CaptureService {
     func setLabel(_ label: String?, on pin: Pin) -> Bool {
         guard pin.modelContext != nil, !pin.isDeleted else { return false }
         pin.label = label
-        return persistChange(to: pin)
+        let saved = persistChange(to: pin)
+        unnamedChanged(unnamedCount())
+        return saved
     }
 
     /// Waits until a pin that was saved without a location has picked one up or given up.
@@ -353,6 +368,7 @@ final class CaptureService {
         if pin.needsReview {
             reviewWaiting(needsReviewCount())
         }
+        unnamedChanged(unnamedCount())
         // After the feedback, so logging never delays it.
         var entry = DriveLogEntry.capture(pin, saved: saved, trailMeters: trailMeters)
         if let fromWatch {

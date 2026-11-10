@@ -7,28 +7,43 @@ struct ReviewRemindersView: View {
     @Environment(\.openURL) private var openURL
     @State private var settings = ReviewReminders.settings
     @State private var notificationsAllowed = true
+    @AppStorage(AppBadge.enabledKey, store: AppGroup.defaults) private var badgeOn = false
 
     var body: some View {
         Form {
+            Section {
+                Toggle("Show a number on Passing's icon", isOn: $badgeOn)
+            } footer: {
+                Text("How many pins still have no name. Naming a pin, or marking it Reviewed, takes it off the count. iOS only shows the number if notifications are allowed for Passing; Passing asks when you turn this on.")
+            }
+            .onChange(of: badgeOn) {
+                Task {
+                    if badgeOn {
+                        notificationsAllowed = await ReviewReminders.requestPermission()
+                    }
+                    AppBadge.update(count: CaptureService.shared.unnamedCount())
+                }
+            }
+
             Section {
                 Toggle("Remind me", isOn: $settings.isOn)
             } footer: {
                 Text("After you save a pin from the widget, CarPlay, Control Center or Apple Watch, Passing reminds you to look at Needs Review. It only reminds you while something is waiting there, and reviewing everything cancels the reminder.")
             }
 
-            if settings.isOn {
-                if !notificationsAllowed {
-                    Section {
-                        Label("Notifications are off for Passing, so reminders can't appear.", systemImage: "bell.slash")
-                            .foregroundStyle(.orange)
-                        Button("Open iOS Settings") {
-                            if let url = URL(string: UIApplication.openSettingsURLString) {
-                                openURL(url)
-                            }
+            if settings.isOn || badgeOn, !notificationsAllowed {
+                Section {
+                    Label("Notifications are off for Passing, so reminders and the number on the icon can't appear.", systemImage: "bell.slash")
+                        .foregroundStyle(.orange)
+                    Button("Open iOS Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            openURL(url)
                         }
                     }
                 }
+            }
 
+            if settings.isOn {
                 Section {
                     Toggle("At a time", isOn: $settings.atTime)
                     if settings.atTime {
@@ -51,7 +66,7 @@ struct ReviewRemindersView: View {
         .navigationTitle("Review Reminders")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            if settings.isOn {
+            if settings.isOn || badgeOn {
                 notificationsAllowed = await ReviewReminders.requestPermission()
             }
         }

@@ -265,6 +265,26 @@ Plan a trip through pins you saved: Pins → **Select**, then tap pins in the or
 8. Select 12 pins (or 11 plus an address end): Google Maps shows **part 1 of 2** and **part 2 of 2**; part 2 starts where part 1 ends.
 9. Select a note and a "No location" pin with two real pins: the route has the two real pins and says 2 picked items have no location.
 
+## Version 2.0 (welcome, backups, icon badge, tidier Settings)
+
+- **Welcome:** three short pages the first time Passing opens on a new install (what a tap does, why location, hands-free ways to pin). Anyone who has already answered the location question never sees it over the capture screen. See it again in Settings → More → **How Passing Works**.
+- **Back Up and Restore** (Settings → Your pins): one file with every pin and note in Pins, with names, notes, groups, places and photos. Restoring adds only pins that aren't here already. The file isn't locked and holds your pins' locations, so keep it private. Recently Deleted and speeds aren't included.
+- **Pins with photos or notes keep themselves:** when their 7 days are up they get a star instead of moving to Recently Deleted.
+- **A number on Passing's icon** (Settings → Review Reminders, off by default): how many pins still have no name and aren't marked Reviewed. It updates when Passing saves or names a pin by voice, and whenever you leave Passing. iOS needs notifications allowed to show it.
+- **What's here? knows the side of the road:** if you tapped left or right and the car's direction was known, places on that side are listed first, and each says "on the left" or "on the right".
+- **Settings is shorter:** Appearance, Delete pins after exporting, Location access, the Drive Log and the testing tools moved to **Advanced**.
+- **Drafts for the App Store:** `docs/privacy.md` and `docs/support.md`. They need a contact email and a public address before Passing can link to them.
+
+## Version 2.0 checklist
+
+1. **Welcome:** Settings → More → **How Passing Works**. Three pages; Next, then Start returns to Settings. (To see the first-run version, delete Passing and install again: the second page's button says **Allow Location** and iOS asks.)
+2. **Backup:** Settings → **Back Up and Restore** → **Back Up All Pins…** → Save to Files. Then delete one pin for good (Pins → delete → Recently Deleted → Delete Now) and **Restore from a Backup…**, picking the file: "Added 1 pin. N were already here." The pin is back with its name, notes, group and photos. Restore the same file again: "Added 0 pins."
+3. Try restoring a JSON export from Pins: Passing says it isn't a backup.
+4. **Icon badge:** Settings → Review Reminders → **Show a number on Passing's icon** → allow notifications. Tap the capture screen twice, go to the Home Screen: the icon shows the count of unnamed pins. Name one in Pins, leave Passing: the number drops. Tap a widget with Passing closed and tell me whether the number goes up by itself (I couldn't confirm iOS lets a widget change it).
+5. **Auto-keep:** in a debug build, add a note to one pin and nothing to another, then Settings → Advanced → Clock +8 days → Run clean-up now. The pin with the note is starred and still in Pins; the other is in Recently Deleted. Set the clock back to 0.
+6. **Side of the road:** on a pin tapped as left or right while driving (More Details shows a heading), **Find Places Near This Pin**: places on that side come first and say which side.
+7. **Settings:** everything that was there before is on the main screen or under Advanced. Tell me if anything is in the wrong place.
+
 ## Version 1.1.9 checklist (Silent check, widget listening)
 
 Turn on **Listen after tap**, and the drive log, for this.
