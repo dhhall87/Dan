@@ -9,7 +9,11 @@ extension CaptureService {
     @MainActor static let shared = CaptureService(
         context: SharedStore.context,
         currentFix: { LocationProvider.shared.freshFix() },
-        lateFix: { await LocationProvider.shared.nextUsableFix(timeout: FixPolicy.lateFixWindow) },
+        lateFix: {
+            // Not asked yet: only the app can ask, so no reading can come and there's nothing to wait for.
+            guard LocationProvider.shared.authorization != .notDetermined else { return nil }
+            return await LocationProvider.shared.nextUsableFix(timeout: FixPolicy.lateFixWindow)
+        },
         trail: { BreadcrumbBuffer() },
         confirm: { _ in },
         isPrecise: { LocationPrivacy.isPrecise },

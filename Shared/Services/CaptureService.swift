@@ -392,8 +392,9 @@ final class CaptureService {
         }
     }
 
-    /// The pin with this id, wherever it is (Pins or Recently Deleted), including one not yet written.
-    private func storedPin(id: UUID) -> Pin? {
+    /// The pin with this id, wherever it is (Pins or Recently Deleted), including one not yet written
+    /// and one another process (the widget) saved.
+    func storedPin(id: UUID) -> Pin? {
         var descriptor = FetchDescriptor<Pin>(predicate: #Predicate { $0.id == id })
         descriptor.fetchLimit = 1
         return try? context.fetch(descriptor).first

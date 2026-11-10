@@ -2,7 +2,8 @@
 /// iOS gives apps no way to read the Silent switch, so following it means playing in a category the
 /// system itself mutes on silent: `ambient` (mixes with music) or `soloAmbient` (pauses music).
 /// Dan, October 2026: on silent, Passing doesn't speak or chime; it still listens, and a buzz says
-/// when. Plain values, so that rule is unit tested.
+/// when. Since 1.1.9 `SilentSwitch` checks first and skips the sound altogether; these sessions
+/// are the backstop for when that check can't tell. Plain values, so the rule is unit tested.
 enum CaptureAudio {
     /// The `AVAudioSession` categories Passing uses.
     enum Category: Equatable {

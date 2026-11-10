@@ -8,8 +8,13 @@ struct ListenPolicy {
     /// Asked by the capture screen's "Add a note" button.
     static let noteQuestion = "What's your note?"
 
-    /// Give up if nothing is said within this long after the question (or chime).
-    var waitForSpeech: TimeInterval = 6
+    /// A widget's pin is listened for only if it was saved this recently (seconds), so Passing
+    /// never starts listening for an old one.
+    static let widgetPinFreshness: TimeInterval = 5
+
+    /// Give up if nothing is said within this long after the question (or chime). Dan asked for
+    /// 3 to 5 seconds (November 2026); it was 6.
+    var waitForSpeech: TimeInterval = 5
     /// Once the driver is talking, stop after this long with no new words.
     var pauseAfterSpeech: TimeInterval = 1.5
     /// After "stop" or "cancel", stop sooner than the normal pause. Not instantly, because the

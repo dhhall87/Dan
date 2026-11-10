@@ -6,8 +6,9 @@ import WidgetKit
 /// Non-visual confirmation that a pin was saved: a haptic, a short tone, and (if turned on)
 /// a spoken phrase like "Left, far. Got it boss." The driver never has to look at the screen.
 /// With listen-after-tap on, Passing asks "What are you passing?" (or chimes) and listens for a label.
-/// Everything it plays on the capture screen follows the Silent switch (`CaptureAudio`): on silent
-/// it neither speaks nor chimes, and the haptics carry it.
+/// Everything it plays on the capture screen follows the Silent switch: on silent it neither speaks
+/// nor chimes, and the haptics carry it. `SilentSwitch` checks before each sound, and `CaptureAudio`'s
+/// sessions are the backstop when that check can't tell.
 @MainActor
 @Observable
 final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
@@ -30,6 +31,10 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
     @ObservationIgnored private var listenTask: Task<Void, Never>?
     @ObservationIgnored private var deactivateTask: Task<Void, Never>?
     @ObservationIgnored private var stopObserver: (any NSObjectProtocol)?
+    @ObservationIgnored private var widgetObserver: (any NSObjectProtocol)?
+    /// What `SilentSwitch` said for the latest listen, reused when the next one starts while its
+    /// microphone is still on (the check isn't made during recording).
+    @ObservationIgnored private var lastListenWasSilent = false
     @ObservationIgnored private var voicesObserver: (any NSObjectProtocol)?
 
     /// True from the tap until listening ends, including while the question is asked.
@@ -42,6 +47,10 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         ListeningSignal.startObserving()
         stopObserver = NotificationCenter.default.addObserver(forName: ListeningSignal.stopRequested, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.stopListening() }
+        }
+        // A Passing widget saved a pin (from CarPlay, say) while Passing is open here.
+        widgetObserver = NotificationCenter.default.addObserver(forName: WidgetActivity.pinSaved, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.widgetPinSaved() }
         }
         // A voice downloaded in iOS Settings may be better than the one "Best available" picked.
         voicesObserver = NotificationCenter.default.addObserver(forName: AVSpeechSynthesizer.availableVoicesDidChangeNotification, object: nil, queue: .main) { _ in
@@ -80,13 +89,34 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
             : nil
         guard playTone || spokenText != nil else { return }
 
-        deactivateTask?.cancel()
-        if spokenText != nil { speechInProgress = true }
-        audio.activateAndPlay(tone: playTone, mode: spokenText == nil ? .tone : Self.speechMode) {
-            Task { @MainActor in
-                self.audioIsActive(speech: spokenText)
+        Task { @MainActor in
+            // On silent the haptic above is the whole confirmation.
+            let silent = await SilentSwitch.shared.isSilent()
+            guard !silent, self.listeningPin == nil else { return }
+            self.deactivateTask?.cancel()
+            if spokenText != nil { self.speechInProgress = true }
+            self.audio.activateAndPlay(tone: playTone, mode: spokenText == nil ? .tone : Self.speechMode) {
+                Task { @MainActor in
+                    self.audioIsActive(speech: spokenText)
+                }
             }
         }
+    }
+
+    /// A Passing widget just saved a pin. If Passing is open on the iPhone's screen with Listen after
+    /// tap on, it listens for that pin's label too, after the chime and never the question (Dan,
+    /// November 2026). Only then: a widget can't use the microphone itself, and Passing can't start
+    /// listening from the background.
+    private func widgetPinSaved() {
+        guard AppSettings.listenAfterTap, SpeechListener.availability == .ready,
+              UIApplication.shared.applicationState == .active,
+              let latest = WidgetActivity.lastWidgetPin,
+              Date.now.timeIntervalSince(latest.savedAt) < ListenPolicy.widgetPinFreshness,
+              let pin = CaptureService.shared.storedPin(id: latest.id),
+              pin.source == .widget, pin.deletedAt == nil, pin.label?.isEmpty ?? true,
+              listeningPin !== pin
+        else { return }
+        listenForLabel(on: pin, fromWidget: true)
     }
 
     /// A tap whose pin couldn't be written to disk: the error haptic instead of the success one, no
@@ -138,8 +168,21 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
     }
 
     /// A spoken message on the capture screen ("Pin not saved.", a read-back). Silent on silent.
-    private func announce(_ text: String) {
-        speakAlone(text, voiceIdentifier: AppSettings.voiceIdentifier, mode: Self.speechMode)
+    /// `silent` is given when it's already known (after a listen, when the microphone is still on).
+    private func announce(_ text: String, silent known: Bool? = nil) {
+        Task { @MainActor in
+            let silent: Bool
+            if let known {
+                silent = known
+            } else {
+                silent = await SilentSwitch.shared.isSilent()
+            }
+            guard !silent, self.listeningPin == nil else {
+                self.scheduleDeactivation(after: 0.1)
+                return
+            }
+            self.speakAlone(text, voiceIdentifier: AppSettings.voiceIdentifier, mode: Self.speechMode)
+        }
     }
 
     /// Switches the session to `mode`, then speaks. The session goes off again once speech ends.
@@ -233,9 +276,11 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
     /// Passing asks "What are you passing?" (or chimes, if the driver turned the question off), then
     /// listens for a few seconds. Whatever the driver says becomes the pin's label; saying nothing
     /// leaves it unlabeled, silently. The pin is already saved, so none of this can lose it.
-    /// The question and the chime play before the microphone comes on, in a session the Silent
-    /// switch mutes, so on silent Passing just listens; a buzz marks when.
-    private func listenForLabel(on pin: Pin, question: String = ListenPolicy.question) {
+    /// The question and the chime play before the microphone comes on. On silent there's neither:
+    /// Passing listens straight away, and a buzz marks when. A widget's pin (`fromWidget`) gets the
+    /// chime and never the question, and doesn't turn the widgets into Stop buttons: in CarPlay a
+    /// widget keeps its last face until it's touched, so the Stop button would take the next tap.
+    private func listenForLabel(on pin: Pin, question: String = ListenPolicy.question, fromWidget: Bool = false) {
         if let listeningPin, listeningPin === pin {
             // Another "+1 mi back" tap on the same pin: start the waiting time over. Its haptic has
             // already played; a chime now would play in the microphone session, which the Silent
@@ -245,24 +290,42 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         }
 
         // A new pin while listening for an older one: the older one keeps whatever was heard so far.
+        let overlapsListen = listeningPin != nil
         listener.stop()
         let previous = listenTask
         deactivateTask?.cancel()
         interruptSpeech()
         sessionStopped = false
         listeningPin = pin
-        ListeningSignal.setListening(true)
-        WidgetCenter.shared.reloadAllTimelines()
+        if !fromWidget {
+            ListeningSignal.setListening(true)
+            WidgetCenter.shared.reloadAllTimelines()
+        }
 
         let pausingOthers = AppSettings.pauseAudioWhileSpeaking
-        let ask = AppSettings.askBeforeListening
+        let ask = AppSettings.askBeforeListening && !fromWidget
         listenCue.prepare()
         // Read now, while the pin is certainly there: by the end it may have been deleted for good.
-        let about = ListenTarget(pin: pin, isNote: pin.isNote, source: pin.source, startedAt: .now)
+        let isNote = pin.isNote
+        let source = pin.source
+        let startedAt = Date.now
         listenTask = Task { @MainActor in
             await previous?.value
             guard self.listeningPin === pin else { return }
-            if ask {
+            // Straight after another listen the microphone is still on, so its answer is reused.
+            let silent: Bool
+            if overlapsListen {
+                silent = self.lastListenWasSilent
+            } else {
+                silent = await SilentSwitch.shared.isSilent()
+            }
+            self.lastListenWasSilent = silent
+            let about = ListenTarget(pin: pin, isNote: isNote, source: source, startedAt: startedAt, silent: silent)
+            guard self.listeningPin === pin, !self.sessionStopped else {
+                self.finishListening(about, heard: nil)
+                return
+            }
+            if ask, !silent {
                 await self.activate(.speech(pausingOthers: pausingOthers))
                 // Starting the audio can take about a second when it pauses music. If a newer tap
                 // took over meanwhile, this one ends quietly instead of asking its question after all.
@@ -280,7 +343,7 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
                 }
             }
             // Without the question, the chime plays first, where the Silent switch can mute it.
-            await self.activate(.listening(pausingOthers: pausingOthers), chime: !ask)
+            await self.activate(.listening(pausingOthers: pausingOthers), chime: !ask && !silent)
             guard self.listeningPin === pin, !self.sessionStopped else {
                 self.finishListening(about, heard: nil)
                 return
@@ -307,6 +370,8 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         let source: CaptureSource
         /// When this listen began, so its own length is logged even when a newer tap overlaps it.
         let startedAt: Date
+        /// The iPhone looked to be on silent, so nothing was asked and nothing is read back.
+        let silent: Bool
     }
 
     /// Ends a listen: always turns the Stop button off and puts the audio back, then labels the pin
@@ -318,12 +383,14 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
         DriveLog.record(DriveLogEntry(
             at: .now, kind: .listen, source: target.isNote ? "note" : target.source.rawValue,
             outcome: label != nil ? "heard" : !stillCurrent ? "replaced" : sessionStopped ? "stopped" : "nothing",
-            seconds: Date.now.timeIntervalSince(target.startedAt)
+            seconds: Date.now.timeIntervalSince(target.startedAt), silent: target.silent
         ))
         if stillCurrent {
             listeningPin = nil
-            ListeningSignal.setListening(false)
-            WidgetCenter.shared.reloadAllTimelines()
+            if ListeningSignal.listeningUntil() != nil {
+                ListeningSignal.setListening(false)
+                WidgetCenter.shared.reloadAllTimelines()
+            }
         }
         let pinExists = pin.modelContext != nil && !pin.isDeleted
         if pinExists, label == nil, target.isNote {
@@ -336,7 +403,7 @@ final class CaptureFeedback: NSObject, AVSpeechSynthesizerDelegate {
             if stillCurrent, AppSettings.spokenConfirmation {
                 // Read it back, so the driver knows what was heard without looking (on silent, the
                 // haptic above says it).
-                announce(saved ? label : "Label not saved.")
+                announce(saved ? label : "Label not saved.", silent: target.silent)
                 return
             }
         }

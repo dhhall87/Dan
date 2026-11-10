@@ -76,6 +76,8 @@ struct DriveLogEntry: Codable, Equatable {
     /// Apple Watch pins: how the copy that got here first came: "message" (sent straight away,
     /// which wakes Passing here; 1.1.7) or "transfer" (queued, delivered when Passing runs here).
     var watchVia: String?
+    /// Listening: the iPhone looked to be on silent (`SilentSwitch`), so nothing was asked or chimed.
+    var silent: Bool?
 
     /// What `seconds` means for this kind, in the exported text.
     var secondsName: String {
@@ -125,6 +127,7 @@ struct DriveLogEntry: Codable, Equatable {
         if let watchWait { fields.append("watchWait=\(DriveLogFormat.duration(watchWait))") }
         if let transfer { fields.append("transfer=\(DriveLogFormat.duration(transfer))") }
         if let watchVia { fields.append("via=\(watchVia)") }
+        if let silent { fields.append("silent=\(silent ? "yes" : "no")") }
         return "\(formatter.string(from: at))  \(process)  \(kind.rawValue)  \(fields.joined(separator: " "))"
     }
 }
@@ -310,6 +313,10 @@ enum DriveLogSummary {
             var text = "Listening: heard \(heard) · nothing \(nothing) · stopped \(stopped)"
             if replaced > 0 {
                 text += " · cut short by a newer tap \(replaced)"
+            }
+            let checked = listens.compactMap(\.silent)
+            if !checked.isEmpty {
+                text += " · on silent \(checked.filter { $0 }.count) of \(checked.count)"
             }
             lines.append(text)
         }

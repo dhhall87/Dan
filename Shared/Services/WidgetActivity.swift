@@ -7,6 +7,7 @@ import Foundation
 enum WidgetActivity {
     private static let noteKey = "widgetSavedNote"
     private static let lastCaptureKey = "lastWidgetCapture"
+    private static let lastPinIDKey = "lastWidgetPinID"
 
     /// Posted on the app's main thread when the widget or Control Center has saved a pin.
     static let pinSaved = Notification.Name("PassingWidgetPinSaved")
@@ -34,6 +35,10 @@ enum WidgetActivity {
                 defaults.set(data, forKey: noteKey)
             }
             note = made
+            // So Passing, if it's open, can listen for this pin's label.
+            defaults.set(state == .notSaved ? nil : pin.id.uuidString, forKey: lastPinIDKey)
+        } else {
+            defaults.removeObject(forKey: lastPinIDKey)
         }
         CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFNotificationName(savedName), nil, nil, true)
         return note
@@ -59,6 +64,14 @@ enum WidgetActivity {
     static var lastNote: WidgetSavedNote? {
         guard let data = AppGroup.defaults?.data(forKey: noteKey) else { return nil }
         return try? JSONDecoder().decode(WidgetSavedNote.self, from: data)
+    }
+
+    /// The pin a widget button saved last, if that was the latest widget or Control Center capture.
+    static var lastWidgetPin: (id: UUID, savedAt: Date)? {
+        guard let text = AppGroup.defaults?.string(forKey: lastPinIDKey), let id = UUID(uuidString: text),
+              let savedAt = lastCaptureAt
+        else { return nil }
+        return (id, savedAt)
     }
 
     /// When the widget or Control Center last saved a pin, or nil if they never have.

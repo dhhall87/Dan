@@ -44,7 +44,14 @@ struct StopListeningIntent: AppIntent {
     static let description = IntentDescription("Stops Passing listening for a label. Used by the Passing widgets.")
     static let isDiscoverable = false
 
+    @MainActor
     func perform() async throws -> some IntentResult {
+        // A widget can keep showing Stop after listening has ended (CarPlay doesn't redraw a widget
+        // until it's touched). A tap then was meant as a pin, so it saves one instead of being lost.
+        guard ListeningSignal.listeningUntil() != nil else {
+            _ = try await WidgetPinIntent(side: .unknown, distance: .unknown).perform()
+            return .result()
+        }
         ListeningSignal.postStop()
         ListeningSignal.setListening(false)
         return .result()

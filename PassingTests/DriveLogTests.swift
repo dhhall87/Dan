@@ -127,6 +127,16 @@ struct DriveLogTests {
         #expect(lines.contains("Listening: heard 1 · nothing 0 · stopped 0 · cut short by a newer tap 1"))
     }
 
+    @Test func listensSayWhetherTheiPhoneWasOnSilent() {
+        var quiet = entry(.listen, source: "app", outcome: "heard")
+        quiet.silent = true
+        var loud = entry(.listen, after: 30, source: "widget", outcome: "nothing")
+        loud.silent = false
+        #expect(quiet.line(timeZone: utc).hasSuffix("outcome=heard silent=yes"))
+        let lines = DriveLogSummary.lines(for: [quiet, loud], timeZone: utc)
+        #expect(lines.contains("Listening: heard 1 · nothing 1 · stopped 0 · on silent 1 of 2"))
+    }
+
     @Test func watchPinsSayHowTheirTripWent() {
         var ready = entry(.capture, source: "watch", outcome: "left-far")
         ready.watchGPS = "atTap"

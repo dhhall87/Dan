@@ -83,11 +83,12 @@ Capture things you pass while driving, then look them up later. One tap saves a 
 
 **Listen after tap (Milestone 7, optional, off by default)**
 - Settings → **Labels by voice** → **Listen after tap**. After a tap on the capture screen, Passing asks **"What are you passing?"** and listens for a few seconds. Say what you saw ("red barn") and it becomes the label. Say nothing, "cancel" or "stop", and the pin stays unlabeled. Turn off **Ask "What are you passing?"** to get a short chime instead of the question.
-- It stops listening about 1.5 seconds after you stop talking, after 6 seconds if you say nothing, and after 15 seconds at most. "Stop" or "cancel" ends it after about half a second. If the speech recognizer gives up on the silence early, Passing quietly starts it again, so the microphone stays on for the full 6 seconds.
+- It stops listening about 1.5 seconds after you stop talking, after 5 seconds if you say nothing (6 before 1.1.9), and after 15 seconds at most. "Stop" or "cancel" ends it after about half a second. If the speech recognizer gives up on the silence early, Passing quietly starts it again, so the microphone stays on for the full 5 seconds.
 - **Stop listening:** while Passing asks or listens, a big red **Stop listening** button takes the place of the **Passing** title (the GPS pill hides meanwhile). It turns the microphone off right away and keeps anything you'd already said. The Passing widgets turn into a big **Stop listening** button at the same time, so you can stop it from CarPlay. It never has to be pressed, and it doesn't move or cover the capture buttons.
 - The pin is saved before Passing listens, so a missed or garbled answer never loses it. You can fix the label later in Pins.
 - With **Spoken confirmation** on, Passing reads the label back ("red barn") instead of saying your phrase.
-- **On silent** (1.1.8), Passing doesn't ask, chime or read back. It still listens: after the tap's buzz, a second buzz says the microphone is on, so talk after the second buzz. With the question on, that second buzz comes after the time the question would have taken (about a second and a half); turn the question off for a shorter wait. When you're not on silent, the second buzz comes right after the question or chime.
+- **On silent**, Passing doesn't ask, chime or read back. It still listens: after the tap's buzz, a second buzz says the microphone is on, so talk after the second buzz, and the red **Stop listening** button shows while it listens. Since 1.1.9 Passing checks for Silent mode at each tap and, on silent, starts listening straight away (no pause where the question would have been). The check also covers Bluetooth and CarPlay, where iOS doesn't mute apps on silent by itself. iOS has no official way to ask, so the check is a workaround: if it ever gets it wrong, tell me (the drive log's listening events say `silent=yes` or `silent=no`).
+- **Widget taps (1.1.9):** while Passing is open on the iPhone's screen, a tap on a Passing widget (in CarPlay, say) chimes and listens for that pin's label too. It never asks the question. With the iPhone locked or Passing closed, widget pins stay silent as before: a widget can't use the microphone, and iOS doesn't let Passing start listening from the background.
 - Music pauses while it listens (or is lowered, with "Pause music while speaking or listening" off), so the microphone hears you rather than the radio.
 - Speech is recognized on the iPhone and the audio never leaves it. iOS shows its orange microphone dot while Passing listens.
 - Only taps on the capture screen listen. The widgets, Control Center and Siri work as before.
@@ -263,6 +264,17 @@ Plan a trip through pins you saved: Pins → **Select**, then tap pins in the or
 7. **Open in Apple Maps**: Maps opens directions through every stop, in order. **Open in Google Maps** (Safari, or the Google Maps app if installed): the same stops.
 8. Select 12 pins (or 11 plus an address end): Google Maps shows **part 1 of 2** and **part 2 of 2**; part 2 starts where part 1 ends.
 9. Select a note and a "No location" pin with two real pins: the route has the two real pins and says 2 picked items have no location.
+
+## Version 1.1.9 checklist (Silent check, widget listening)
+
+Turn on **Listen after tap**, and the drive log, for this.
+
+1. **Silent on:** tap the capture screen. Two buzzes close together, no question, and **Stop listening** shows. Say "red barn": the pin is labeled "red barn". Say nothing: listening ends after about 5 seconds.
+2. **Silent off:** tap. Passing asks "What are you passing?", buzzes, then listens. If it stays quiet with Silent off, the Silent check got it wrong: tell me.
+3. **In the car on Silent** (Bluetooth or CarPlay connected): tap. No question and no tone through the car's speakers.
+4. **Widget:** with Passing open on the iPhone (not locked), tap a Passing widget in CarPlay or on the Home Screen side of a split view. A chime (nothing on Silent), then say "blue door": that pin, in Needs Review, is labeled "blue door". With the iPhone locked, the same tap saves silently.
+5. If a widget ever still shows **Stop listening** when nothing is listening, tap it: it now saves a pin instead of doing nothing.
+6. Drive Log: listening events end with `silent=yes` or `silent=no`, and the summary says "on silent N of M".
 
 ## Version 1.1.8 checklist (Passing's voice follows the Silent switch)
 
